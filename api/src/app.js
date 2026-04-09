@@ -10,6 +10,25 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 export function createApp() {
   const app = express();
   app.set('trust proxy', 1);
+  const allowedOrigins = new Set(env.CORS_ORIGINS);
+
+  if (!env.isProd) {
+    allowedOrigins.add('http://localhost:3000');
+    allowedOrigins.add('http://127.0.0.1:3000');
+    allowedOrigins.add('http://localhost:3001');
+    allowedOrigins.add('http://127.0.0.1:3001');
+  }
+
+  const corsOptions = {
+    origin(origin, cb) {
+      if (!origin) return cb(null, true);
+      if (allowedOrigins.has(origin)) return cb(null, true);
+      return cb(null, false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  };
 
   app.use(
     helmet({
@@ -20,16 +39,8 @@ export function createApp() {
   app.use(express.json({ limit: '1mb' }));
   app.use(cookieParser());
 
-  app.use(
-    cors({
-      origin(origin, cb) {
-        if (!origin) return cb(null, true);
-        if (env.CORS_ORIGINS.includes(origin)) return cb(null, true);
-        return cb(null, false);
-      },
-      credentials: true,
-    }),
-  );
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions));
 
   const globalLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,

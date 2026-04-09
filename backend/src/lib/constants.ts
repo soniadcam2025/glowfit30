@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import type { Role } from "@/types";
 
-export const authCookieKey = "glowfit_token";
+export const authCookieKey = "token";
 
 export const adminNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
