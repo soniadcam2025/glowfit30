@@ -1,0 +1,39 @@
+GlowFit 30 — deployment status (Cursor-side check, 2026-04-09)
+================================================================
+
+CHECKED FROM HERE (public internet)
+-----------------------------------
+- https://api.glowfit30.com     → Cloudflare 521 (origin not OK for CF → origin handshake)
+- https://admin.glowfit30.com   → Cloudflare 521 (same)
+- http://139.84.149.147/        → HTTP 307 (origin is reachable on port 80)
+
+CONCLUSION
+----------
+Your VPS answers on HTTP :80. HTTPS :443 to the raw IP does not connect — typical when
+Let’s Encrypt / nginx SSL is not set up yet. With Cloudflare SSL mode “Full” or “Full (strict)”,
+Cloudflare must connect to your origin on HTTPS; if :443 is closed or has no cert → 521.
+
+WHAT YOU MUST RUN ON THE VPS (SSH; cannot be done from Cursor)
+--------------------------------------------------------------
+1) Upload this repo’s server/ folder and run:
+     chmod +x server/scripts/setup-subdomains.sh
+     sudo bash server/scripts/setup-subdomains.sh
+2) PM2: Next → 127.0.0.1:3000, API → 127.0.0.1:4000
+3) TLS on nginx:
+     sudo apt install -y certbot python3-certbot-nginx
+     sudo certbot --nginx -d admin.glowfit30.com -d api.glowfit30.com
+4) Cloudflare → SSL/TLS → Full (strict) after step 3 succeeds
+5) API .env: CORS_ORIGINS includes https://admin.glowfit30.com
+6) Next .env: NEXT_PUBLIC_API_URL=https://api.glowfit30.com
+
+REPO FILES ADDED FOR YOU
+------------------------
+- server/nginx/glowfit30-subdomains.conf
+- server/scripts/setup-subdomains.sh
+- api/ (Express API under F:\app\glowfit\api)
+- backend/.env.example (production API URL template)
+
+WHEN FIXED, RE-CHECK
+--------------------
+curl -sI https://api.glowfit30.com/   → expect 200 + JSON health
+curl -sI https://admin.glowfit30.com/ → expect 200/3xx from Next
