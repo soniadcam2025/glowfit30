@@ -12,11 +12,17 @@ export function createApp() {
   app.set('trust proxy', 1);
   const allowedOrigins = new Set(env.CORS_ORIGINS);
 
-  if (!env.isProd) {
+  const addLocalDevOrigins = () => {
     allowedOrigins.add('http://localhost:3000');
     allowedOrigins.add('http://127.0.0.1:3000');
     allowedOrigins.add('http://localhost:3001');
     allowedOrigins.add('http://127.0.0.1:3001');
+  };
+
+  if (!env.isProd) {
+    addLocalDevOrigins();
+  } else if (env.CORS_ALLOW_LOCAL_DEV) {
+    addLocalDevOrigins();
   }
 
   const corsOptions = {

@@ -20,6 +20,11 @@ const schema = z.object({
     .string()
     .optional()
     .transform((v) => v === 'true' || v === '1'),
+  /** Allow http://localhost / 127.0.0.1 on dev ports (e.g. local Next admin → prod API) */
+  CORS_ALLOW_LOCAL_DEV: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === '1'),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -42,5 +47,6 @@ export const env = {
   AUTH_COOKIE_NAME: p.AUTH_COOKIE_NAME,
   AUTH_DEBUG: p.AUTH_DEBUG ?? false,
   REGISTER_ENABLED: p.REGISTER_ENABLED ?? false,
+  CORS_ALLOW_LOCAL_DEV: p.CORS_ALLOW_LOCAL_DEV ?? false,
   isProd: p.NODE_ENV === 'production',
 };
