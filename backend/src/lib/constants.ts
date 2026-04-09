@@ -12,6 +12,9 @@ import type { Role } from "@/types";
 
 export const authCookieKey = "token";
 
+/** Client-side JWT for Authorization header when API is on another origin than the admin app. */
+export const adminJwtStorageKey = "glowfit_admin_jwt";
+
 export const adminNavItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/users", label: "Users", icon: Users },
