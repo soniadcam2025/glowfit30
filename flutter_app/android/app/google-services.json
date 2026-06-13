@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "479431264975",
+    "project_id": "glowfit-beta-829ea",
+    "storage_bucket": "glowfit-beta-829ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:479431264975:android:3d2a39282fd2dfcd7f05ba",
+        "android_client_info": {
+          "package_name": "com.glowfit.glowfit"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "479431264975-e5v3dn14ue92kl5ku8dricvvspo185ip.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.glowfit.glowfit",
+            "certificate_hash": "2a7f329def28f6625da9fa27d20e1fb200c37a4d"
+          }
+        },
+        {
+          "client_id": "479431264975-nrhnp9h40qek38hbfko9kcbu4q804oo3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApaYBQ3tWkGoeqr5nZbiE-AU4s9wnBBX8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "479431264975-nrhnp9h40qek38hbfko9kcbu4q804oo3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

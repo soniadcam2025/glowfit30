@@ -1,0 +1,188 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../../config/theme/app_colors.dart';
+import '../../config/theme/app_typography.dart';
+import '../../config/theme/app_spacing.dart';
+import '../../config/constants/app_constants.dart';
+import '../../controllers/onboarding_controller.dart';
+import '../../routes/app_pages.dart';
+import '../../services/auth_service.dart';
+
+class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
+  @override
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _setupAnimation();
+  }
+
+  void _setupAnimation() {
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: AppConstants.animationDuration),
+      vsync: this,
+    );
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(_animationController);
+    _animationController.forward();
+    _animationController.addStatusListener((status) {
+      if (status == AnimationStatus.completed) _checkAuthAndRoute();
+      // _checkAuthAndRoute is async but fire-and-forget is fine here
+    });
+  }
+
+  Future<void> _checkAuthAndRoute() async {
+    // Wait for Firebase to restore its cached auth token (avoids null on cold start)
+    final user = await FirebaseAuth.instance
+        .authStateChanges()
+        .first
+        .timeout(const Duration(seconds: 5), onTimeout: () => null);
+
+    if (user == null) return; // not logged in — show splash with Get Started
+
+    final controller = Get.find<OnboardingController>();
+    if (controller.isComplete) {
+      Get.offAllNamed(Routes.home);
+    } else if (controller.currentStep.value > 1) {
+      // resume mid-onboarding
+      Get.offAllNamed(controller.resumeRoute);
+    } else {
+      // logged in but onboarding not started yet
+      Get.offAllNamed(Routes.language);
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/hero_woman.png',
+              fit: BoxFit.cover,
+            ),
+            SafeArea(
+              child: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 20),
+                    child: Image.asset(
+                      'assets/images/glowfit_logo.png',
+                      height: 80,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.paddingLarge),
+                    child: Column(
+                      children: [
+                        Text(
+                          '30-Days Smart Fitness for Women',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.headlineSmall().copyWith(
+                            color: AppColors.textPrimary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Workout • Diet • Beauty • Transformation',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodyMedium().copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Spacer(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.paddingLarge),
+                    child: Column(
+                      children: [
+                        GestureDetector(
+                          onTap: () => Get.toNamed(Routes.language),
+                          child: Container(
+                            width: double.infinity,
+                            height: AppConstants.buttonHeight,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [AppColors.neonMagenta, AppColors.neonPink],
+                                begin: Alignment.centerLeft,
+                                end: Alignment.centerRight,
+                              ),
+                              borderRadius: BorderRadius.circular(AppConstants.buttonBorderRadius),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: AppColors.neonMagenta.withValues(alpha: 0.4),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    'Get Started',
+                                    style: AppTypography.button().copyWith(
+                                      color: AppColors.white,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  const Icon(Icons.arrow_forward_rounded, color: AppColors.white, size: 20),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'Your best version starts today ',
+                              textAlign: TextAlign.center,
+                              style: AppTypography.bodySmall().copyWith(color: AppColors.textSecondary),
+                            ),
+                            Image.asset(
+                              'assets/images/star1.png',
+                              height: 18,
+                              width: 18,
+                              fit: BoxFit.contain,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
