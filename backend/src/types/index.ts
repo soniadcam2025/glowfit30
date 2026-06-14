@@ -83,15 +83,12 @@ export type DietPlan = {
 };
 
 export type UserDetail = UserItem & {
-  photoUrl?: string;
-  fitnessLevel?: string;
-  goal?: string;
-  dietStyle?: string;
-  targetWeight?: number;
+  dietStyle?: string | null;
+  targetWeight?: number | null;
   focusAreas?: string[];
-  dob?: string;
-  height?: number;
-  weight?: number;
+  dob?: string | null;
+  height?: number | null;
+  weight?: number | null;
 };
 
 export type UserProgress = {

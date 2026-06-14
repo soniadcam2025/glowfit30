@@ -30,7 +30,7 @@ export const usersService = {
   },
   async getById(id: string): Promise<UserDetail> {
     const { data } = await api.get<ApiResponse<UserDetail>>(`/users/${id}`);
-    return { ...mapUser(data.data), ...data.data };
+    return { ...data.data, ...mapUser(data.data) } as UserDetail;
   },
 
   async getProgress(id: string): Promise<UserProgress> {
