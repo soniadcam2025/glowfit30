@@ -1,12 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import '../core/storage/preferences.dart';
+import 'api_service.dart';
 
 const _webClientId =
     '479431264975-nrhnp9h40qek38hbfko9kcbu4q804oo3.apps.googleusercontent.com';
 
 class AuthService extends GetxService {
   final _auth = FirebaseAuth.instance;
+  final _preferences = Get.find<Preferences>();
 
   User? get currentUser => _auth.currentUser;
   bool get isLoggedIn => currentUser != null;
@@ -24,26 +27,34 @@ class AuthService extends GetxService {
 
       final credential = GoogleAuthProvider.credential(idToken: idToken);
       final userCredential = await _auth.signInWithCredential(credential);
-      return userCredential.user;
+      final firebaseUser = userCredential.user;
+
+      if (firebaseUser != null) {
+        // Exchange Firebase ID token for our own JWT
+        final firebaseIdToken = await firebaseUser.getIdToken();
+        final api = Get.find<ApiService>();
+        final result = await api.firebaseAuth(firebaseIdToken!);
+
+        if (result != null && result['token'] != null) {
+          await _preferences.setAccessToken(result['token'] as String);
+        }
+      }
+
+      return firebaseUser;
     } on GoogleSignInException catch (e) {
       if (e.code == GoogleSignInExceptionCode.canceled) return null;
-      Get.snackbar(
-        'Sign-in Failed',
-        'Could not sign in with Google. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Sign-in Failed', 'Could not sign in with Google.',
+          snackPosition: SnackPosition.BOTTOM);
       return null;
     } catch (_) {
-      Get.snackbar(
-        'Sign-in Failed',
-        'Something went wrong. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-      );
+      Get.snackbar('Sign-in Failed', 'Something went wrong.',
+          snackPosition: SnackPosition.BOTTOM);
       return null;
     }
   }
 
   Future<void> signOut() async {
+    await _preferences.clearAuthTokens();
     await GoogleSignIn.instance.signOut();
     await _auth.signOut();
   }

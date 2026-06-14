@@ -1,16 +1,7 @@
 import { z } from 'zod';
 
-export const loginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
-});
-
-export const registerSchema = z.object({
-  name:         z.string().min(1).max(200),
-  email:        z.string().email(),
-  password:     z.string().min(8).max(128),
-
-  // Optional onboarding profile fields
+export const patchProfileSchema = z.object({
+  name:         z.string().min(1).max(200).optional(),
   fitnessLevel: z.string().optional(),
   goal:         z.string().optional(),
   dietStyle:    z.string().optional(),
@@ -19,4 +10,4 @@ export const registerSchema = z.object({
   dob:          z.string().datetime({ offset: true }).optional(),
   height:       z.number().positive().optional(),
   weight:       z.number().positive().optional(),
-});
+}).strict();

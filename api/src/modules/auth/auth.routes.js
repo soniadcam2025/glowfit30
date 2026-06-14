@@ -24,9 +24,11 @@ function registerGate(_req, res, next) {
 }
 
 router.post('/register', authLimiter, registerGate, validateBody(registerSchema), ctrl.register);
+router.post('/firebase', authLimiter, ctrl.firebaseAuth);
 
 router.post('/login', authLimiter, validateBody(loginSchema), ctrl.login);
 router.post('/logout', ctrl.logout);
 router.get('/me', verifyToken, ctrl.me);
+router.post('/reset-password', authLimiter, ctrl.resetPassword);
 
 export default router;

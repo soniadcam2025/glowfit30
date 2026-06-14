@@ -4,7 +4,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { usersService } from "@/services/users.service";
 import type { PaginatedResponse, UserItem } from "@/types";
 
-type UsersQuery = { page: number; pageSize: number; search?: string; status?: string };
+export type UsersQuery = {
+  page: number;
+  pageSize: number;
+  search?: string;
+  status?: "active" | "blocked" | "all";
+  goal?: string;
+  fitnessLevel?: string;
+  sortBy?: "name" | "email" | "createdAt" | "goal" | "fitnessLevel";
+  sortDir?: "asc" | "desc";
+};
 
 export function useUsers(query: UsersQuery) {
   return useQuery({
@@ -21,11 +30,18 @@ export function useUserDetails(id?: string) {
   });
 }
 
-export function useBlockUser(query: UsersQuery) {
-  const queryClient = useQueryClient();
+export function useUserProgress(id?: string) {
+  return useQuery({
+    queryKey: ["users", "progress", id],
+    queryFn: () => usersService.getProgress(id as string),
+    enabled: !!id,
+  });
+}
 
+function useToggleBlock(query: UsersQuery, blocked: boolean) {
+  const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (id: string) => usersService.block(id),
+    mutationFn: (id: string) => (blocked ? usersService.block(id) : usersService.unblock(id)),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["users", query] });
       const previous = queryClient.getQueryData<PaginatedResponse<UserItem>>(["users", query]);
@@ -34,19 +50,18 @@ export function useBlockUser(query: UsersQuery) {
         return {
           ...old,
           items: old.items.map((u) =>
-            u.id === id ? { ...u, isBlocked: true, status: "blocked" } : u,
+            u.id === id ? { ...u, isBlocked: blocked, status: blocked ? "blocked" : "active" } : u,
           ),
         };
       });
       return { previous };
     },
     onError: (_error, _id, context) => {
-      if (context?.previous) {
-        queryClient.setQueryData(["users", query], context.previous);
-      }
+      if (context?.previous) queryClient.setQueryData(["users", query], context.previous);
     },
-    onSettled: () => {
-      void queryClient.invalidateQueries({ queryKey: ["users"] });
-    },
+    onSettled: () => { void queryClient.invalidateQueries({ queryKey: ["users"] }); },
   });
 }
+
+export function useBlockUser(query: UsersQuery) { return useToggleBlock(query, true); }
+export function useUnblockUser(query: UsersQuery) { return useToggleBlock(query, false); }

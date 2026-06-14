@@ -24,12 +24,14 @@ class WorkoutActiveScreen extends StatefulWidget {
   final List<ActiveExercise> exercises;
   final int totalKcal;
   final int day;
+  final String? dayId;
 
   const WorkoutActiveScreen({
     super.key,
     required this.exercises,
     required this.totalKcal,
     this.day = 3,
+    this.dayId,
   });
 
   @override
@@ -173,8 +175,10 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
       MaterialPageRoute(
         builder: (_) => WorkoutCompleteScreen(
           day: widget.day,
+          dayId: widget.dayId,
           caloriesBurned: widget.totalKcal,
           totalTime: '$mm:$ss',
+          durationMin: totalSecs ~/ 60,
           exercisesCompleted: widget.exercises.length,
           totalExercises: widget.exercises.length,
         ),

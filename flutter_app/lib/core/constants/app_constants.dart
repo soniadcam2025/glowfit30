@@ -2,11 +2,10 @@ class AppConstants {
   AppConstants._();
 
   // API Configuration
-  static const String baseUrl = 'https://api.glowfit.com/api/v1';
-  static const String apiTimeout = '30000'; // milliseconds
+  static const String baseUrl = 'https://api.glowfit30.com/api';
+  static const String apiTimeout = '30000';
   static const int maxRetries = 3;
-  static const int retryDelay = 1000; // milliseconds
-  static const String tokenRefreshUrl = '/auth/refresh-token';
+  static const int retryDelay = 1000;
 
   // Storage Keys
   static const String accessTokenKey = 'access_token';

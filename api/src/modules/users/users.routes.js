@@ -10,6 +10,7 @@ router.use(verifyToken, requireRole('admin', 'super_admin'));
 
 router.get('/', validateQuery(listQuerySchema), ctrl.list);
 router.get('/:id', validateParams(idParamSchema), ctrl.getOne);
+router.get('/:id/progress', validateParams(idParamSchema), ctrl.getUserProgress);
 router.patch(
   '/:id/block',
   validateParams(idParamSchema),

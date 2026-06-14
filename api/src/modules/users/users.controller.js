@@ -7,8 +7,8 @@ const STATS_KEY = 'admin:stats';
 
 export async function list(req, res, next) {
   try {
-    const { page, limit, q } = req.query;
-    const data = await svc.listUsers({ page, limit, q });
+    const { page, limit, q, status, goal, fitnessLevel, sortBy, sortDir } = req.query;
+    const data = await svc.listUsers({ page, limit, q, status, goal, fitnessLevel, sortBy, sortDir });
     return sendSuccess(res, data, 'OK');
   } catch (e) {
     next(e);
@@ -21,6 +21,16 @@ export async function getOne(req, res, next) {
     const user = await svc.getUserById(id);
     if (!user) return sendError(res, 'User not found', 404);
     return sendSuccess(res, user, 'OK');
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function getUserProgress(req, res, next) {
+  try {
+    const { id } = req.params;
+    const data = await svc.getUserProgress(id);
+    return sendSuccess(res, data, 'OK');
   } catch (e) {
     next(e);
   }

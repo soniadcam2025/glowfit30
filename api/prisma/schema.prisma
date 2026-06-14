@@ -14,27 +14,96 @@ enum UserRole {
 }
 
 model User {
-  id        String   @id @default(uuid()) @db.Uuid
-  name      String
-  email     String   @unique
-  password  String
-  role      UserRole @default(user)
-  isBlocked Boolean  @default(false) @map("is_blocked")
-  createdAt DateTime @default(now()) @map("created_at")
+  id           String    @id @default(uuid()) @db.Uuid
+  name         String
+  email        String    @unique
+  password     String?
+  role         UserRole  @default(user)
+  isBlocked    Boolean   @default(false) @map("is_blocked")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
-  adminLogs AdminLog[]
+  // Firebase / social login fields
+  firebaseUid  String?   @unique @map("firebase_uid")
+  photoUrl     String?   @map("photo_url")
+
+  // Onboarding profile fields
+  fitnessLevel String?   @map("fitness_level")
+  goal         String?   @map("goal")
+  dietStyle    String?   @map("diet_style")
+  targetWeight Float?    @map("target_weight")
+  focusAreas   String[]  @map("focus_areas")
+  dob          DateTime? @map("dob")
+  height       Float?    @map("height")
+  weight       Float?    @map("weight")
+
+  adminLogs    AdminLog[]
+  progress     Progress[]
 
   @@map("users")
 }
 
 model Workout {
-  id        String   @id @default(uuid()) @db.Uuid
-  title     String
-  level     String
-  duration  Int
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String       @id @default(uuid()) @db.Uuid
+  title       String
+  level       String
+  duration    Int
+  imageUrl    String?      @map("image_url")
+  description String?      @db.Text
+  goal        String?
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  days        WorkoutDay[]
 
   @@map("workouts")
+}
+
+model WorkoutDay {
+  id         String     @id @default(uuid()) @db.Uuid
+  workoutId  String     @map("workout_id") @db.Uuid
+  workout    Workout    @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  dayNumber  Int        @map("day_number")
+  title      String
+  focus      String?
+  createdAt  DateTime   @default(now()) @map("created_at")
+
+  exercises  Exercise[]
+  progress   Progress[]
+
+  @@index([workoutId])
+  @@map("workout_days")
+}
+
+model Exercise {
+  id           String     @id @default(uuid()) @db.Uuid
+  workoutDayId String     @map("workout_day_id") @db.Uuid
+  workoutDay   WorkoutDay @relation(fields: [workoutDayId], references: [id], onDelete: Cascade)
+  name         String
+  sets         Int?
+  reps         Int?
+  duration     Int?
+  rest         Int?
+  imageUrl     String?    @map("image_url")
+  gifUrl       String?    @map("gif_url")
+  order        Int        @default(0)
+  createdAt    DateTime   @default(now()) @map("created_at")
+
+  @@index([workoutDayId])
+  @@map("exercises")
+}
+
+model Progress {
+  id           String     @id @default(uuid()) @db.Uuid
+  userId       String     @map("user_id") @db.Uuid
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workoutDayId String     @map("workout_day_id") @db.Uuid
+  workoutDay   WorkoutDay @relation(fields: [workoutDayId], references: [id], onDelete: Cascade)
+  completedAt  DateTime   @default(now()) @map("completed_at")
+  caloriesBurned Int?     @map("calories_burned")
+  durationMin  Int?       @map("duration_min")
+
+  @@unique([userId, workoutDayId])
+  @@index([userId])
+  @@map("progress")
 }
 
 model DietPlan {

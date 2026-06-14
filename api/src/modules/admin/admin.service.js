@@ -8,15 +8,22 @@ export async function getStatsCached() {
   const hit = await cacheGet(STATS_KEY);
   if (hit) return hit;
 
-  const [totalUsers, activeUsers] = await Promise.all([
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const [totalUsers, activeUsers, todayCompletions, totalWorkouts] = await Promise.all([
     prisma.user.count(),
     prisma.user.count({ where: { isBlocked: false } }),
+    prisma.progress.count({ where: { completedAt: { gte: today } } }),
+    prisma.workout.count(),
   ]);
 
   const payload = {
     totalUsers,
     activeUsers,
     blockedUsers: totalUsers - activeUsers,
+    todayCompletions,
+    totalWorkouts,
     generatedAt: new Date().toISOString(),
   };
 

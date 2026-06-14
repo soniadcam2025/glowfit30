@@ -1,6 +1,8 @@
 import { env } from '../../config/env.js';
 import { sendError, sendSuccess, pickUser } from '../../utils/response.js';
 import * as authService from './auth.service.js';
+import { verifyFirebaseToken } from '../../config/firebase.js';
+import { prisma } from '../../database/prisma.js';
 
 function authDebug(message, meta = null) {
   if (!env.AUTH_DEBUG) return;
@@ -24,11 +26,19 @@ export async function register(req, res, next) {
     if (!env.REGISTER_ENABLED) {
       return sendError(res, 'Registration is disabled', 403);
     }
-    const { name, email, password } = req.body;
+    const {
+      name, email, password,
+      fitnessLevel, goal, dietStyle, targetWeight,
+      focusAreas, dob, height, weight,
+    } = req.body;
     const existing = await authService.findByEmail(email);
     if (existing) return sendError(res, 'Email already registered', 409);
 
-    const user = await authService.createUser({ name, email, password });
+    const user = await authService.createUser({
+      name, email, password,
+      fitnessLevel, goal, dietStyle, targetWeight,
+      focusAreas, dob, height, weight,
+    });
     const token = authService.signToken(user);
     res.cookie(env.AUTH_COOKIE_NAME, token, cookieOpts());
     return sendSuccess(res, { user: pickUser(user) }, 'Registered', 201);
@@ -84,3 +94,62 @@ export function logout(_req, res) {
 export function me(req, res) {
   return sendSuccess(res, { user: req.user }, 'OK');
 }
+
+export async function firebaseAuth(req, res, next) {
+  try {
+    const { idToken } = req.body;
+    if (!idToken) return sendError(res, 'Firebase ID token is required', 400);
+
+    let decoded;
+    try {
+      decoded = await verifyFirebaseToken(idToken);
+    } catch {
+      return sendError(res, 'Invalid or expired Firebase token', 401);
+    }
+
+    const { uid, email, name, picture } = decoded;
+    if (!email) return sendError(res, 'Google account has no email address', 400);
+
+    const { user, isNew } = await authService.findOrCreateFirebaseUser({
+      uid,
+      email,
+      name: name || email.split('@')[0],
+      photoUrl: picture || null,
+    });
+
+    const token = authService.signToken(user);
+    res.cookie(env.AUTH_COOKIE_NAME, token, cookieOpts());
+
+    return sendSuccess(
+      res,
+      { user: pickUser(user), token, isNew },
+      isNew ? 'Account created' : 'Logged in',
+      isNew ? 201 : 200,
+    );
+  } catch (e) {
+    next(e);
+  }
+}
+
+const DEFAULT_RESET_PASSWORD = 'Admin12345';
+
+export async function resetPassword(req, res, next) {
+  try {
+    const { email } = req.body;
+    if (!email) return sendError(res, 'Email is required', 400);
+
+    const user = await authService.findByEmail(email);
+    if (!user || !['admin', 'super_admin'].includes(user.role)) {
+      // Always return the same message to avoid email enumeration
+      return sendSuccess(res, null, 'If that admin account exists, the password has been reset.');
+    }
+
+    const hashed = await authService.hashPassword(DEFAULT_RESET_PASSWORD);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
+
+    return sendSuccess(res, null, 'Password reset to default. Please sign in with "Admin12345".');
+  } catch (e) {
+    next(e);
+  }
+}
+

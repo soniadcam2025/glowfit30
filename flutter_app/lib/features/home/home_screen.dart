@@ -1,7 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../controllers/home_controller.dart';
 import '../workout/workout_plan_screen.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -16,6 +18,14 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    Get.put(HomeController());
+  }
+
+  HomeController get _c => Get.find<HomeController>();
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +58,7 @@ class _HomeScreenState extends State<HomeScreen> {
   // ─── HEADER ──────────────────────────────────────────────────────────────────
 
   Widget _buildHeader() {
-    return Row(
+    return Obx(() => Row(
       children: [
         Stack(
           clipBehavior: Clip.none,
@@ -57,17 +67,17 @@ class _HomeScreenState extends State<HomeScreen> {
               radius: 28,
               backgroundColor: const Color(0xFFFFD6E7),
               child: ClipOval(
-                child: Image.asset(
-                  'assets/images/profile_avatar.png',
-                  width: 56,
-                  height: 56,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const Icon(
-                    Icons.person,
-                    size: 28,
-                    color: _pink,
-                  ),
-                ),
+                child: _c.photoUrl.value.isNotEmpty
+                    ? Image.network(
+                        _c.photoUrl.value,
+                        width: 56, height: 56, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 28, color: _pink),
+                      )
+                    : Image.asset(
+                        'assets/images/profile_avatar.png',
+                        width: 56, height: 56, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 28, color: _pink),
+                      ),
               ),
             ),
             Positioned(
@@ -101,7 +111,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Row(
                 children: [
                   Text(
-                    'Neha ',
+                    '${_c.userName.value} ',
                     style: GoogleFonts.poppins(
                       fontSize: 16,
                       color: _pink,
@@ -122,11 +132,11 @@ class _HomeScreenState extends State<HomeScreen> {
             ],
           ),
         ),
-        _buildStatChip('🔥', '3', 'Day Streak'),
+        _buildStatChip('🔥', _c.streak.value.toString(), 'Day Streak'),
         const SizedBox(width: 8),
         _buildStatChip('💧', '2.3L', 'of 3L'),
       ],
-    );
+    ));
   }
 
   Widget _buildStatChip(String emoji, String value, String label) {
@@ -218,10 +228,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: RichText(
+                  child: Obx(() => RichText(
                     text: TextSpan(children: [
                       TextSpan(
-                        text: 'DAY 3',
+                        text: 'DAY ${_c.currentDay.value}',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
@@ -229,7 +239,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       TextSpan(
-                        text: '/30',
+                        text: '/${_c.totalDays.value}',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w600,
@@ -237,18 +247,18 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                     ]),
-                  ),
+                  )),
                 ),
                 const SizedBox(height: 6),
-                Text(
-                  'WEIGHT LOSS',
+                Obx(() => Text(
+                  _c.goalText.value,
                   style: GoogleFonts.poppins(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: _darkText,
                     height: 1.1,
                   ),
-                ),
+                )),
                 Text(
                   'IN 30 DAYS',
                   style: GoogleFonts.poppins(
@@ -300,14 +310,14 @@ class _HomeScreenState extends State<HomeScreen> {
                               style: GoogleFonts.poppins(
                                   fontSize: 10, color: Colors.grey[600]),
                             ),
-                            Text(
-                              'Full Body Fat Burn',
+                            Obx(() => Text(
+                              _c.workoutTitle.value,
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700,
                                 color: _pink,
                               ),
-                            ),
+                            )),
                             const SizedBox(height: 4),
                             Row(mainAxisSize: MainAxisSize.min, children: [
                               Container(
@@ -330,14 +340,14 @@ class _HomeScreenState extends State<HomeScreen> {
                                     shape: BoxShape.circle),
                               ),
                               const SizedBox(width: 4),
-                              Text(
-                                'Beginner',
+                              Obx(() => Text(
+                                _c.workoutLevel.value,
                                 style: GoogleFonts.poppins(
                                   fontSize: 11,
                                   fontWeight: FontWeight.w600,
                                   color: const Color(0xFF6C5DD3),
                                 ),
-                              ),
+                              )),
                             ]),
                           ],
                         ),
@@ -347,16 +357,16 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 const SizedBox(height: 12),
                 // 3 stat boxes — grouped together with 2px gaps
-                Row(
+                Obx(() => Row(
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    _buildStatBox('🔥', '420 kcal', 'Burned'),
+                    _buildStatBox('🔥', '${_c.todayKcal.value} kcal', 'Burned'),
                     const SizedBox(width: 2),
-                    _buildStatBox('⏱', '45 min', 'Total Time'),
+                    _buildStatBox('⏱', '${_c.todayMinutes.value} min', 'Total Time'),
                     const SizedBox(width: 2),
-                    _buildStatBox('🏃', '18', 'Exercises'),
+                    _buildStatBox('🏃', '${_c.exerciseCount.value}', 'Exercises'),
                   ],
-                ),
+                )),
                 const SizedBox(height: 10),
                 // Gradient CTA button
                 FractionallySizedBox(
@@ -517,17 +527,17 @@ class _HomeScreenState extends State<HomeScreen> {
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 10),
-                        SizedBox(
+                        Obx(() => SizedBox(
                           width: 68,
                           height: 68,
                           child: CustomPaint(
                             painter: _CircularProgressPainter(
-                              progress: 0.75,
+                              progress: _c.progressPercent,
                               color: _pink,
                             ),
                             child: Center(
                               child: Text(
-                                '75%',
+                                '${(_c.progressPercent * 100).toInt()}%',
                                 style: GoogleFonts.poppins(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w700,
@@ -536,7 +546,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ),
                           ),
-                        ),
+                        )),
                         const SizedBox(height: 10),
                         FittedBox(
                           fit: BoxFit.scaleDown,
@@ -598,11 +608,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        RichText(
+                        Obx(() => RichText(
                           text: TextSpan(
                             children: [
                               TextSpan(
-                                text: '420',
+                                text: '${_c.todayKcal.value}',
                                 style: GoogleFonts.poppins(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w800,
@@ -618,26 +628,29 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                        ),
+                        )),
                         const SizedBox(height: 4),
-                        Text(
-                          '70% of 600 kcal',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: const Color(0xFF22C55E),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        Obx(() {
+                          final pct = (_c.progressPercent * 100).toInt();
+                          return Text(
+                            '$pct% of goal',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              color: const Color(0xFF22C55E),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          );
+                        }),
                         const SizedBox(height: 6),
-                        ClipRRect(
+                        Obx(() => ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: 0.70,
+                            value: _c.progressPercent.clamp(0, 1),
                             backgroundColor: Colors.green[100],
                             color: const Color(0xFF22C55E),
                             minHeight: 6,
                           ),
-                        ),
+                        )),
                       ],
                     ),
                   ),
@@ -663,11 +676,11 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                         ),
                         const SizedBox(height: 6),
-                        RichText(
+                        Obx(() => RichText(
                           text: TextSpan(
                             children: [
                               TextSpan(
-                                text: '45',
+                                text: '${_c.todayMinutes.value}',
                                 style: GoogleFonts.poppins(
                                   fontSize: 26,
                                   fontWeight: FontWeight.w800,
@@ -683,26 +696,29 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                             ],
                           ),
-                        ),
+                        )),
                         const SizedBox(height: 4),
-                        Text(
-                          '75% of 60 min',
-                          style: GoogleFonts.poppins(
-                            fontSize: 10,
-                            color: const Color(0xFF4F8EF7),
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        Obx(() {
+                          final pct = (_c.progressPercent * 100).toInt();
+                          return Text(
+                            '$pct% completed',
+                            style: GoogleFonts.poppins(
+                              fontSize: 10,
+                              color: const Color(0xFF4F8EF7),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          );
+                        }),
                         const SizedBox(height: 6),
-                        ClipRRect(
+                        Obx(() => ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: 0.75,
+                            value: _c.progressPercent.clamp(0, 1),
                             backgroundColor: Colors.blue[100],
                             color: const Color(0xFF4F8EF7),
                             minHeight: 6,
                           ),
-                        ),
+                        )),
                       ],
                     ),
                   ),
@@ -752,26 +768,31 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 14),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              _buildDayCircle(1, _DayStatus.done),
-              const SizedBox(width: 10),
-              _buildDayCircle(2, _DayStatus.done),
-              const SizedBox(width: 10),
-              _buildDayCircle(3, _DayStatus.today),
-              const SizedBox(width: 10),
-              _buildDayCircle(4, _DayStatus.locked),
-              const SizedBox(width: 10),
-              _buildDayCircle(5, _DayStatus.locked),
-              const SizedBox(width: 10),
-              _buildDayCircle(6, _DayStatus.locked),
-              const SizedBox(width: 10),
-              _buildDayCircle(7, _DayStatus.locked),
-            ],
-          ),
-        ),
+        Obx(() {
+          final todayNum = _c.currentDay.value;
+          final total = _c.totalDays.value > 0 ? _c.totalDays.value : 30;
+          final visible = total.clamp(1, 30);
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: List.generate(visible, (i) {
+                final dayNum = i + 1;
+                final _DayStatus status;
+                if (dayNum < todayNum) {
+                  status = _DayStatus.done;
+                } else if (dayNum == todayNum) {
+                  status = _DayStatus.today;
+                } else {
+                  status = _DayStatus.locked;
+                }
+                return Padding(
+                  padding: EdgeInsets.only(right: i < visible - 1 ? 10 : 0),
+                  child: _buildDayCircle(dayNum, status),
+                );
+              }),
+            ),
+          );
+        }),
       ],
     );
   }

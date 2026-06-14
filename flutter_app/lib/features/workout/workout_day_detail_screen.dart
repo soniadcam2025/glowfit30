@@ -1,6 +1,9 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../controllers/workout_controller.dart';
+import '../../models/workout_model.dart';
 import 'workout_active_screen.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -23,6 +26,7 @@ class WorkoutExercise {
 }
 
 class WorkoutDayDetailScreen extends StatefulWidget {
+  final String? dayId;
   final int day;
   final String workoutName;
   final String workoutSub;
@@ -36,6 +40,7 @@ class WorkoutDayDetailScreen extends StatefulWidget {
 
   const WorkoutDayDetailScreen({
     super.key,
+    this.dayId,
     required this.day,
     required this.workoutName,
     required this.workoutSub,
@@ -53,13 +58,43 @@ class WorkoutDayDetailScreen extends StatefulWidget {
 }
 
 class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
-  // null = never launched; non-null = returned from active screen
   double? _activeProgress;
+  WorkoutController? _wc;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.dayId != null) {
+      _wc = Get.isRegistered<WorkoutController>()
+          ? Get.find<WorkoutController>()
+          : Get.put(WorkoutController());
+      _wc!.loadExercises(widget.dayId!);
+    }
+  }
 
   int _parseDuration(String d) {
     final parts = d.split(':');
     if (parts.length == 2) return int.parse(parts[0]) * 60 + int.parse(parts[1]);
     return 30;
+  }
+
+  List<ActiveExercise> _buildActiveExercises() {
+    if (_wc != null && _wc!.dayExercises.isNotEmpty) {
+      return _wc!.dayExercises
+          .map((e) => ActiveExercise(
+                name: e.name,
+                imagePath: e.gifUrl ?? e.imageUrl ?? '',
+                durationSeconds: e.durationSeconds,
+              ))
+          .toList();
+    }
+    return widget.exercises
+        .map((e) => ActiveExercise(
+              name: e.name,
+              imagePath: e.imagePath,
+              durationSeconds: _parseDuration(e.duration),
+            ))
+        .toList();
   }
 
   void _launchActive() {
@@ -68,13 +103,9 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
       MaterialPageRoute(
         builder: (_) => WorkoutActiveScreen(
           totalKcal: 128,
-          exercises: widget.exercises
-              .map((e) => ActiveExercise(
-                    name: e.name,
-                    imagePath: e.imagePath,
-                    durationSeconds: _parseDuration(e.duration),
-                  ))
-              .toList(),
+          day: widget.day,
+          dayId: widget.dayId,
+          exercises: _buildActiveExercises(),
         ),
       ),
     ).then((result) {
@@ -247,7 +278,8 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                     const SizedBox(width: 12),
                     _emojiStat('🔥', widget.kcal),
                     const SizedBox(width: 12),
-                    _emojiStat('🏃', '${widget.exerciseCount} Workouts'),
+                    _emojiStat('🏃',
+                        '${_wc != null && _wc!.dayExercises.isNotEmpty ? _wc!.dayExercises.length : widget.exerciseCount} Exercises'),
                   ],
                 ),
               ],
@@ -332,17 +364,101 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Text(
-            'Excercises',
+            'Exercises',
             style: GoogleFonts.poppins(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
-              color: _darkText,
-            ),
+              fontSize: 18, fontWeight: FontWeight.w800, color: _darkText),
           ),
         ),
         const SizedBox(height: 14),
-        ...widget.exercises.map(_buildExerciseCard),
+        if (_wc != null)
+          Obx(() {
+            if (_wc!.loadingExercises.value) {
+              return const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator(color: _pink)),
+              );
+            }
+            if (_wc!.dayExercises.isEmpty) {
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text('No exercises found.',
+                    style: GoogleFonts.poppins(color: Colors.grey)),
+              );
+            }
+            return Column(
+              children: _wc!.dayExercises.map(_buildApiExerciseCard).toList(),
+            );
+          })
+        else
+          ...widget.exercises.map(_buildExerciseCard),
       ],
+    );
+  }
+
+  Widget _buildApiExerciseCard(ExerciseModel ex) {
+    final label = ex.reps != null
+        ? '${ex.sets ?? 1}×${ex.reps} reps'
+        : '${ex.durationSeconds}s';
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 8, offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 80, height: 80,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFE0EC),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ex.gifUrl != null
+                ? ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(ex.gifUrl!, fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            const Icon(Icons.fitness_center, size: 28, color: _pink)),
+                  )
+                : const Icon(Icons.fitness_center, size: 28, color: _pink),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(ex.name,
+                    style: GoogleFonts.poppins(
+                        fontSize: 14, fontWeight: FontWeight.w700, color: _darkText)),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.timer_outlined, size: 13, color: Colors.grey[500]),
+                    const SizedBox(width: 4),
+                    Text(label,
+                        style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+                    if (ex.rest != null) ...[
+                      const SizedBox(width: 10),
+                      Icon(Icons.pause_circle_outline, size: 13, color: Colors.grey[400]),
+                      const SizedBox(width: 3),
+                      Text('${ex.rest}s rest',
+                          style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

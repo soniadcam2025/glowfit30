@@ -5,6 +5,8 @@ type Stats = {
   totalUsers: number;
   activeUsers: number;
   blockedUsers: number;
+  todayCompletions: number;
+  totalWorkouts: number;
   generatedAt: string;
 };
 

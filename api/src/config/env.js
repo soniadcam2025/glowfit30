@@ -25,6 +25,12 @@ const schema = z.object({
     .string()
     .optional()
     .transform((v) => v === 'true' || v === '1'),
+
+  // Firebase — provide one of these two:
+  // FIREBASE_SERVICE_ACCOUNT_JSON: full service account JSON as a string (recommended for prod)
+  // FIREBASE_PROJECT_ID: project ID only (uses GOOGLE_APPLICATION_CREDENTIALS or GCP metadata)
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  FIREBASE_PROJECT_ID: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

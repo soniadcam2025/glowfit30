@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/api_service.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
 
-class WorkoutCompleteScreen extends StatelessWidget {
+class WorkoutCompleteScreen extends StatefulWidget {
   final int day;
+  final String? dayId;
   final int caloriesBurned;
   final String totalTime;
+  final int durationMin;
   final int exercisesCompleted;
   final int totalExercises;
   final int streakDays;
@@ -15,12 +19,31 @@ class WorkoutCompleteScreen extends StatelessWidget {
   const WorkoutCompleteScreen({
     super.key,
     required this.day,
+    this.dayId,
     required this.caloriesBurned,
     required this.totalTime,
+    this.durationMin = 0,
     required this.exercisesCompleted,
     required this.totalExercises,
     this.streakDays = 7,
   });
+
+  @override
+  State<WorkoutCompleteScreen> createState() => _WorkoutCompleteScreenState();
+}
+
+class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.dayId != null) {
+      Get.find<ApiService>().logProgress(
+        workoutDayId: widget.dayId!,
+        caloriesBurned: widget.caloriesBurned,
+        durationMin: widget.durationMin,
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -106,7 +129,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
             child: RichText(
               text: TextSpan(children: [
                 TextSpan(
-                  text: 'Day $day Complete! ',
+                  text: 'Day ${widget.day} Complete! ',
                   style: GoogleFonts.poppins(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -166,7 +189,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
                           fontSize: 14, color: Colors.grey[600]),
                     ),
                     Text(
-                      'Day $day',
+                      'Day ${widget.day}',
                       style: GoogleFonts.poppins(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
@@ -257,10 +280,10 @@ class WorkoutCompleteScreen extends StatelessWidget {
             children: [
               Expanded(
                   child: _statCell(
-                      '🔥', '$caloriesBurned', 'kcal', 'Calories\nBurned')),
+                      '🔥', '${widget.caloriesBurned}', 'kcal', 'Calories\nBurned')),
               Container(width: 1, height: 60, color: Colors.grey[100]),
               Expanded(
-                  child: _statCell('🕐', totalTime, 'min', 'Total Time')),
+                  child: _statCell('🕐', widget.totalTime, 'min', 'Total Time')),
             ],
           ),
           Divider(height: 24, thickness: 1, color: Colors.grey[100]),
@@ -268,7 +291,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
             children: [
               Expanded(
                   child: _statCell('✦',
-                      '$exercisesCompleted/$totalExercises', '', 'Exercises\nCompleted')),
+                      '${widget.exercisesCompleted}/${widget.totalExercises}', '', 'Exercises\nCompleted')),
               Container(width: 1, height: 60, color: Colors.grey[100]),
               Expanded(
                   child:
@@ -346,7 +369,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
                 children: [
                   const Text('🔥', style: TextStyle(fontSize: 16)),
                   Text(
-                    '$streakDays',
+                    '${widget.streakDays}',
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
@@ -372,7 +395,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  "You're on a $streakDays day streak",
+                  "You're on a ${widget.streakDays} day streak",
                   style: GoogleFonts.poppins(
                       fontSize: 11, color: Colors.grey[500]),
                 ),
@@ -382,7 +405,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: List.generate(days.length, (i) {
-              final done = streakDays >= 7 || i < streakDays;
+              final done = widget.streakDays >= 7 || i < widget.streakDays;
               return Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 2),
                 child: Column(
@@ -469,7 +492,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Day $day Diet Plan',
+                          'Day ${widget.day} Diet Plan',
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
@@ -543,7 +566,7 @@ class WorkoutCompleteScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Continue to Day ${day + 1}',
+                'Continue to Day ${widget.day + 1}',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
