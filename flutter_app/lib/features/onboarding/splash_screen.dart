@@ -6,8 +6,8 @@ import '../../config/theme/app_typography.dart';
 import '../../config/theme/app_spacing.dart';
 import '../../config/constants/app_constants.dart';
 import '../../controllers/onboarding_controller.dart';
+import '../../core/storage/preferences.dart';
 import '../../routes/app_pages.dart';
-import '../../services/auth_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -40,24 +40,35 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _checkAuthAndRoute() async {
-    // Wait for Firebase to restore its cached auth token (avoids null on cold start)
-    final user = await FirebaseAuth.instance
+    final prefs = Get.find<Preferences>();
+    final hasToken = await prefs.hasAccessToken();
+    final controller = Get.find<OnboardingController>();
+
+    if (hasToken && controller.isComplete) {
+      // Valid session — go straight to home
+      Get.offAllNamed(Routes.home);
+      return;
+    }
+
+    if (controller.isComplete && !hasToken) {
+      // Completed onboarding before but JWT was cleared (e.g. expiry/401)
+      // Send to welcome screen so user can re-authenticate with Google
+      Get.offAllNamed(Routes.welcome);
+      return;
+    }
+
+    // No JWT and not fully onboarded — check Firebase for mid-onboarding resume
+    final firebaseUser = await FirebaseAuth.instance
         .authStateChanges()
         .first
         .timeout(const Duration(seconds: 5), onTimeout: () => null);
 
-    if (user == null) return; // not logged in — show splash with Get Started
-
-    final controller = Get.find<OnboardingController>();
-    if (controller.isComplete) {
-      Get.offAllNamed(Routes.home);
-    } else if (controller.currentStep.value > 1) {
-      // resume mid-onboarding
+    if (firebaseUser != null && controller.currentStep.value > 1) {
       Get.offAllNamed(controller.resumeRoute);
-    } else {
-      // logged in but onboarding not started yet
-      Get.offAllNamed(Routes.language);
+      return;
     }
+
+    // New user — stay on splash and show Get Started
   }
 
   @override

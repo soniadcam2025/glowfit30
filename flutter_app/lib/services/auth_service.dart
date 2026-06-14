@@ -37,6 +37,16 @@ class AuthService extends GetxService {
 
         if (result != null && result['token'] != null) {
           await _preferences.setAccessToken(result['token'] as String);
+        } else {
+          // Backend auth failed — sign out Firebase to prevent splash redirect loop
+          await _auth.signOut();
+          await GoogleSignIn.instance.signOut();
+          Get.snackbar(
+            'Sign-in Failed',
+            'Could not authenticate with server. Please try again.',
+            snackPosition: SnackPosition.BOTTOM,
+          );
+          return null;
         }
       }
 

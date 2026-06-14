@@ -36,7 +36,9 @@ class ApiClient {
   }
 
   Future<void> _onError(DioException error, ErrorInterceptorHandler handler) async {
-    if (error.response?.statusCode == 401) {
+    final path = error.requestOptions.path;
+    // Don't intercept 401s on auth endpoints — let the caller handle them
+    if (error.response?.statusCode == 401 && !path.startsWith('/auth')) {
       await _preferences.clearAuthTokens();
       getx.Get.offAllNamed(Routes.splash);
     }
