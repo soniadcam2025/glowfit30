@@ -8,5 +8,6 @@ router.use(verifyToken, requireRole('admin', 'super_admin'));
 
 router.get('/stats', ctrl.stats);
 router.get('/analytics', ctrl.analytics);
+router.get('/chart-data', ctrl.chartData);
 
 export default router;

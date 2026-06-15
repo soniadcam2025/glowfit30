@@ -1,5 +1,5 @@
 import { api } from "@/services/api";
-import type { ApiResponse } from "@/types";
+import type { ApiResponse, AnalyticsData } from "@/types";
 
 type Stats = {
   totalUsers: number;
@@ -17,6 +17,10 @@ export const adminService = {
   },
   async getAnalytics() {
     const { data } = await api.get<ApiResponse<unknown>>("/admin/analytics");
+    return data.data;
+  },
+  async getChartData() {
+    const { data } = await api.get<ApiResponse<AnalyticsData>>("/admin/chart-data");
     return data.data;
   },
 };

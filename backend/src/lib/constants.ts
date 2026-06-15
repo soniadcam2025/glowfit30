@@ -1,5 +1,6 @@
 import {
   Activity,
+  BarChart2,
   Bell,
   Dumbbell,
   LayoutDashboard,
@@ -21,6 +22,7 @@ export const adminNavItems = [
   { href: "/workouts", label: "Workouts", icon: Dumbbell },
   { href: "/diet", label: "Diet", icon: UtensilsCrossed },
   { href: "/beauty", label: "Beauty", icon: Sparkles },
+  { href: "/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
@@ -31,6 +33,7 @@ export const routeRoleMap: Record<string, Role[]> = {
   "/workouts": ["admin", "super_admin"],
   "/diet": ["admin", "super_admin"],
   "/beauty": ["admin", "super_admin"],
+  "/analytics": ["admin", "super_admin"],
   "/notifications": ["admin", "super_admin"],
   "/settings": ["super_admin"],
 };

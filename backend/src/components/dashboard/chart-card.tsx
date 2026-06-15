@@ -19,8 +19,8 @@ export function ChartCard({
   stroke,
 }: {
   title: string;
-  data: ChartPoint[];
-  dataKey: "users" | "engagement";
+  data: Record<string, unknown>[];
+  dataKey: string;
   stroke: string;
 }) {
   return (

@@ -59,3 +59,53 @@ export async function getAnalytics() {
     recentAdminLogs: recentLogs,
   };
 }
+
+export async function getChartData() {
+  const sevenDaysAgo  = new Date(); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);   sevenDaysAgo.setHours(0, 0, 0, 0);
+  const fourteenDaysAgo = new Date(); fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 13); fourteenDaysAgo.setHours(0, 0, 0, 0);
+
+  // Raw SQL gives us clean date-bucketed counts in one query each
+  const [signupRows, completionRows, activeUsersRows] = await Promise.all([
+    prisma.$queryRaw`
+      SELECT TO_CHAR(DATE("createdAt"), 'YYYY-MM-DD') AS date, COUNT(*)::int AS count
+      FROM "User"
+      WHERE "createdAt" >= ${fourteenDaysAgo}
+      GROUP BY DATE("createdAt")
+      ORDER BY DATE("createdAt") ASC
+    `,
+    prisma.$queryRaw`
+      SELECT TO_CHAR(DATE("completedAt"), 'YYYY-MM-DD') AS date, COUNT(*)::int AS count
+      FROM "Progress"
+      WHERE "completedAt" >= ${fourteenDaysAgo}
+      GROUP BY DATE("completedAt")
+      ORDER BY DATE("completedAt") ASC
+    `,
+    prisma.$queryRaw`
+      SELECT COUNT(DISTINCT "userId")::int AS count
+      FROM "Progress"
+      WHERE "completedAt" >= ${sevenDaysAgo}
+    `,
+  ]);
+
+  // Fill in missing days so charts have continuous x-axis
+  const signupsPerDay     = _fillDays(signupRows,     14);
+  const completionsPerDay = _fillDays(completionRows,  14);
+
+  const activeUsersThisWeek      = activeUsersRows[0]?.count ?? 0;
+  const totalSignupsThisWeek     = signupsPerDay.slice(-7).reduce((s, r) => s + r.count, 0);
+  const totalCompletionsThisWeek = completionsPerDay.slice(-7).reduce((s, r) => s + r.count, 0);
+
+  return { signupsPerDay, completionsPerDay, activeUsersThisWeek, totalSignupsThisWeek, totalCompletionsThisWeek };
+}
+
+function _fillDays(rows, days) {
+  const map = Object.fromEntries(rows.map((r) => [r.date, r.count]));
+  const result = [];
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    result.push({ date: key, count: map[key] ?? 0 });
+  }
+  return result;
+}

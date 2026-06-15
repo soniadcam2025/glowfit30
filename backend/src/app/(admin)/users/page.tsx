@@ -147,7 +147,7 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
                 <p className="text-xs text-slate-400">Loading progress…</p>
               ) : progress ? (
                 <>
-                  <div className="mb-3 grid grid-cols-3 gap-2">
+                  <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-800">
                       <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{progress.stats.totalSessions}</p>
                       <p className="text-xs text-slate-400">Sessions</p>
@@ -159,6 +159,10 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
                     <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-800">
                       <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{progress.stats.totalMinutes}</p>
                       <p className="text-xs text-slate-400">min</p>
+                    </div>
+                    <div className="rounded-xl bg-pink-50 p-3 text-center dark:bg-pink-900/20">
+                      <p className="text-xl font-bold text-pink-600 dark:text-pink-400">{progress.stats.streak ?? 0} 🔥</p>
+                      <p className="text-xs text-slate-400">Day streak</p>
                     </div>
                   </div>
                   {progress.completions.length > 0 && (

@@ -103,5 +103,16 @@ export type UserProgress = {
     totalSessions: number;
     totalCalories: number;
     totalMinutes: number;
+    streak: number;
   };
+};
+
+export type ChartDataPoint = { date: string; count: number };
+
+export type AnalyticsData = {
+  signupsPerDay: ChartDataPoint[];
+  completionsPerDay: ChartDataPoint[];
+  activeUsersThisWeek: number;
+  totalSignupsThisWeek: number;
+  totalCompletionsThisWeek: number;
 };

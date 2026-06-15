@@ -18,3 +18,12 @@ export async function analytics(req, res, next) {
     next(e);
   }
 }
+
+export async function chartData(req, res, next) {
+  try {
+    const data = await svc.getChartData();
+    return sendSuccess(res, data, 'OK');
+  } catch (e) {
+    next(e);
+  }
+}
