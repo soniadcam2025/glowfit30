@@ -4,6 +4,7 @@ import '../../config/theme/app_colors.dart';
 import '../../config/theme/app_typography.dart';
 import '../../controllers/onboarding_controller.dart';
 import '../../routes/app_pages.dart';
+import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -88,6 +89,20 @@ class WelcomeScreen extends StatelessWidget {
                   final user = await Get.find<AuthService>().signInWithGoogle();
                   if (user != null) {
                     final ob = Get.find<OnboardingController>();
+                    // Sync onboarding answers to the server profile
+                    final p = ob.userProfile;
+                    final payload = <String, dynamic>{};
+                    if (p.name?.isNotEmpty == true)       payload['name']         = p.name;
+                    if (p.mainGoal != null)               payload['goal']         = p.mainGoal;
+                    if (p.fitnessLevel != null)           payload['fitnessLevel'] = p.fitnessLevel;
+                    if (p.dietStyle != null)              payload['dietStyle']    = p.dietStyle;
+                    if (p.targetWeight != null)           payload['targetWeight'] = p.targetWeight;
+                    if (p.focusAreas.isNotEmpty)          payload['focusAreas']   = p.focusAreas;
+                    if (p.heightCm != null)               payload['height']       = p.heightCm;
+                    if (p.currentWeight != null)          payload['weight']       = p.currentWeight;
+                    if (payload.isNotEmpty) {
+                      await Get.find<ApiService>().patchProfile(payload);
+                    }
                     ob.completeOnboarding();
                   }
                 },
