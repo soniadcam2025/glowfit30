@@ -103,4 +103,16 @@ class ApiService extends GetxService {
       return null;
     }
   }
+
+  // ── Diet ─────────────────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getDietPlans() async {
+    try {
+      final r = await _client.get('/diet');
+      final d = _data(r) as Map<String, dynamic>?;
+      return d?['items'] as List<dynamic>? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
 }

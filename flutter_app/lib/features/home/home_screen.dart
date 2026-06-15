@@ -4,6 +4,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/home_controller.dart';
+import '../../routes/app_pages.dart';
 import '../workout/workout_plan_screen.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -959,7 +960,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
-                        onPressed: () {},
+                        onPressed: () => Get.toNamed(Routes.diet),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: _pink,
                           foregroundColor: Colors.white,
@@ -1061,7 +1062,10 @@ class _HomeScreenState extends State<HomeScreen> {
               final selected = i == _selectedIndex;
               final color = selected ? _pink : Colors.grey[500]!;
               return GestureDetector(
-                onTap: () => setState(() => _selectedIndex = i),
+                onTap: () {
+                  setState(() => _selectedIndex = i);
+                  if (i == 2) Get.toNamed(Routes.diet);
+                },
                 behavior: HitTestBehavior.opaque,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
