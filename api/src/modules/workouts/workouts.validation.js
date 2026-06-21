@@ -28,5 +28,6 @@ export const createExerciseSchema = z.object({
   rest:     z.coerce.number().int().positive().optional(),
   imageUrl: z.string().url().optional(),
   gifUrl:   z.string().url().optional(),
+  videoUrl: z.string().url().optional(),
   order:    z.coerce.number().int().min(0).default(0),
 });

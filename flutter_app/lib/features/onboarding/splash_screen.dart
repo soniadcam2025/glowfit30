@@ -8,6 +8,7 @@ import '../../config/constants/app_constants.dart';
 import '../../controllers/onboarding_controller.dart';
 import '../../core/storage/preferences.dart';
 import '../../routes/app_pages.dart';
+import '../../services/notification_service.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -45,7 +46,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     final controller = Get.find<OnboardingController>();
 
     if (hasToken && controller.isComplete) {
-      // Valid session — go straight to home
+      // Valid session — register FCM token for already-logged-in users
+      Get.find<NotificationService>().registerToken();
       Get.offAllNamed(Routes.home);
       return;
     }

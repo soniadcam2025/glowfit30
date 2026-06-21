@@ -64,6 +64,7 @@ class DietController extends GetxController {
   final waterTarget    = 3.0.obs;
   final focusTags   = <String>[].obs;
   final meals       = <MealSlot>[].obs;
+  final planImageUrl = ''.obs;
   final isLoading   = true.obs;
   final hasError    = false.obs;
 
@@ -108,6 +109,7 @@ class DietController extends GetxController {
 
       if (match != null) {
         caloriesTarget.value = (match['calories'] as num?)?.toInt() ?? 1350;
+        planImageUrl.value = match['imageUrl'] as String? ?? '';
         final mealsJson = match['meals'];
         if (mealsJson is Map && mealsJson['items'] is List) {
           meals.value = (mealsJson['items'] as List)

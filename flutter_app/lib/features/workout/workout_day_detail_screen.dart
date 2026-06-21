@@ -84,6 +84,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
           .map((e) => ActiveExercise(
                 name: e.name,
                 imagePath: e.gifUrl ?? e.imageUrl ?? '',
+                videoUrl: e.videoUrl,
                 durationSeconds: e.durationSeconds,
               ))
           .toList();
@@ -245,6 +246,9 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
               children: [
                 Text(
                   widget.workoutName,
+                  softWrap: true,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
                     fontSize: 22,
                     fontWeight: FontWeight.w700,
@@ -254,6 +258,9 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                 ),
                 Text(
                   widget.workoutSub,
+                  softWrap: true,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
                     fontSize: 28,
                     fontWeight: FontWeight.w900,
@@ -264,6 +271,9 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                 const SizedBox(height: 8),
                 Text(
                   widget.subtitle,
+                  softWrap: true,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
                     fontSize: 12,
                     color: Colors.grey[600],
@@ -271,13 +281,13 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
                   children: [
                     _iconStat(Icons.access_time_rounded,
                         const Color(0xFF6C5DD3), widget.duration),
-                    const SizedBox(width: 12),
                     _emojiStat('🔥', widget.kcal),
-                    const SizedBox(width: 12),
                     _emojiStat('🏃',
                         '${_wc != null && _wc!.dayExercises.isNotEmpty ? _wc!.dayExercises.length : widget.exerciseCount} Exercises'),
                   ],
@@ -414,20 +424,37 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 80, height: 80,
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFE0EC),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: ex.gifUrl != null
-                ? ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(ex.gifUrl!, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            const Icon(Icons.fitness_center, size: 28, color: _pink)),
-                  )
-                : const Icon(Icons.fitness_center, size: 28, color: _pink),
+          Stack(
+            children: [
+              Container(
+                width: 80, height: 80,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFFE0EC),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ex.gifUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.network(ex.gifUrl!, fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) =>
+                                const Icon(Icons.fitness_center, size: 28, color: _pink)),
+                      )
+                    : const Icon(Icons.fitness_center, size: 28, color: _pink),
+              ),
+              if (ex.videoUrl != null)
+                Positioned(
+                  right: 4,
+                  bottom: 4,
+                  child: Container(
+                    padding: const EdgeInsets.all(3),
+                    decoration: const BoxDecoration(
+                      color: Colors.black54,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.play_arrow_rounded, size: 14, color: Colors.white),
+                  ),
+                ),
+            ],
           ),
           const SizedBox(width: 14),
           Expanded(

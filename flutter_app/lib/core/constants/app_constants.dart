@@ -1,8 +1,13 @@
+import 'package:flutter/foundation.dart' show kDebugMode;
+
 class AppConstants {
   AppConstants._();
 
   // API Configuration
-  static const String baseUrl = 'https://api.glowfit30.com/api';
+  // Debug builds hit the local API via 10.0.2.2 (the Android emulator's route to the
+  // host machine's localhost). Release builds always hit production.
+  static const String baseUrl =
+      kDebugMode ? 'http://10.0.2.2:4000/api' : 'https://api.glowfit30.com/api';
   static const String apiTimeout = '30000';
   static const int maxRetries = 3;
   static const int retryDelay = 1000;

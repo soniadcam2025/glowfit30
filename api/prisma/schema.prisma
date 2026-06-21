@@ -26,6 +26,9 @@ model User {
   firebaseUid  String?   @unique @map("firebase_uid")
   photoUrl     String?   @map("photo_url")
 
+  // Push notification token
+  fcmToken     String?   @map("fcm_token")
+
   // Onboarding profile fields
   fitnessLevel String?   @map("fitness_level")
   goal         String?   @map("goal")
@@ -84,6 +87,7 @@ model Exercise {
   rest         Int?
   imageUrl     String?    @map("image_url")
   gifUrl       String?    @map("gif_url")
+  videoUrl     String?    @map("video_url")
   order        Int        @default(0)
   createdAt    DateTime   @default(now()) @map("created_at")
 
@@ -111,6 +115,7 @@ model DietPlan {
   type      String
   calories  Int
   meals     Json
+  imageUrl  String?  @map("image_url")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("diet_plans")

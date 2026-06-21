@@ -47,6 +47,7 @@ class _DietScreenState extends State<DietScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 16),
+                      _buildPlanImageBanner(),
                       _buildDietTypeSelector(),
                       const SizedBox(height: 20),
                       _buildDayTimeline(),
@@ -132,6 +133,34 @@ class _DietScreenState extends State<DietScreen> {
   }
 
   // ─── DIET TYPE SELECTOR ───────────────────────────────────────────────────────
+
+  Widget _buildPlanImageBanner() {
+    return Obx(() {
+      final url = _c.planImageUrl.value;
+      if (url.isEmpty) return const SizedBox.shrink();
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.network(
+            url,
+            height: 160,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return Container(
+                height: 160,
+                color: Colors.grey[200],
+                child: const Center(child: CircularProgressIndicator(color: _pink)),
+              );
+            },
+          ),
+        ),
+      );
+    });
+  }
 
   Widget _buildDietTypeSelector() {
     return Center(

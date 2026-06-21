@@ -31,6 +31,14 @@ const schema = z.object({
   // FIREBASE_PROJECT_ID: project ID only (uses GOOGLE_APPLICATION_CREDENTIALS or GCP metadata)
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
   FIREBASE_PROJECT_ID: z.string().optional(),
+
+  // Vultr Object Storage (S3-compatible) — used for exercise/diet image uploads
+  VULTR_S3_ENDPOINT: z.string().optional(),
+  VULTR_S3_REGION: z.string().optional(),
+  VULTR_S3_ACCESS_KEY: z.string().optional(),
+  VULTR_S3_SECRET_KEY: z.string().optional(),
+  VULTR_S3_BUCKET_EXERCISES: z.string().optional(),
+  VULTR_S3_BUCKET_DIET: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -55,4 +63,11 @@ export const env = {
   REGISTER_ENABLED: p.REGISTER_ENABLED ?? false,
   CORS_ALLOW_LOCAL_DEV: p.CORS_ALLOW_LOCAL_DEV ?? false,
   isProd: p.NODE_ENV === 'production',
+
+  VULTR_S3_ENDPOINT: p.VULTR_S3_ENDPOINT,
+  VULTR_S3_REGION: p.VULTR_S3_REGION,
+  VULTR_S3_ACCESS_KEY: p.VULTR_S3_ACCESS_KEY,
+  VULTR_S3_SECRET_KEY: p.VULTR_S3_SECRET_KEY,
+  VULTR_S3_BUCKET_EXERCISES: p.VULTR_S3_BUCKET_EXERCISES,
+  VULTR_S3_BUCKET_DIET: p.VULTR_S3_BUCKET_DIET,
 };

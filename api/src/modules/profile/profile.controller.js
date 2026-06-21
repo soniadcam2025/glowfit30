@@ -11,6 +11,19 @@ export async function getProfile(req, res, next) {
   }
 }
 
+export async function saveFcmToken(req, res, next) {
+  try {
+    const { fcmToken } = req.body;
+    if (!fcmToken || typeof fcmToken !== 'string') {
+      return sendError(res, 'fcmToken is required', 400);
+    }
+    await svc.saveFcmToken(req.user.id, fcmToken);
+    return sendSuccess(res, null, 'FCM token saved');
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function patchProfile(req, res, next) {
   try {
     if (Object.keys(req.body).length === 0) {

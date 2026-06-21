@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../widgets/exercise_video_player.dart';
 import 'workout_rest_screen.dart';
 import 'workout_complete_screen.dart';
 
@@ -11,11 +12,13 @@ const _darkText = Color(0xFF1A1A2E);
 class ActiveExercise {
   final String name;
   final String imagePath;
+  final String? videoUrl;
   final int durationSeconds;
 
   const ActiveExercise({
     required this.name,
     required this.imagePath,
+    this.videoUrl,
     required this.durationSeconds,
   });
 }
@@ -228,7 +231,7 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
           children: [
             _buildAppBar(context, exercise.name),
             _buildProgressDots(),
-            _buildExerciseImage(exercise.imagePath),
+            _buildExerciseImage(exercise.imagePath, exercise.videoUrl),
             const SizedBox(height: 24),
             _buildStatsRow(),
             const SizedBox(height: 32),
@@ -315,18 +318,40 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
 
   // ─── EXERCISE IMAGE ───────────────────────────────────────────────────────
 
-  Widget _buildExerciseImage(String path) {
+  Widget _buildExerciseImage(String path, String? videoUrl) {
+    final isNetworkImage = path.startsWith('http');
+
     return Expanded(
-      child: Image.asset(
-        path,
-        width: double.infinity,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => Container(
-          color: const Color(0xFFFF8C00),
-          child: const Center(
-            child: Icon(Icons.fitness_center, size: 80, color: Colors.white),
-          ),
-        ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          isNetworkImage
+              ? Image.network(
+                  path,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _imageFallback(),
+                )
+              : (path.isEmpty
+                  ? _imageFallback()
+                  : Image.asset(
+                      path,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _imageFallback(),
+                    )),
+          if (videoUrl != null && videoUrl.isNotEmpty)
+            ExerciseVideoPlayer(videoUrl: videoUrl),
+        ],
+      ),
+    );
+  }
+
+  Widget _imageFallback() {
+    return Container(
+      color: const Color(0xFFFF8C00),
+      child: const Center(
+        child: Icon(Icons.fitness_center, size: 80, color: Colors.white),
       ),
     );
   }

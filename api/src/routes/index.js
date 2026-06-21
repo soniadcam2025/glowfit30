@@ -7,6 +7,8 @@ import adminRoutes from '../modules/admin/admin.routes.js';
 import workoutsRoutes from '../modules/workouts/workouts.routes.js';
 import dietRoutes from '../modules/diet/diet.routes.js';
 import beautyRoutes from '../modules/beauty/beauty.routes.js';
+import notificationsRoutes from '../modules/notifications/notifications.routes.js';
+import uploadsRoutes from '../modules/uploads/uploads.routes.js';
 
 const router = Router();
 
@@ -18,5 +20,7 @@ router.use('/admin', adminRoutes);
 router.use('/workouts', workoutsRoutes);
 router.use('/diet', dietRoutes);
 router.use('/beauty', beautyRoutes);
+router.use('/notifications', notificationsRoutes);
+router.use('/uploads', uploadsRoutes);
 
 export default router;

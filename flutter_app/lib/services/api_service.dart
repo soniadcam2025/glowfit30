@@ -36,6 +36,12 @@ class ApiService extends GetxService {
     }
   }
 
+  Future<void> saveFcmToken(String token) async {
+    try {
+      await _client.patch('/profile/fcm-token', data: {'fcmToken': token});
+    } catch (_) {}
+  }
+
   Future<Map<String, dynamic>?> patchProfile(Map<String, dynamic> data) async {
     try {
       final r = await _client.patch('/profile', data: data);

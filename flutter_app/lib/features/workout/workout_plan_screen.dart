@@ -184,7 +184,11 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
           children: [
             Positioned(
               right: 0, top: 0, bottom: 0, width: 160,
-              child: Container(color: const Color(0xFFFCE4EF)),
+              child: Image.asset(
+                'assets/images/workout_plan_bg_blob.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Container(color: const Color(0xFFFCE4EF)),
+              ),
             ),
             Positioned(
               right: 0, top: 0, bottom: 0,
@@ -431,7 +435,7 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
               kcal: '— kcal',
               exerciseCount: day.exerciseCount,
               progress: state.progress,
-              heroImage: '',
+              heroImage: 'assets/images/workout_day_hero.png',
               exercises: const [],
             ),
           ),

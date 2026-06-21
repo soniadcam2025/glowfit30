@@ -4,6 +4,7 @@ import '../core/network/api_client.dart';
 import '../core/storage/preferences.dart';
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -13,6 +14,7 @@ class InitialBinding extends Bindings {
     Get.put(ApiClient(), permanent: true);
     Get.put(ApiService(), permanent: true);
     Get.put(AuthService(), permanent: true);
+    Get.put(NotificationService(), permanent: true);
     Get.lazyPut(() => OnboardingController(), fenix: true);
   }
 }

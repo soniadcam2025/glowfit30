@@ -66,6 +66,7 @@ export type Exercise = {
   rest?: number;
   imageUrl?: string;
   gifUrl?: string;
+  videoUrl?: string;
   order: number;
 };
 
@@ -79,6 +80,7 @@ export type DietPlan = {
     dinner?: string;
     snacks?: string;
   };
+  imageUrl?: string;
   createdAt: string;
 };
 

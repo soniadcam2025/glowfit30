@@ -14,10 +14,20 @@ const adminRoutes = [
   "/settings",
 ];
 
+const mobileUserAgent = /Mobile|Android|iPhone|iPod|IEMobile|BlackBerry|Opera Mini/i;
+
 export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (pathname !== "/desktop-only") {
+    const userAgent = request.headers.get("user-agent") ?? "";
+    if (mobileUserAgent.test(userAgent)) {
+      return NextResponse.redirect(new URL("/desktop-only", request.url));
+    }
+  }
+
   const token = request.cookies.get(authCookieKey)?.value;
   const role = request.cookies.get("admin_role")?.value as Role | undefined;
-  const { pathname } = request.nextUrl;
 
   const isAdminRoute = adminRoutes.some((route) => pathname.startsWith(route));
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
@@ -38,5 +48,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/users/:path*", "/workouts/:path*", "/diet/:path*", "/beauty/:path*", "/notifications/:path*", "/settings/:path*", "/login"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api).*)",
+  ],
 };

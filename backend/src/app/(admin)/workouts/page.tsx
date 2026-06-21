@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmModal } from "@/components/ui/modal";
+import { ImageUploadField } from "@/components/common/image-upload-field";
+import { VideoUploadField } from "@/components/common/video-upload-field";
 import { workoutService } from "@/services/workout.service";
 import type { Workout, WorkoutDay, Exercise } from "@/types";
 
@@ -16,9 +18,9 @@ const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
 // ─── Workout Form ─────────────────────────────────────────────────────────────
 
-type WorkoutForm = { title: string; level: string; duration: string; goal: string; description: string };
+type WorkoutForm = { title: string; level: string; duration: string; goal: string; description: string; imageUrl: string };
 
-const emptyWorkout = (): WorkoutForm => ({ title: "", level: "Beginner", duration: "30", goal: GOALS[0], description: "" });
+const emptyWorkout = (): WorkoutForm => ({ title: "", level: "Beginner", duration: "30", goal: GOALS[0], description: "", imageUrl: "" });
 
 function WorkoutFormPanel({ initial, onSave, onCancel, loading }: {
   initial: WorkoutForm;
@@ -65,6 +67,14 @@ function WorkoutFormPanel({ initial, onSave, onCancel, loading }: {
           <Input value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="Short description..." />
         </div>
       </div>
+
+      <ImageUploadField
+        label="Cover image"
+        value={f.imageUrl}
+        onChange={(url) => set("imageUrl", url)}
+        folder="exercises"
+      />
+
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
         <Button onClick={() => onSave(f)} disabled={!f.title.trim() || loading}>
@@ -78,10 +88,20 @@ function WorkoutFormPanel({ initial, onSave, onCancel, loading }: {
 // ─── Exercise Row ──────────────────────────────────────────────────────────────
 
 function ExerciseRow({ ex, onDelete }: { ex: Exercise; onDelete: () => void }) {
+  const thumb = ex.imageUrl || ex.gifUrl;
   return (
     <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
       <span className="w-5 text-center text-xs text-slate-400">{ex.order + 1}</span>
+      {thumb && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={thumb} alt="" className="h-8 w-8 shrink-0 rounded-md object-cover" />
+      )}
       <span className="flex-1 font-medium text-slate-800 dark:text-slate-100">{ex.name}</span>
+      {ex.videoUrl && (
+        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+          🎬 Video
+        </span>
+      )}
       {ex.sets && <span className="text-xs text-slate-500">{ex.sets}×{ex.reps ?? "—"} reps</span>}
       {ex.duration && <span className="text-xs text-slate-500">{ex.duration}s</span>}
       {ex.rest && <span className="text-xs text-slate-400">rest {ex.rest}s</span>}
@@ -92,8 +112,8 @@ function ExerciseRow({ ex, onDelete }: { ex: Exercise; onDelete: () => void }) {
 
 // ─── Add Exercise Form ─────────────────────────────────────────────────────────
 
-type ExForm = { name: string; sets: string; reps: string; duration: string; rest: string };
-const emptyEx = (): ExForm => ({ name: "", sets: "3", reps: "12", duration: "", rest: "30" });
+type ExForm = { name: string; sets: string; reps: string; duration: string; rest: string; imageUrl: string; gifUrl: string; videoUrl: string };
+const emptyEx = (): ExForm => ({ name: "", sets: "3", reps: "12", duration: "", rest: "30", imageUrl: "", gifUrl: "", videoUrl: "" });
 
 function AddExerciseForm({ dayId, order, onAdded }: { dayId: string; order: number; onAdded: () => void }) {
   const [f, setF] = useState<ExForm>(emptyEx());
@@ -110,6 +130,9 @@ function AddExerciseForm({ dayId, order, onAdded }: { dayId: string; order: numb
         reps: f.reps ? parseInt(f.reps) : undefined,
         duration: f.duration ? parseInt(f.duration) : undefined,
         rest: f.rest ? parseInt(f.rest) : undefined,
+        imageUrl: f.imageUrl.trim() || undefined,
+        gifUrl: f.gifUrl.trim() || undefined,
+        videoUrl: f.videoUrl.trim() || undefined,
         order,
       });
       setF(emptyEx());
@@ -123,13 +146,20 @@ function AddExerciseForm({ dayId, order, onAdded }: { dayId: string; order: numb
   };
 
   return (
-    <div className="grid grid-cols-2 gap-2 rounded-lg border border-dashed border-blue-300 bg-blue-50/50 p-3 sm:grid-cols-5 dark:border-blue-700 dark:bg-blue-950/20">
-      <Input className="sm:col-span-2" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Exercise name *" />
-      <Input type="number" value={f.sets} onChange={(e) => set("sets", e.target.value)} placeholder="Sets" />
-      <Input type="number" value={f.reps} onChange={(e) => set("reps", e.target.value)} placeholder="Reps" />
-      <Input type="number" value={f.duration} onChange={(e) => set("duration", e.target.value)} placeholder="Sec (alt)" />
-      <Input type="number" value={f.rest} onChange={(e) => set("rest", e.target.value)} placeholder="Rest sec" />
-      <Button className="sm:col-span-4" onClick={save} disabled={!f.name.trim() || loading}>
+    <div className="space-y-2 rounded-lg border border-dashed border-blue-300 bg-blue-50/50 p-3 dark:border-blue-700 dark:bg-blue-950/20">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+        <Input className="sm:col-span-2" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Exercise name *" />
+        <Input type="number" value={f.sets} onChange={(e) => set("sets", e.target.value)} placeholder="Sets" />
+        <Input type="number" value={f.reps} onChange={(e) => set("reps", e.target.value)} placeholder="Reps" />
+        <Input type="number" value={f.duration} onChange={(e) => set("duration", e.target.value)} placeholder="Sec (alt)" />
+        <Input type="number" value={f.rest} onChange={(e) => set("rest", e.target.value)} placeholder="Rest sec" />
+      </div>
+      <div className="grid gap-2 sm:grid-cols-3">
+        <ImageUploadField label="Exercise image" value={f.imageUrl} onChange={(url) => set("imageUrl", url)} folder="exercises" />
+        <ImageUploadField label="Exercise GIF" value={f.gifUrl} onChange={(url) => set("gifUrl", url)} folder="exercises" />
+        <VideoUploadField label="Exercise video (MP4)" value={f.videoUrl} onChange={(url) => set("videoUrl", url)} />
+      </div>
+      <Button className="w-full" onClick={save} disabled={!f.name.trim() || loading}>
         {loading ? "Adding…" : "+ Add Exercise"}
       </Button>
     </div>
@@ -338,6 +368,7 @@ export default function WorkoutsPage() {
         duration: parseInt(f.duration) || 30,
         goal: f.goal,
         description: f.description.trim() || undefined,
+        imageUrl: f.imageUrl.trim() || undefined,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["workouts"] });

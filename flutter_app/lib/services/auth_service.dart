@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import '../core/storage/preferences.dart';
 import 'api_service.dart';
+import 'notification_service.dart';
 
 const _webClientId =
     '479431264975-nrhnp9h40qek38hbfko9kcbu4q804oo3.apps.googleusercontent.com';
@@ -37,6 +38,7 @@ class AuthService extends GetxService {
 
         if (result != null && result['token'] != null) {
           await _preferences.setAccessToken(result['token'] as String);
+          Get.find<NotificationService>().registerToken();
         } else {
           // Backend auth failed — sign out Firebase to prevent splash redirect loop
           await _auth.signOut();

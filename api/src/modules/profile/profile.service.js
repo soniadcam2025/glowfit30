@@ -22,6 +22,14 @@ export async function getProfile(userId) {
   });
 }
 
+export async function saveFcmToken(userId, fcmToken) {
+  return prisma.user.update({
+    where: { id: userId },
+    data: { fcmToken },
+    select: { id: true },
+  });
+}
+
 export async function updateProfile(userId, data) {
   const payload = {};
 

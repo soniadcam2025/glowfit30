@@ -19,6 +19,7 @@ export function createDietPlan(data) {
       type: data.type,
       calories: data.calories,
       meals: normalizeMeals(data.meals),
+      imageUrl: data.imageUrl,
     },
   });
 }

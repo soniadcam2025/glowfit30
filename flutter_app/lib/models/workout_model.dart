@@ -64,6 +64,7 @@ class ExerciseModel {
   final int? rest;
   final String? imageUrl;
   final String? gifUrl;
+  final String? videoUrl;
   final int order;
 
   ExerciseModel({
@@ -75,6 +76,7 @@ class ExerciseModel {
     this.rest,
     this.imageUrl,
     this.gifUrl,
+    this.videoUrl,
     this.order = 0,
   });
 
@@ -87,6 +89,7 @@ class ExerciseModel {
         rest:     (m['rest'] as num?)?.toInt(),
         imageUrl: m['imageUrl'] as String?,
         gifUrl:   m['gifUrl'] as String?,
+        videoUrl: m['videoUrl'] as String?,
         order:    (m['order'] as num?)?.toInt() ?? 0,
       );
 

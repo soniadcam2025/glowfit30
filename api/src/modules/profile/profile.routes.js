@@ -10,5 +10,6 @@ router.use(verifyToken);
 
 router.get('/', ctrl.getProfile);
 router.patch('/', validateBody(patchProfileSchema), ctrl.patchProfile);
+router.patch('/fcm-token', ctrl.saveFcmToken);
 
 export default router;

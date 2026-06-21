@@ -49,7 +49,7 @@ Admin dashboard login → `POST /auth/login` (email + password, admins only)
 - [x] 12. Workout plan screen → fetch real workout + day data from `GET /workouts`
 - [x] 13. Workout day detail screen → use real exercises from API (`GET /workouts/days/:dayId/exercises`)
 - [x] 14. On workout complete → call `POST /progress` to save completion to DB
-- [ ] 15. Diet screen → fetch real diet plan from `GET /diet`
+- [x] 15. Diet screen → fetch real diet plan from `GET /diet`
 - [x] 16. Add token refresh / auto logout on 401 unauthorized errors
 
 ---
@@ -70,10 +70,10 @@ Admin dashboard login → `POST /auth/login` (email + password, admins only)
 
 > Final integrations to make the product production-ready.
 
-- [ ] 22. Push notifications — admin sends notification from dashboard → users receive it in Flutter app
-- [ ] 23. Image upload for exercises and diet plans — store on VPS or cloud storage (S3 / Cloudinary)
-- [ ] 24. User streak logic on API — calculate and return current streak count daily
-- [ ] 25. Analytics page in admin — signups per day, workout completion rate, active users chart
+- [x] 22. Push notifications — admin sends notification from dashboard → users receive it in Flutter app
+- [x] 23. Image upload for exercises and diet plans — Vultr Object Storage (S3-compatible)
+- [x] 24. User streak logic on API — calculate and return current streak count daily
+- [x] 25. Analytics page in admin — signups per day, workout completion rate, active users chart
 
 ---
 
@@ -82,10 +82,10 @@ Admin dashboard login → `POST /auth/login` (email + password, admins only)
 | Phase | Total Tasks | Completed | Status |
 |-------|------------|-----------|--------|
 | Phase 1 — API Foundation | 8 | 8 | ✅ Complete |
-| Phase 2 — Flutter Integration | 8 | 7 | 🔄 In Progress (Task 15 remaining) |
+| Phase 2 — Flutter Integration | 8 | 8 | ✅ Complete |
 | Phase 3 — Admin Dashboard | 5 | 5 | ✅ Complete |
-| Phase 4 — Polish | 4 | 0 | Not Started |
-| **Total** | **25** | **20** | |
+| Phase 4 — Polish | 4 | 4 | ✅ Complete |
+| **Total** | **25** | **25** | ✅ All tasks complete |
 
 ---
 
@@ -98,6 +98,7 @@ Admin dashboard login → `POST /auth/login` (email + password, admins only)
 | Service Account Key | Configured in `api/.env` ✓ (gitignored — never commit) |
 | PostgreSQL | `glowfit_db` on port 5433 |
 | JWT Secret | ⚠️ Change `JWT_SECRET` in `.env` before going to production |
+| Vultr Object Storage | ⚠️ Add `VULTR_S3_*` vars to `api/.env` (see Task 23 notes below) before image upload will work |
 
 ---
 

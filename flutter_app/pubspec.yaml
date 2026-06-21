@@ -35,7 +35,11 @@ dependencies:
   fl_chart: ^0.64.0
   firebase_core: ^4.10.0
   firebase_auth: ^6.5.2
+  firebase_messaging: ^16.3.0
   google_sign_in: ^7.2.0
+
+  # Video Playback
+  video_player: ^2.9.2
 
 dev_dependencies:
   flutter_test:
