@@ -18,9 +18,9 @@ const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
 // ─── Workout Form ─────────────────────────────────────────────────────────────
 
-type WorkoutForm = { title: string; level: string; duration: string; goal: string; description: string; imageUrl: string };
+type WorkoutForm = { title: string; level: string; duration: string; goal: string; description: string };
 
-const emptyWorkout = (): WorkoutForm => ({ title: "", level: "Beginner", duration: "30", goal: GOALS[0], description: "", imageUrl: "" });
+const emptyWorkout = (): WorkoutForm => ({ title: "", level: "Beginner", duration: "30", goal: GOALS[0], description: "" });
 
 function WorkoutFormPanel({ initial, onSave, onCancel, loading }: {
   initial: WorkoutForm;
@@ -68,13 +68,6 @@ function WorkoutFormPanel({ initial, onSave, onCancel, loading }: {
         </div>
       </div>
 
-      <ImageUploadField
-        label="Cover image"
-        value={f.imageUrl}
-        onChange={(url) => set("imageUrl", url)}
-        folder="exercises"
-      />
-
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
         <Button onClick={() => onSave(f)} disabled={!f.title.trim() || loading}>
@@ -112,16 +105,18 @@ function ExerciseRow({ ex, onDelete }: { ex: Exercise; onDelete: () => void }) {
 
 // ─── Add Exercise Form ─────────────────────────────────────────────────────────
 
-type ExForm = { name: string; sets: string; reps: string; duration: string; rest: string; imageUrl: string; gifUrl: string; videoUrl: string };
-const emptyEx = (): ExForm => ({ name: "", sets: "3", reps: "12", duration: "", rest: "30", imageUrl: "", gifUrl: "", videoUrl: "" });
+type ExForm = { name: string; sets: string; reps: string; duration: string; rest: string; imageUrl: string; videoUrl: string };
+const emptyEx = (): ExForm => ({ name: "", sets: "3", reps: "12", duration: "", rest: "30", imageUrl: "", videoUrl: "" });
 
 function AddExerciseForm({ dayId, order, onAdded }: { dayId: string; order: number; onAdded: () => void }) {
   const [f, setF] = useState<ExForm>(emptyEx());
   const [loading, setLoading] = useState(false);
   const set = (k: keyof ExForm, v: string) => setF((p) => ({ ...p, [k]: v }));
 
+  const canSave = f.name.trim() && f.imageUrl.trim() && f.videoUrl.trim();
+
   const save = async () => {
-    if (!f.name.trim()) return;
+    if (!canSave) return;
     setLoading(true);
     try {
       await workoutService.createExercise(dayId, {
@@ -130,9 +125,8 @@ function AddExerciseForm({ dayId, order, onAdded }: { dayId: string; order: numb
         reps: f.reps ? parseInt(f.reps) : undefined,
         duration: f.duration ? parseInt(f.duration) : undefined,
         rest: f.rest ? parseInt(f.rest) : undefined,
-        imageUrl: f.imageUrl.trim() || undefined,
-        gifUrl: f.gifUrl.trim() || undefined,
-        videoUrl: f.videoUrl.trim() || undefined,
+        imageUrl: f.imageUrl.trim(),
+        videoUrl: f.videoUrl.trim(),
         order,
       });
       setF(emptyEx());
@@ -154,12 +148,11 @@ function AddExerciseForm({ dayId, order, onAdded }: { dayId: string; order: numb
         <Input type="number" value={f.duration} onChange={(e) => set("duration", e.target.value)} placeholder="Sec (alt)" />
         <Input type="number" value={f.rest} onChange={(e) => set("rest", e.target.value)} placeholder="Rest sec" />
       </div>
-      <div className="grid gap-2 sm:grid-cols-3">
-        <ImageUploadField label="Exercise image" value={f.imageUrl} onChange={(url) => set("imageUrl", url)} folder="exercises" />
-        <ImageUploadField label="Exercise GIF" value={f.gifUrl} onChange={(url) => set("gifUrl", url)} folder="exercises" />
-        <VideoUploadField label="Exercise video (MP4)" value={f.videoUrl} onChange={(url) => set("videoUrl", url)} />
+      <div className="grid gap-2 sm:grid-cols-2">
+        <ImageUploadField label="Exercise image *" value={f.imageUrl} onChange={(url) => set("imageUrl", url)} folder="exercises" />
+        <VideoUploadField label="Exercise video (MP4) *" value={f.videoUrl} onChange={(url) => set("videoUrl", url)} />
       </div>
-      <Button className="w-full" onClick={save} disabled={!f.name.trim() || loading}>
+      <Button className="w-full" onClick={save} disabled={!canSave || loading}>
         {loading ? "Adding…" : "+ Add Exercise"}
       </Button>
     </div>
@@ -203,6 +196,10 @@ function DayPanel({ day, workoutId, onDeleted }: { day: WorkoutDay; workoutId: s
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-pink-100 text-xs font-bold text-pink-600 dark:bg-pink-900/40">
             {day.dayNumber}
           </span>
+          {day.imageUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={day.imageUrl} alt="" className="h-8 w-8 rounded-md object-cover" />
+          ) : null}
           <span className="flex-1 font-medium text-slate-800 dark:text-slate-100">{day.title}</span>
           {day.focus && <span className="text-xs text-slate-400">{day.focus}</span>}
           <button
@@ -250,14 +247,22 @@ function DayPanel({ day, workoutId, onDeleted }: { day: WorkoutDay; workoutId: s
 function AddDayForm({ workoutId, nextDay, onAdded }: { workoutId: string; nextDay: number; onAdded: () => void }) {
   const [title, setTitle] = useState("");
   const [focus, setFocus] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const canSave = title.trim() && imageUrl.trim();
+
   const save = async () => {
-    if (!title.trim()) return;
+    if (!canSave) return;
     setLoading(true);
     try {
-      await workoutService.createDay(workoutId, { title: title.trim(), focus: focus.trim() || undefined, dayNumber: nextDay });
-      setTitle(""); setFocus("");
+      await workoutService.createDay(workoutId, {
+        title: title.trim(),
+        focus: focus.trim() || undefined,
+        imageUrl: imageUrl.trim(),
+        dayNumber: nextDay,
+      });
+      setTitle(""); setFocus(""); setImageUrl("");
       onAdded();
       toast.success(`Day ${nextDay} added`);
     } catch {
@@ -268,10 +273,13 @@ function AddDayForm({ workoutId, nextDay, onAdded }: { workoutId: string; nextDa
   };
 
   return (
-    <div className="flex gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-800/50">
-      <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Day ${nextDay} title (e.g. Upper Body)`} />
-      <Input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Focus (optional)" className="max-w-[180px]" />
-      <Button onClick={save} disabled={!title.trim() || loading}>{loading ? "…" : `+ Day ${nextDay}`}</Button>
+    <div className="space-y-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-800/50">
+      <div className="flex gap-2">
+        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Day ${nextDay} title (e.g. Upper Body)`} />
+        <Input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Focus (optional)" className="max-w-[180px]" />
+        <Button onClick={save} disabled={!canSave || loading}>{loading ? "…" : `+ Day ${nextDay}`}</Button>
+      </div>
+      <ImageUploadField label="Day image *" value={imageUrl} onChange={setImageUrl} folder="exercises" />
     </div>
   );
 }
@@ -368,7 +376,6 @@ export default function WorkoutsPage() {
         duration: parseInt(f.duration) || 30,
         goal: f.goal,
         description: f.description.trim() || undefined,
-        imageUrl: f.imageUrl.trim() || undefined,
       }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["workouts"] });

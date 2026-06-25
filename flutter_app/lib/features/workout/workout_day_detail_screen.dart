@@ -432,10 +432,10 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                   color: const Color(0xFFFFE0EC),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: ex.gifUrl != null
+                child: (ex.imageUrl ?? ex.gifUrl) != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(ex.gifUrl!, fit: BoxFit.cover,
+                        child: Image.network(ex.imageUrl ?? ex.gifUrl!, fit: BoxFit.cover,
                             errorBuilder: (_, __, ___) =>
                                 const Icon(Icons.fitness_center, size: 28, color: _pink)),
                       )

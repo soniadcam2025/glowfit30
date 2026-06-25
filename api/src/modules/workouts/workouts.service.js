@@ -1,4 +1,9 @@
 import { prisma } from '../../database/prisma.js';
+import { deleteFiles } from '../../config/storage.js';
+
+function exerciseFileUrls(exercise) {
+  return [exercise.imageUrl, exercise.gifUrl, exercise.videoUrl];
+}
 
 // ── Workouts ──────────────────────────────────────────────────────────────────
 
@@ -18,8 +23,23 @@ export function updateWorkout(id, data) {
   return prisma.workout.update({ where: { id }, data });
 }
 
-export function deleteWorkout(id) {
-  return prisma.workout.delete({ where: { id } });
+export async function deleteWorkout(id) {
+  const workout = await prisma.workout.findUnique({
+    where: { id },
+    include: { days: { include: { exercises: true } } },
+  });
+
+  const row = await prisma.workout.delete({ where: { id } });
+
+  if (workout) {
+    const urls = [
+      workout.imageUrl,
+      ...workout.days.flatMap((day) => [day.imageUrl, ...day.exercises.flatMap(exerciseFileUrls)]),
+    ];
+    await deleteFiles(urls);
+  }
+
+  return row;
 }
 
 // ── Workout Days ──────────────────────────────────────────────────────────────
@@ -43,8 +63,19 @@ export function createDay(workoutId, data) {
   return prisma.workoutDay.create({ data: { ...data, workoutId } });
 }
 
-export function deleteDay(dayId) {
-  return prisma.workoutDay.delete({ where: { id: dayId } });
+export async function deleteDay(dayId) {
+  const day = await prisma.workoutDay.findUnique({
+    where: { id: dayId },
+    include: { exercises: true },
+  });
+
+  const row = await prisma.workoutDay.delete({ where: { id: dayId } });
+
+  if (day) {
+    await deleteFiles([day.imageUrl, ...day.exercises.flatMap(exerciseFileUrls)]);
+  }
+
+  return row;
 }
 
 // ── Exercises ─────────────────────────────────────────────────────────────────
@@ -64,6 +95,14 @@ export function updateExercise(id, data) {
   return prisma.exercise.update({ where: { id }, data });
 }
 
-export function deleteExercise(id) {
-  return prisma.exercise.delete({ where: { id } });
+export async function deleteExercise(id) {
+  const exercise = await prisma.exercise.findUnique({ where: { id } });
+
+  const row = await prisma.exercise.delete({ where: { id } });
+
+  if (exercise) {
+    await deleteFiles(exerciseFileUrls(exercise));
+  }
+
+  return row;
 }

@@ -18,6 +18,7 @@ export const createDaySchema = z.object({
   dayNumber: z.coerce.number().int().positive(),
   title:     z.string().min(1).max(300),
   focus:     z.string().optional(),
+  imageUrl:  z.string().url({ message: 'Day image is required' }),
 });
 
 export const createExerciseSchema = z.object({
@@ -26,8 +27,8 @@ export const createExerciseSchema = z.object({
   reps:     z.coerce.number().int().positive().optional(),
   duration: z.coerce.number().int().positive().optional(),
   rest:     z.coerce.number().int().positive().optional(),
-  imageUrl: z.string().url().optional(),
+  imageUrl: z.string().url({ message: 'Exercise image is required' }),
   gifUrl:   z.string().url().optional(),
-  videoUrl: z.string().url().optional(),
+  videoUrl: z.string().url({ message: 'Exercise video is required' }),
   order:    z.coerce.number().int().min(0).default(0),
 });

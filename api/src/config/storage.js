@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { env } from './env.js';
 
@@ -54,4 +54,37 @@ export async function uploadFile(buffer, mimetype, folder = 'exercises') {
   );
 
   return publicUrlFor(bucket, key);
+}
+
+function parsePublicUrl(url) {
+  try {
+    const { hostname, pathname } = new URL(url);
+    const bucket = hostname.split('.')[0];
+    const key = pathname.replace(/^\//, '');
+    if (!bucket || !key) return null;
+    return { bucket, key };
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteFile(url) {
+  if (!url) return;
+  const parsed = parsePublicUrl(url);
+  if (!parsed) return;
+
+  await getClient().send(
+    new DeleteObjectCommand({ Bucket: parsed.bucket, Key: parsed.key }),
+  );
+}
+
+export async function deleteFiles(urls) {
+  const unique = [...new Set((urls || []).filter(Boolean))];
+  await Promise.all(
+    unique.map((url) =>
+      deleteFile(url).catch((err) => {
+        console.error(`[storage] failed to delete ${url}:`, err.message);
+      }),
+    ),
+  );
 }

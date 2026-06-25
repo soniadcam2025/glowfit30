@@ -306,6 +306,30 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
     );
   }
 
+  // ─── THUMBNAIL ──────────────────────────────────────────────────────────────
+
+  Widget _buildThumbnail(String? imageUrl, bool isLocked) {
+    return Container(
+      width: 72, height: 72,
+      decoration: BoxDecoration(
+        color: isLocked ? Colors.grey[100] : const Color(0xFFFFE0EC),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: (imageUrl == null || imageUrl.isEmpty)
+          ? Icon(Icons.fitness_center, size: 28,
+              color: isLocked ? Colors.grey[300] : _pink)
+          : ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(Icons.fitness_center, size: 28,
+                    color: isLocked ? Colors.grey[300] : _pink),
+              ),
+            ),
+    );
+  }
+
   // ─── DAY CARD ───────────────────────────────────────────────────────────────
 
   Widget _buildDayCard(WorkoutDayState state) {
@@ -349,16 +373,8 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
               ),
             ),
             const SizedBox(width: 10),
-            // Thumbnail placeholder
-            Container(
-              width: 72, height: 72,
-              decoration: BoxDecoration(
-                color: isLocked ? Colors.grey[100] : const Color(0xFFFFE0EC),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(Icons.fitness_center, size: 28,
-                  color: isLocked ? Colors.grey[300] : _pink),
-            ),
+            // Thumbnail (day image, falls back to dumbbell icon)
+            _buildThumbnail(day.imageUrl, isLocked),
             const SizedBox(width: 12),
             // Info
             Expanded(

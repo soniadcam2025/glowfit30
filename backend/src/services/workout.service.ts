@@ -28,7 +28,7 @@ export const workoutService = {
     return data.data.days;
   },
 
-  async createDay(workoutId: string, payload: { title: string; focus?: string; dayNumber: number }): Promise<WorkoutDay> {
+  async createDay(workoutId: string, payload: { title: string; focus?: string; imageUrl: string; dayNumber: number }): Promise<WorkoutDay> {
     const { data } = await api.post<ApiResponse<WorkoutDay>>(`/workouts/${workoutId}/days`, payload);
     return data.data;
   },
@@ -42,7 +42,10 @@ export const workoutService = {
     return data.data.exercises;
   },
 
-  async createExercise(dayId: string, payload: Omit<Exercise, "id" | "workoutDayId">): Promise<Exercise> {
+  async createExercise(
+    dayId: string,
+    payload: Omit<Exercise, "id" | "workoutDayId" | "imageUrl" | "videoUrl"> & { imageUrl: string; videoUrl: string },
+  ): Promise<Exercise> {
     const { data } = await api.post<ApiResponse<Exercise>>(`/workouts/days/${dayId}/exercises`, payload);
     return data.data;
   },

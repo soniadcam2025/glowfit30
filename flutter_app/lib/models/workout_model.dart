@@ -34,6 +34,7 @@ class WorkoutDayModel {
   final int dayNumber;
   final String title;
   final String? focus;
+  final String? imageUrl;
   final int exerciseCount;
 
   WorkoutDayModel({
@@ -42,6 +43,7 @@ class WorkoutDayModel {
     required this.dayNumber,
     required this.title,
     this.focus,
+    this.imageUrl,
     this.exerciseCount = 0,
   });
 
@@ -51,6 +53,7 @@ class WorkoutDayModel {
         dayNumber:     (m['dayNumber'] as num).toInt(),
         title:         m['title'] as String,
         focus:         m['focus'] as String?,
+        imageUrl:      m['imageUrl'] as String?,
         exerciseCount: (m['_count']?['exercises'] as num?)?.toInt() ?? 0,
       );
 }
