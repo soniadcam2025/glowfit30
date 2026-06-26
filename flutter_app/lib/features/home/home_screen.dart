@@ -60,84 +60,94 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildHeader() {
     return Obx(() => Row(
-      children: [
-        Stack(
-          clipBehavior: Clip.none,
           children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundColor: const Color(0xFFFFD6E7),
-              child: ClipOval(
-                child: _c.photoUrl.value.isNotEmpty
-                    ? Image.network(
-                        _c.photoUrl.value,
-                        width: 56, height: 56, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 28, color: _pink),
-                      )
-                    : Image.asset(
-                        'assets/images/profile_avatar.png',
-                        width: 56, height: 56, fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const Icon(Icons.person, size: 28, color: _pink),
-                      ),
-              ),
-            ),
-            Positioned(
-              bottom: 2,
-              right: 2,
-              child: Container(
-                width: 12,
-                height: 12,
-                decoration: BoxDecoration(
-                  color: _pink,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: const Color(0xFFFFD6E7),
+                  child: ClipOval(
+                    child: _c.photoUrl.value.isNotEmpty
+                        ? Image.network(
+                            _c.photoUrl.value,
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.person,
+                                size: 28,
+                                color: _pink),
+                          )
+                        : Image.asset(
+                            'assets/images/profile_avatar.png',
+                            width: 56,
+                            height: 56,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.person,
+                                size: 28,
+                                color: _pink),
+                          ),
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Good Morning,',
-                style: GoogleFonts.poppins(
-                  fontSize: 13,
-                  color: Colors.black87,
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-              Row(
-                children: [
-                  Text(
-                    '${_c.userName.value} ',
-                    style: GoogleFonts.poppins(
-                      fontSize: 16,
+                Positioned(
+                  bottom: 2,
+                  right: 2,
+                  child: Container(
+                    width: 12,
+                    height: 12,
+                    decoration: BoxDecoration(
                       color: _pink,
-                      fontWeight: FontWeight.w700,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
                     ),
                   ),
-                  SvgPicture.asset(
-                    'assets/icons/double_heart_solid.svg',
-                    height: 18,
-                    width: 18,
-                    colorFilter: const ColorFilter.mode(
-                      _pink,
-                      BlendMode.srcIn,
+                ),
+              ],
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Good Morning,',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      color: Colors.black87,
+                      fontWeight: FontWeight.w400,
                     ),
+                  ),
+                  Row(
+                    children: [
+                      Text(
+                        '${_c.userName.value} ',
+                        style: GoogleFonts.poppins(
+                          fontSize: 16,
+                          color: _pink,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      SvgPicture.asset(
+                        'assets/icons/double_heart_solid.svg',
+                        height: 18,
+                        width: 18,
+                        colorFilter: const ColorFilter.mode(
+                          _pink,
+                          BlendMode.srcIn,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
-          ),
-        ),
-        _buildStatChip('🔥', _c.streak.value.toString(), 'Day Streak'),
-        const SizedBox(width: 8),
-        _buildStatChip('💧', '2.3L', 'of 3L'),
-      ],
-    ));
+            ),
+            _buildStatChip('🔥', _c.streak.value.toString(), 'Day Streak'),
+            const SizedBox(width: 8),
+            _buildStatChip('💧', '2.3L', 'of 3L'),
+          ],
+        ));
   }
 
   Widget _buildStatChip(String emoji, String value, String label) {
@@ -229,44 +239,32 @@ class _HomeScreenState extends State<HomeScreen> {
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Obx(() => RichText(
-                    text: TextSpan(children: [
-                      TextSpan(
-                        text: 'DAY ${_c.currentDay.value}',
+                  child: Obx(() => Text(
+                        'DAY ${_c.currentDay.value}',
                         style: GoogleFonts.poppins(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
                           color: _pink,
                         ),
-                      ),
-                      TextSpan(
-                        text: '/${_c.totalDays.value}',
-                        style: GoogleFonts.poppins(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: _darkText,
-                        ),
-                      ),
-                    ]),
-                  )),
+                      )),
                 ),
                 const SizedBox(height: 6),
                 Obx(() => Text(
-                  _c.goalText.value,
-                  style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w900,
-                    color: _darkText,
-                    height: 1.1,
-                  ),
-                )),
+                      _c.goalText.value,
+                      style: GoogleFonts.poppins(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w900,
+                        color: _darkText,
+                        height: 1.15,
+                      ),
+                    )),
                 Text(
                   'IN 30 DAYS',
                   style: GoogleFonts.poppins(
-                    fontSize: 22,
+                    fontSize: 26,
                     fontWeight: FontWeight.w900,
                     color: _pink,
-                    height: 1.1,
+                    height: 1.15,
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -312,13 +310,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                   fontSize: 10, color: Colors.grey[600]),
                             ),
                             Obx(() => Text(
-                              _c.workoutTitle.value,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: _pink,
-                              ),
-                            )),
+                                  _c.workoutTitle.value,
+                                  style: GoogleFonts.poppins(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w700,
+                                    color: _pink,
+                                  ),
+                                )),
                             const SizedBox(height: 4),
                             Row(mainAxisSize: MainAxisSize.min, children: [
                               Container(
@@ -328,9 +326,11 @@ class _HomeScreenState extends State<HomeScreen> {
                                   border: Border.all(color: Colors.grey[300]!),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: Text('Level',
+                                child: Obx(() => Text(
+                                    '${_c.totalDays.value} DAYS',
                                     style: GoogleFonts.poppins(
-                                        fontSize: 10, color: Colors.grey[700])),
+                                        fontSize: 10,
+                                        color: Colors.grey[700]))),
                               ),
                               const SizedBox(width: 6),
                               Container(
@@ -342,13 +342,13 @@ class _HomeScreenState extends State<HomeScreen> {
                               ),
                               const SizedBox(width: 4),
                               Obx(() => Text(
-                                _c.workoutLevel.value,
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w600,
-                                  color: const Color(0xFF6C5DD3),
-                                ),
-                              )),
+                                    _c.workoutLevel.value,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF6C5DD3),
+                                    ),
+                                  )),
                             ]),
                           ],
                         ),
@@ -359,15 +359,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 const SizedBox(height: 12),
                 // 3 stat boxes — grouped together with 2px gaps
                 Obx(() => Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    _buildStatBox('🔥', '${_c.todayKcal.value} kcal', 'Burned'),
-                    const SizedBox(width: 2),
-                    _buildStatBox('⏱', '${_c.todayMinutes.value} min', 'Total Time'),
-                    const SizedBox(width: 2),
-                    _buildStatBox('🏃', '${_c.exerciseCount.value}', 'Exercises'),
-                  ],
-                )),
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        _buildStatBox(
+                            '🔥', '${_c.todayKcal.value} kcal', 'Burned'),
+                        const SizedBox(width: 6),
+                        _buildStatBox(
+                            '⏱', '${_c.todayMinutes.value} min', 'Total Time'),
+                        const SizedBox(width: 6),
+                        _buildStatBox(
+                            '🏃', '${_c.exerciseCount.value}', 'Exercises'),
+                      ],
+                    )),
                 const SizedBox(height: 10),
                 // Gradient CTA button
                 FractionallySizedBox(
@@ -384,7 +387,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       borderRadius: BorderRadius.circular(10),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color(0xFFFF136B).withValues(alpha: 0.28),
+                          color:
+                              const Color(0xFFFF136B).withValues(alpha: 0.28),
                           blurRadius: 8,
                           offset: const Offset(0, 3),
                         ),
@@ -434,20 +438,13 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.white.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 14)),
+          Text(emoji, style: const TextStyle(fontSize: 16)),
           const SizedBox(width: 5),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,25 +526,25 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 10),
                         Obx(() => SizedBox(
-                          width: 68,
-                          height: 68,
-                          child: CustomPaint(
-                            painter: _CircularProgressPainter(
-                              progress: _c.progressPercent,
-                              color: _pink,
-                            ),
-                            child: Center(
-                              child: Text(
-                                '${(_c.progressPercent * 100).toInt()}%',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: _darkText,
+                              width: 68,
+                              height: 68,
+                              child: CustomPaint(
+                                painter: _CircularProgressPainter(
+                                  progress: _c.progressPercent,
+                                  color: _pink,
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${(_c.progressPercent * 100).toInt()}%',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w700,
+                                      color: _darkText,
+                                    ),
+                                  ),
                                 ),
                               ),
-                            ),
-                          ),
-                        )),
+                            )),
                         const SizedBox(height: 10),
                         FittedBox(
                           fit: BoxFit.scaleDown,
@@ -610,26 +607,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 6),
                         Obx(() => RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '${_c.todayKcal.value}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800,
-                                  color: _darkText,
-                                ),
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: '${_c.todayKcal.value}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w800,
+                                      color: _darkText,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: ' kcal',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              TextSpan(
-                                text: ' kcal',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
+                            )),
                         const SizedBox(height: 4),
                         Obx(() {
                           final pct = (_c.progressPercent * 100).toInt();
@@ -644,14 +641,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         }),
                         const SizedBox(height: 6),
                         Obx(() => ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: _c.progressPercent.clamp(0, 1),
-                            backgroundColor: Colors.green[100],
-                            color: const Color(0xFF22C55E),
-                            minHeight: 6,
-                          ),
-                        )),
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: _c.progressPercent.clamp(0, 1),
+                                backgroundColor: Colors.green[100],
+                                color: const Color(0xFF22C55E),
+                                minHeight: 6,
+                              ),
+                            )),
                       ],
                     ),
                   ),
@@ -678,26 +675,26 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 6),
                         Obx(() => RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '${_c.todayMinutes.value}',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 26,
-                                  fontWeight: FontWeight.w800,
-                                  color: _darkText,
-                                ),
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(
+                                    text: '${_c.todayMinutes.value}',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 26,
+                                      fontWeight: FontWeight.w800,
+                                      color: _darkText,
+                                    ),
+                                  ),
+                                  TextSpan(
+                                    text: ' min',
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 11,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
                               ),
-                              TextSpan(
-                                text: ' min',
-                                style: GoogleFonts.poppins(
-                                  fontSize: 11,
-                                  color: Colors.grey[600],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )),
+                            )),
                         const SizedBox(height: 4),
                         Obx(() {
                           final pct = (_c.progressPercent * 100).toInt();
@@ -712,14 +709,14 @@ class _HomeScreenState extends State<HomeScreen> {
                         }),
                         const SizedBox(height: 6),
                         Obx(() => ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: _c.progressPercent.clamp(0, 1),
-                            backgroundColor: Colors.blue[100],
-                            color: const Color(0xFF4F8EF7),
-                            minHeight: 6,
-                          ),
-                        )),
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: _c.progressPercent.clamp(0, 1),
+                                backgroundColor: Colors.blue[100],
+                                color: const Color(0xFF4F8EF7),
+                                minHeight: 6,
+                              ),
+                            )),
                       ],
                     ),
                   ),

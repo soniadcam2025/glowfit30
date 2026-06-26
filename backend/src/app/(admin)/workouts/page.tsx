@@ -248,9 +248,11 @@ function AddDayForm({ workoutId, nextDay, onAdded }: { workoutId: string; nextDa
   const [title, setTitle] = useState("");
   const [focus, setFocus] = useState("");
   const [imageUrl, setImageUrl] = useState("");
+  const [durationMinutes, setDurationMinutes] = useState("30");
+  const [kcal, setKcal] = useState("200");
   const [loading, setLoading] = useState(false);
 
-  const canSave = title.trim() && imageUrl.trim();
+  const canSave = title.trim() && imageUrl.trim() && durationMinutes.trim() && kcal.trim();
 
   const save = async () => {
     if (!canSave) return;
@@ -260,9 +262,11 @@ function AddDayForm({ workoutId, nextDay, onAdded }: { workoutId: string; nextDa
         title: title.trim(),
         focus: focus.trim() || undefined,
         imageUrl: imageUrl.trim(),
+        durationMinutes: parseInt(durationMinutes),
+        kcal: parseInt(kcal),
         dayNumber: nextDay,
       });
-      setTitle(""); setFocus(""); setImageUrl("");
+      setTitle(""); setFocus(""); setImageUrl(""); setDurationMinutes("30"); setKcal("200");
       onAdded();
       toast.success(`Day ${nextDay} added`);
     } catch {
@@ -278,6 +282,10 @@ function AddDayForm({ workoutId, nextDay, onAdded }: { workoutId: string; nextDa
         <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Day ${nextDay} title (e.g. Upper Body)`} />
         <Input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Focus (optional)" className="max-w-[180px]" />
         <Button onClick={save} disabled={!canSave || loading}>{loading ? "…" : `+ Day ${nextDay}`}</Button>
+      </div>
+      <div className="flex gap-2">
+        <Input type="number" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} placeholder="Duration (min) *" className="max-w-[160px]" />
+        <Input type="number" value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="Calories (kcal) *" className="max-w-[160px]" />
       </div>
       <ImageUploadField label="Day image *" value={imageUrl} onChange={setImageUrl} folder="exercises" />
     </div>

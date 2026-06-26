@@ -35,6 +35,8 @@ class WorkoutDayModel {
   final String title;
   final String? focus;
   final String? imageUrl;
+  final int? durationMinutes;
+  final int? kcal;
   final int exerciseCount;
 
   WorkoutDayModel({
@@ -44,17 +46,21 @@ class WorkoutDayModel {
     required this.title,
     this.focus,
     this.imageUrl,
+    this.durationMinutes,
+    this.kcal,
     this.exerciseCount = 0,
   });
 
   factory WorkoutDayModel.fromMap(Map<String, dynamic> m) => WorkoutDayModel(
-        id:            m['id'] as String,
-        workoutId:     m['workoutId'] as String,
-        dayNumber:     (m['dayNumber'] as num).toInt(),
-        title:         m['title'] as String,
-        focus:         m['focus'] as String?,
-        imageUrl:      m['imageUrl'] as String?,
-        exerciseCount: (m['_count']?['exercises'] as num?)?.toInt() ?? 0,
+        id:              m['id'] as String,
+        workoutId:       m['workoutId'] as String,
+        dayNumber:       (m['dayNumber'] as num).toInt(),
+        title:           m['title'] as String,
+        focus:           m['focus'] as String?,
+        imageUrl:        m['imageUrl'] as String?,
+        durationMinutes: (m['durationMinutes'] as num?)?.toInt(),
+        kcal:            (m['kcal'] as num?)?.toInt(),
+        exerciseCount:   (m['_count']?['exercises'] as num?)?.toInt() ?? 0,
       );
 }
 

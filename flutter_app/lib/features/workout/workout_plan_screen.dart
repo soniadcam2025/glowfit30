@@ -397,10 +397,15 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      const Icon(Icons.fitness_center_rounded,
-                          size: 12, color: Color(0xFF6C5DD3)),
+                      Icon(Icons.access_time_rounded,
+                          size: 12, color: isLocked ? Colors.grey[400] : _pink),
                       const SizedBox(width: 3),
-                      Text('${day.exerciseCount} exercises',
+                      Text('${day.durationMinutes ?? 0} min',
+                          style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
+                      const SizedBox(width: 10),
+                      const Text('🔥', style: TextStyle(fontSize: 11)),
+                      const SizedBox(width: 3),
+                      Text('${day.kcal ?? 0} kcal',
                           style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[600])),
                     ],
                   ),

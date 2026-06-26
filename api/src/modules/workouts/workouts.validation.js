@@ -15,10 +15,12 @@ export const createWorkoutSchema = z.object({
 export const updateWorkoutSchema = createWorkoutSchema.partial();
 
 export const createDaySchema = z.object({
-  dayNumber: z.coerce.number().int().positive(),
-  title:     z.string().min(1).max(300),
-  focus:     z.string().optional(),
-  imageUrl:  z.string().url({ message: 'Day image is required' }),
+  dayNumber:       z.coerce.number().int().positive(),
+  title:           z.string().min(1).max(300),
+  focus:           z.string().optional(),
+  imageUrl:        z.string().url({ message: 'Day image is required' }),
+  durationMinutes: z.coerce.number().int().positive({ message: 'Duration is required' }),
+  kcal:            z.coerce.number().int().positive({ message: 'Calories is required' }),
 });
 
 export const createExerciseSchema = z.object({

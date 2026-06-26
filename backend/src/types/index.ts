@@ -53,6 +53,8 @@ export type WorkoutDay = {
   title: string;
   focus?: string;
   imageUrl?: string;
+  durationMinutes?: number;
+  kcal?: number;
   exercises?: Exercise[];
   _count?: { exercises: number };
 };
