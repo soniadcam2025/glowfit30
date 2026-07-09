@@ -7,11 +7,13 @@ import 'package:video_player/video_player.dart';
 class ExerciseVideoPlayer extends StatefulWidget {
   final String videoUrl;
   final BoxFit fit;
+  final bool playing;
 
   const ExerciseVideoPlayer({
     super.key,
     required this.videoUrl,
     this.fit = BoxFit.cover,
+    this.playing = true,
   });
 
   @override
@@ -34,6 +36,13 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
     if (old.videoUrl != widget.videoUrl) {
       _controller?.dispose();
       _initialize(widget.videoUrl);
+      return;
+    }
+    final controller = _controller;
+    if (old.playing != widget.playing &&
+        controller != null &&
+        controller.value.isInitialized) {
+      widget.playing ? controller.play() : controller.pause();
     }
   }
 
@@ -43,8 +52,8 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
       if (!mounted) return;
       controller
         ..setLooping(true)
-        ..setVolume(0)
-        ..play();
+        ..setVolume(0);
+      if (widget.playing) controller.play();
       setState(() {});
     }).catchError((_) {
       if (mounted) setState(() => _hasError = true);

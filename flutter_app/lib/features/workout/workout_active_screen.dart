@@ -3,8 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/exercise_video_player.dart';
+import 'music_settings_screen.dart';
 import 'workout_rest_screen.dart';
-import 'workout_complete_screen.dart';
+import 'workout_settings_screen.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -47,6 +48,7 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
   bool _isPaused = false;
   Timer? _timer;
   int _earnedKcal = 12;
+  bool _showMoreOptions = false;
 
   @override
   void initState() {
@@ -68,9 +70,12 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
       if (_secondsLeft > 0) {
         setState(() {
           _secondsLeft--;
-          _earnedKcal = ((_currentIndex * widget.exercises[_currentIndex].durationSeconds +
-                      (widget.exercises[_currentIndex].durationSeconds - _secondsLeft)) /
-                  (widget.exercises.length * widget.exercises[_currentIndex].durationSeconds) *
+          _earnedKcal = ((_currentIndex *
+                          widget.exercises[_currentIndex].durationSeconds +
+                      (widget.exercises[_currentIndex].durationSeconds -
+                          _secondsLeft)) /
+                  (widget.exercises.length *
+                      widget.exercises[_currentIndex].durationSeconds) *
                   widget.totalKcal)
               .clamp(0, widget.totalKcal)
               .toInt();
@@ -87,9 +92,26 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
     _showPauseSheet();
   }
 
+  void _openSettings(Widget screen) {
+    setState(() {
+      _isPaused = true;
+      _showMoreOptions = false;
+    });
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    ).then((_) {
+      if (mounted) setState(() => _isPaused = false);
+    });
+  }
+
   void _showLeaveDialog() {
-    final elapsed = widget.exercises[_currentIndex].durationSeconds - _secondsLeft
-        + _currentIndex * (widget.exercises.isNotEmpty ? widget.exercises[0].durationSeconds : 0);
+    final elapsed = widget.exercises[_currentIndex].durationSeconds -
+        _secondsLeft +
+        _currentIndex *
+            (widget.exercises.isNotEmpty
+                ? widget.exercises[0].durationSeconds
+                : 0);
     final mm = (elapsed ~/ 60).toString().padLeft(2, '0');
     final ss = (elapsed % 60).toString().padLeft(2, '0');
 
@@ -105,7 +127,7 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
         },
         onExit: () {
           Navigator.pop(context);
-          Navigator.pop(context, _progress);
+          Navigator.pop(context, _currentIndex);
         },
       ),
     );
@@ -122,23 +144,20 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
           setState(() => _isPaused = false);
         },
         onRestart: () {
-          Navigator.pop(context);
-          setState(() {
-            _currentIndex = 0;
-            _secondsLeft = widget.exercises[0].durationSeconds;
-            _isPaused = false;
-          });
+          Navigator.pop(context); // close sheet
+          Navigator.pop(context, 0); // back to the workout day detail screen
         },
         onSkip: () {
-          Navigator.pop(context);
-          _goNext();
+          Navigator.pop(context); // close sheet
+          _timer?.cancel();
+          _onExerciseComplete();
         },
         onQuit: () {
           Navigator.pop(context); // close sheet
           _showLeaveDialog();
         },
       ),
-    ).then((_) => setState(() => _isPaused = false));
+    );
   }
 
   void _onExerciseComplete() {
@@ -168,25 +187,37 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
     });
   }
 
-  void _navigateToComplete() {
-    final totalSecs = widget.exercises
-        .fold(0, (sum, e) => sum + e.durationSeconds);
-    final mm = (totalSecs ~/ 60).toString().padLeft(2, '0');
-    final ss = (totalSecs % 60).toString().padLeft(2, '0');
-    Navigator.pushReplacement(
+  void _goPrevWithRestScreen() {
+    if (_currentIndex <= 0) return;
+    _timer?.cancel();
+    final prevIndex = _currentIndex - 1;
+    final prev = widget.exercises[prevIndex];
+    Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => WorkoutCompleteScreen(
-          day: widget.day,
-          dayId: widget.dayId,
-          caloriesBurned: widget.totalKcal,
-          totalTime: '$mm:$ss',
-          durationMin: totalSecs ~/ 60,
-          exercisesCompleted: widget.exercises.length,
+        builder: (_) => WorkoutRestScreen(
+          nextExerciseName: prev.name,
+          nextExerciseImage: prev.imagePath,
+          nextExerciseDuration: prev.durationSeconds >= 60
+              ? '${prev.durationSeconds ~/ 60} Min'
+              : '${prev.durationSeconds} Sec',
+          nextExerciseKcal:
+              '${(widget.totalKcal / widget.exercises.length).toInt()} kcal',
+          exerciseNumber: prevIndex + 1,
           totalExercises: widget.exercises.length,
         ),
       ),
-    );
+    ).then((proceed) {
+      if (proceed == true && mounted) _goPrev();
+    });
+  }
+
+  void _navigateToComplete() {
+    // Pop all the way back to the Workout Day Detail screen (same chain the
+    // Quit flow already uses) instead of pushReplacement, which would resolve
+    // WorkoutReadyScreen's awaited push and cause it to immediately pop the
+    // freshly-shown Complete screen right back off.
+    Navigator.pop(context, widget.exercises.length);
   }
 
   void _goNext() {
@@ -196,6 +227,7 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
         _secondsLeft = widget.exercises[_currentIndex].durationSeconds;
         _isPaused = false;
       });
+      _startTimer();
     }
   }
 
@@ -206,6 +238,7 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
         _secondsLeft = widget.exercises[_currentIndex].durationSeconds;
         _isPaused = false;
       });
+      _startTimer();
     }
   }
 
@@ -226,97 +259,47 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            _buildAppBar(context, exercise.name),
-            _buildProgressDots(),
-            _buildExerciseImage(exercise.imagePath, exercise.videoUrl),
-            const SizedBox(height: 24),
-            _buildStatsRow(),
-            const SizedBox(height: 32),
-            _buildControls(),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // ─── APP BAR ──────────────────────────────────────────────────────────────
-
-  Widget _buildAppBar(BuildContext context, String name) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 6),
-      child: Row(
+      body: Column(
         children: [
-          GestureDetector(
-            onTap: () => Navigator.pop(context, _progress),
-            child: Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F5),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.arrow_back_ios_new,
-                  size: 16, color: _darkText),
+          _buildExerciseImage(exercise.imagePath, exercise.videoUrl),
+          _buildProgressBar(),
+          SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                const SizedBox(height: 20),
+                Text(
+                  exercise.name,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    color: _darkText,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  width: 26,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: _pink,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _buildTimer(),
+                const SizedBox(height: 28),
+                _buildControls(),
+                const SizedBox(height: 24),
+              ],
             ),
-          ),
-          Expanded(
-            child: Text(
-              name,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: _darkText,
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: () {},
-            child: const Icon(Icons.music_note_rounded, color: _pink, size: 26),
-          ),
-          const SizedBox(width: 14),
-          GestureDetector(
-            onTap: () {},
-            child: Icon(Icons.settings_outlined,
-                color: Colors.grey[500], size: 24),
           ),
         ],
       ),
     );
   }
 
-  // ─── PROGRESS DOTS ────────────────────────────────────────────────────────
-
-  Widget _buildProgressDots() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(widget.exercises.length, (i) {
-          final isDone = i < _currentIndex;
-          final isCurrent = i == _currentIndex;
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              width: isDone || isCurrent ? 22 : 10,
-              height: 6,
-              decoration: BoxDecoration(
-                color: isDone || isCurrent ? _pink : Colors.grey[300],
-                borderRadius: BorderRadius.circular(3),
-              ),
-            ),
-          );
-        }),
-      ),
-    );
-  }
-
-  // ─── EXERCISE IMAGE ───────────────────────────────────────────────────────
+  // ─── EXERCISE IMAGE (with overlay controls) ──────────────────────────────
 
   Widget _buildExerciseImage(String path, String? videoUrl) {
     final isNetworkImage = path.startsWith('http');
@@ -341,7 +324,40 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
                       errorBuilder: (_, __, ___) => _imageFallback(),
                     )),
           if (videoUrl != null && videoUrl.isNotEmpty)
-            ExerciseVideoPlayer(videoUrl: videoUrl),
+            ExerciseVideoPlayer(videoUrl: videoUrl, playing: !_isPaused),
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _roundIconButton(
+                    color: Colors.black38,
+                    icon: const Icon(Icons.arrow_back_ios_new,
+                        size: 16, color: Colors.white),
+                    onTap: _togglePause,
+                  ),
+                  Expanded(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          _statBox('🚴', '${_currentIndex + 1}',
+                              '${widget.exercises.length}', 'Exercise'),
+                          const SizedBox(width: 8),
+                          _statBox('🔥', '$_earnedKcal', '${widget.totalKcal}',
+                              'Kcal Burned'),
+                        ],
+                      ),
+                    ),
+                  ),
+                  _buildMoreOptionsColumn(),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -356,82 +372,160 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
     );
   }
 
-  // ─── STATS ROW ────────────────────────────────────────────────────────────
+  // ─── OVERLAY WIDGETS ──────────────────────────────────────────────────────
 
-  Widget _buildStatsRow() {
-    return IntrinsicHeight(
+  Widget _roundIconButton({
+    required Color color,
+    required Widget icon,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        child: Center(child: icon),
+      ),
+    );
+  }
+
+  Widget _buildMoreOptionsColumn() {
+    return Column(
+      children: [
+        _roundIconButton(
+          color: Colors.white.withValues(alpha: 0.85),
+          icon: const Icon(Icons.more_vert_rounded, size: 20, color: _darkText),
+          onTap: () => setState(() => _showMoreOptions = !_showMoreOptions),
+        ),
+        if (_showMoreOptions) ...[
+          const SizedBox(height: 8),
+          _roundIconButton(
+            color: Colors.white.withValues(alpha: 0.85),
+            icon: const Icon(Icons.music_note_rounded, size: 18, color: _pink),
+            onTap: () => _openSettings(const MusicSettingsScreen()),
+          ),
+          const SizedBox(height: 8),
+          _roundIconButton(
+            color: Colors.white.withValues(alpha: 0.85),
+            icon: Icon(Icons.settings_outlined,
+                size: 18, color: Colors.grey[600]),
+            onTap: () => _openSettings(const WorkoutSettingsScreen()),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _statBox(String emoji, String value, String total, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.black38,
+        borderRadius: BorderRadius.circular(14),
+      ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Expanded(child: _buildStat(
-            primary: '${_currentIndex + 1}',
-            secondary: '/ ${widget.exercises.length}',
-            label: 'Exercise',
-          )),
-          _divider(),
-          Expanded(child: _buildStat(
-            primary: _timeFormatted,
-            secondary: '',
-            label: 'Time Left',
-            primaryColor: _darkText,
-          )),
-          _divider(),
-          Expanded(child: _buildStat(
-            primary: '$_earnedKcal',
-            secondary: '/${widget.totalKcal}',
-            label: 'kcal',
-          )),
+          Container(
+            width: 26,
+            height: 26,
+            decoration: const BoxDecoration(
+              color: Color(0xFFFFE0EC),
+              shape: BoxShape.circle,
+            ),
+            child: Center(
+              child: Text(emoji, style: const TextStyle(fontSize: 12)),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              RichText(
+                text: TextSpan(children: [
+                  TextSpan(
+                    text: value,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                      height: 1,
+                    ),
+                  ),
+                  TextSpan(
+                    text: ' / $total',
+                    style: GoogleFonts.poppins(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white70,
+                      height: 1,
+                    ),
+                  ),
+                ]),
+              ),
+              Text(
+                label,
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  color: Colors.white70,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStat({
-    required String primary,
-    required String secondary,
-    required String label,
-    Color primaryColor = _pink,
-  }) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        RichText(
-          text: TextSpan(children: [
-            TextSpan(
-              text: primary,
-              style: GoogleFonts.poppins(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: primaryColor,
-              ),
-            ),
-            if (secondary.isNotEmpty)
-              TextSpan(
-                text: ' $secondary',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[400],
-                ),
-              ),
-          ]),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          style: GoogleFonts.poppins(
-            fontSize: 12,
-            color: Colors.grey[500],
-          ),
-        ),
-      ],
+  // ─── PROGRESS BAR ─────────────────────────────────────────────────────────
+
+  Widget _buildProgressBar() {
+    return Container(
+      width: double.infinity,
+      height: 4,
+      color: Colors.grey[200],
+      child: FractionallySizedBox(
+        alignment: Alignment.centerLeft,
+        widthFactor: _progress.clamp(0, 1),
+        child: Container(color: _pink),
+      ),
     );
   }
 
-  Widget _divider() {
-    return Container(
-      width: 1,
-      height: 48,
-      color: Colors.grey[200],
+  // ─── TIMER ────────────────────────────────────────────────────────────────
+
+  Widget _buildTimer() {
+    final parts = _timeFormatted.split(':');
+    return RichText(
+      text: TextSpan(children: [
+        TextSpan(
+          text: parts[0],
+          style: GoogleFonts.poppins(
+            fontSize: 48,
+            fontWeight: FontWeight.w800,
+            color: _darkText,
+          ),
+        ),
+        TextSpan(
+          text: ' : ',
+          style: GoogleFonts.poppins(
+            fontSize: 40,
+            fontWeight: FontWeight.w700,
+            color: _darkText,
+          ),
+        ),
+        TextSpan(
+          text: parts[1],
+          style: GoogleFonts.poppins(
+            fontSize: 48,
+            fontWeight: FontWeight.w800,
+            color: _pink,
+          ),
+        ),
+      ]),
     );
   }
 
@@ -443,14 +537,17 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
         _buildControlButton(
-          onTap: _goPrev,
+          onTap: _goPrevWithRestScreen,
           icon: Icons.skip_previous_rounded,
           label: 'Previous',
           size: 50,
         ),
         _buildPauseButton(),
         _buildControlButton(
-          onTap: _goNext,
+          onTap: () {
+            _timer?.cancel();
+            _onExerciseComplete();
+          },
           icon: Icons.skip_next_rounded,
           label: 'Skip',
           size: 50,

@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/workout_controller.dart';
 import '../../models/workout_model.dart';
 import 'workout_active_screen.dart';
+import 'workout_complete_screen.dart';
+import 'workout_ready_screen.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -58,8 +60,18 @@ class WorkoutDayDetailScreen extends StatefulWidget {
 }
 
 class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
-  double? _activeProgress;
+  int? _completedExerciseCount;
   WorkoutController? _wc;
+
+  int get _totalExerciseCount => _wc != null && _wc!.dayExercises.isNotEmpty
+      ? _wc!.dayExercises.length
+      : widget.exerciseCount;
+
+  double? get _activeProgress => _completedExerciseCount == null
+      ? null
+      : (_totalExerciseCount > 0
+          ? _completedExerciseCount! / _totalExerciseCount
+          : 0);
 
   @override
   void initState() {
@@ -74,7 +86,8 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
 
   int _parseDuration(String d) {
     final parts = d.split(':');
-    if (parts.length == 2) return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+    if (parts.length == 2)
+      return int.parse(parts[0]) * 60 + int.parse(parts[1]);
     return 30;
   }
 
@@ -99,21 +112,45 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
   }
 
   void _launchActive() {
-    Navigator.push<double>(
+    final activeExercises = _buildActiveExercises();
+    Navigator.push<int>(
       context,
       MaterialPageRoute(
-        builder: (_) => WorkoutActiveScreen(
+        builder: (_) => WorkoutReadyScreen(
           totalKcal: 128,
           day: widget.day,
           dayId: widget.dayId,
-          exercises: _buildActiveExercises(),
+          exercises: activeExercises,
         ),
       ),
     ).then((result) {
-      if (result != null && mounted) {
-        setState(() => _activeProgress = result);
+      if (result == null || !mounted) return;
+      if (result >= activeExercises.length && activeExercises.isNotEmpty) {
+        _showCompleteScreen(activeExercises);
+      } else {
+        setState(() => _completedExerciseCount = result);
       }
     });
+  }
+
+  void _showCompleteScreen(List<ActiveExercise> exercises) {
+    final totalSecs = exercises.fold(0, (sum, e) => sum + e.durationSeconds);
+    final mm = (totalSecs ~/ 60).toString().padLeft(2, '0');
+    final ss = (totalSecs % 60).toString().padLeft(2, '0');
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => WorkoutCompleteScreen(
+          day: widget.day,
+          dayId: widget.dayId,
+          caloriesBurned: 128,
+          totalTime: '$mm:$ss',
+          durationMin: totalSecs ~/ 60,
+          exercisesCompleted: exercises.length,
+          totalExercises: exercises.length,
+        ),
+      ),
+    );
   }
 
   @override
@@ -130,8 +167,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                 children: [
                   _buildAppBar(context),
                   _buildHeroSection(),
-                  _buildProgressCircle(),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 20),
                   _buildExercisesSection(),
                   const SizedBox(height: 16),
                 ],
@@ -204,7 +240,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
 
   Widget _buildHeroSection() {
     return SizedBox(
-      height: 280,
+      height: 410,
       child: Stack(
         clipBehavior: Clip.none,
         children: [
@@ -240,32 +276,33 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
           Positioned(
             left: 20,
             top: 30,
-            right: 180,
+            right: 150,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  widget.workoutName,
-                  softWrap: true,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.poppins(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                    color: _darkText,
-                    height: 1.2,
+                if (widget.workoutName.isNotEmpty)
+                  Text(
+                    widget.workoutName,
+                    softWrap: true,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w700,
+                      color: _darkText,
+                      height: 1.15,
+                    ),
                   ),
-                ),
                 Text(
                   widget.workoutSub,
                   softWrap: true,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.poppins(
-                    fontSize: 28,
+                    fontSize: 34,
                     fontWeight: FontWeight.w900,
                     color: _pink,
-                    height: 1.1,
+                    height: 1.05,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -281,17 +318,20 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 6,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     _iconStat(Icons.access_time_rounded,
                         const Color(0xFF6C5DD3), widget.duration),
+                    const SizedBox(width: 6),
                     _emojiStat('🔥', widget.kcal),
+                    const SizedBox(width: 6),
                     _emojiStat('🏃',
-                        '${_wc != null && _wc!.dayExercises.isNotEmpty ? _wc!.dayExercises.length : widget.exerciseCount} Exercises'),
+                        '${_wc != null && _wc!.dayExercises.isNotEmpty ? _wc!.dayExercises.length : widget.exerciseCount} Workouts'),
                   ],
                 ),
+                const SizedBox(height: 10),
+                _buildProgressCircle(),
               ],
             ),
           ),
@@ -307,7 +347,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
         Icon(icon, size: 13, color: color),
         const SizedBox(width: 3),
         Text(label,
-            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700])),
+            style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[700])),
       ],
     );
   }
@@ -319,7 +359,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
         Text(emoji, style: const TextStyle(fontSize: 13)),
         const SizedBox(width: 3),
         Text(label,
-            style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[700])),
+            style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[700])),
       ],
     );
   }
@@ -328,37 +368,34 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
 
   Widget _buildProgressCircle() {
     final pct = _activeProgress ?? widget.progress;
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: SizedBox(
-        width: 140,
-        height: 140,
-        child: CustomPaint(
-          painter: _ArcPainter(progress: pct),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${(pct * 100).toInt()}%',
-                  style: GoogleFonts.poppins(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    color: _pink,
-                    height: 1,
-                  ),
+    return SizedBox(
+      width: 120,
+      height: 120,
+      child: CustomPaint(
+        painter: _ArcPainter(progress: pct),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '${(pct * 100).toInt()}%',
+                style: GoogleFonts.poppins(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  color: _pink,
+                  height: 1,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  'Completed',
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                'Completed',
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  color: Colors.grey[500],
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -376,7 +413,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
           child: Text(
             'Exercises',
             style: GoogleFonts.poppins(
-              fontSize: 18, fontWeight: FontWeight.w800, color: _darkText),
+                fontSize: 18, fontWeight: FontWeight.w800, color: _darkText),
           ),
         ),
         const SizedBox(height: 14),
@@ -396,7 +433,11 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
               );
             }
             return Column(
-              children: _wc!.dayExercises.map(_buildApiExerciseCard).toList(),
+              children: _wc!.dayExercises
+                  .asMap()
+                  .entries
+                  .map((e) => _buildApiExerciseCard(e.value, e.key))
+                  .toList(),
             );
           })
         else
@@ -405,10 +446,17 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
     );
   }
 
-  Widget _buildApiExerciseCard(ExerciseModel ex) {
+  Widget _buildApiExerciseCard(ExerciseModel ex, int index) {
     final label = ex.reps != null
         ? '${ex.sets ?? 1}×${ex.reps} reps'
         : '${ex.durationSeconds}s';
+    final status = _completedExerciseCount == null
+        ? ExerciseStatus.upcoming
+        : (index < _completedExerciseCount!
+            ? ExerciseStatus.completed
+            : (index == _completedExerciseCount!
+                ? ExerciseStatus.current
+                : ExerciseStatus.upcoming));
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       padding: const EdgeInsets.all(12),
@@ -418,7 +466,8 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8, offset: const Offset(0, 2),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -427,7 +476,8 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
           Stack(
             children: [
               Container(
-                width: 80, height: 80,
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
                   color: const Color(0xFFFFE0EC),
                   borderRadius: BorderRadius.circular(12),
@@ -435,9 +485,12 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                 child: (ex.imageUrl ?? ex.gifUrl) != null
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.network(ex.imageUrl ?? ex.gifUrl!, fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const Icon(Icons.fitness_center, size: 28, color: _pink)),
+                        child: Image.network(ex.imageUrl ?? ex.gifUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                                Icons.fitness_center,
+                                size: 28,
+                                color: _pink)),
                       )
                     : const Icon(Icons.fitness_center, size: 28, color: _pink),
               ),
@@ -451,7 +504,8 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                       color: Colors.black54,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.play_arrow_rounded, size: 14, color: Colors.white),
+                    child: const Icon(Icons.play_arrow_rounded,
+                        size: 14, color: Colors.white),
                   ),
                 ),
             ],
@@ -464,26 +518,36 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
               children: [
                 Text(ex.name,
                     style: GoogleFonts.poppins(
-                        fontSize: 14, fontWeight: FontWeight.w700, color: _darkText)),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: _darkText)),
                 const SizedBox(height: 4),
                 Row(
                   children: [
-                    Icon(Icons.timer_outlined, size: 13, color: Colors.grey[500]),
+                    Icon(Icons.timer_outlined,
+                        size: 13, color: Colors.grey[500]),
                     const SizedBox(width: 4),
                     Text(label,
-                        style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600])),
+                        style: GoogleFonts.poppins(
+                            fontSize: 12, color: Colors.grey[600])),
                     if (ex.rest != null) ...[
                       const SizedBox(width: 10),
-                      Icon(Icons.pause_circle_outline, size: 13, color: Colors.grey[400]),
+                      Icon(Icons.pause_circle_outline,
+                          size: 13, color: Colors.grey[400]),
                       const SizedBox(width: 3),
                       Text('${ex.rest}s rest',
-                          style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500])),
+                          style: GoogleFonts.poppins(
+                              fontSize: 11, color: Colors.grey[500])),
                     ],
                   ],
                 ),
               ],
             ),
           ),
+          if (status != ExerciseStatus.upcoming) ...[
+            const SizedBox(width: 8),
+            _buildExerciseStatus(status),
+          ],
         ],
       ),
     );
@@ -561,14 +625,13 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
     switch (status) {
       case ExerciseStatus.completed:
         return Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: const Color(0xFF22C55E).withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
+          width: 32,
+          height: 32,
+          decoration: const BoxDecoration(
+            color: Color(0xFF22C55E),
+            shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.check_rounded,
-              color: Color(0xFF22C55E), size: 22),
+          child: const Icon(Icons.check_rounded, color: Colors.white, size: 18),
         );
       case ExerciseStatus.current:
         return Container(
@@ -583,8 +646,8 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
               Container(
                 width: 7,
                 height: 7,
-                decoration: const BoxDecoration(
-                    color: _pink, shape: BoxShape.circle),
+                decoration:
+                    const BoxDecoration(color: _pink, shape: BoxShape.circle),
               ),
               const SizedBox(width: 5),
               Text('Current',
@@ -628,7 +691,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
           Expanded(
             child: GestureDetector(
               onTap: () {
-                setState(() => _activeProgress = null);
+                setState(() => _completedExerciseCount = null);
                 _launchActive();
               },
               child: Container(
@@ -641,8 +704,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.restart_alt_rounded,
-                        size: 20, color: _darkText),
+                    Icon(Icons.restart_alt_rounded, size: 20, color: _darkText),
                     const SizedBox(width: 6),
                     Text(
                       'Restart',

@@ -442,6 +442,12 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
     );
 
     if (!isLocked) {
+      final titleWords = day.title.split(' ');
+      final titleLine1 = titleWords.length > 1
+          ? titleWords.sublist(0, titleWords.length - 1).join(' ')
+          : '';
+      final titleLine2 = titleWords.isNotEmpty ? titleWords.last : day.title;
+
       return GestureDetector(
         onTap: () => Navigator.push(
           context,
@@ -449,11 +455,11 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
             builder: (_) => WorkoutDayDetailScreen(
               dayId: day.id,
               day: day.dayNumber,
-              workoutName: day.title.split(' ').first,
-              workoutSub: day.title.split(' ').skip(1).join(' '),
+              workoutName: titleLine1,
+              workoutSub: titleLine2,
               subtitle: day.focus ?? 'Complete today\'s workout!',
-              duration: '— min',
-              kcal: '— kcal',
+              duration: '${day.durationMinutes ?? 0} Min',
+              kcal: '${day.kcal ?? 0} kcal',
               exerciseCount: day.exerciseCount,
               progress: state.progress,
               heroImage: 'assets/images/workout_day_hero.png',
