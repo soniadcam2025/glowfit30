@@ -121,4 +121,16 @@ class ApiService extends GetxService {
       return [];
     }
   }
+
+  /// Server-resolved diet for the given program day: picks the plan matching
+  /// the user's diet style and returns that day's meals (cycling through the
+  /// configured days when the program is longer than the meal rotation).
+  Future<Map<String, dynamic>?> getDietToday(int day) async {
+    try {
+      final r = await _client.get('/diet/today?day=$day');
+      return _data(r) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
 }

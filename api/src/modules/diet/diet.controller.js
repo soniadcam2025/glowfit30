@@ -52,3 +52,58 @@ export async function remove(req, res, next) {
     next(e);
   }
 }
+
+// ─── Per-day meals ──────────────────────────────────────────────────────────
+
+export async function listDays(req, res, next) {
+  try {
+    const items = await svc.listPlanDays(req.params.id);
+    return sendSuccess(res, { items }, 'OK');
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function upsertDay(req, res, next) {
+  try {
+    const row = await svc.upsertPlanDay(
+      req.params.id,
+      req.params.day,
+      req.body.meals,
+    );
+    await logAdminAction(req.user.id, 'diet.day.upsert', {
+      id: req.params.id,
+      day: req.params.day,
+    });
+    return sendSuccess(res, row, 'Saved');
+  } catch (e) {
+    if (e.code === 'P2003') return sendError(res, 'Diet plan not found', 404);
+    next(e);
+  }
+}
+
+export async function removeDay(req, res, next) {
+  try {
+    await svc.deletePlanDay(req.params.id, req.params.day);
+    await logAdminAction(req.user.id, 'diet.day.delete', {
+      id: req.params.id,
+      day: req.params.day,
+    });
+    return sendSuccess(res, null, 'Deleted');
+  } catch (e) {
+    if (e.code === 'P2025') return sendError(res, 'Not found', 404);
+    next(e);
+  }
+}
+
+// ─── App resolver ───────────────────────────────────────────────────────────
+
+export async function today(req, res, next) {
+  try {
+    const result = await svc.resolveToday(req.user.id, req.query.day);
+    if (!result) return sendError(res, 'No diet plans configured', 404);
+    return sendSuccess(res, result, 'OK');
+  } catch (e) {
+    next(e);
+  }
+}

@@ -73,18 +73,43 @@ export type Exercise = {
   order: number;
 };
 
+export type DietMealItem = {
+  type: string; // breakfast | mid_morning | lunch | snack | dinner
+  label: string;
+  time?: string;
+  desc?: string;
+  kcal?: number;
+  image?: string;
+};
+
+export type DietDayMeals = {
+  items?: DietMealItem[];
+  tags?: string[];
+  waterTarget?: number;
+  // legacy plan-level fields (old admin form)
+  breakfast?: string;
+  lunch?: string;
+  dinner?: string;
+  snacks?: string;
+};
+
+export type DietPlanDay = {
+  id: string;
+  dietPlanId: string;
+  dayNumber: number;
+  meals: DietDayMeals;
+  createdAt: string;
+};
+
 export type DietPlan = {
   id: string;
-  type: string;
+  type: string; // diet style: Vegetarian | Non-Vegetarian | Vegan | Balanced
+  goal?: string | null;
   calories: number;
-  meals: {
-    breakfast?: string;
-    lunch?: string;
-    dinner?: string;
-    snacks?: string;
-  };
+  meals: DietDayMeals;
   imageUrl?: string;
   createdAt: string;
+  _count?: { days: number };
 };
 
 export type UserDetail = UserItem & {

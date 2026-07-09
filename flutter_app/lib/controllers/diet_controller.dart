@@ -82,6 +82,13 @@ class DietController extends GetxController {
       totalDays.value  = home.totalDays.value;
       goal.value       = home.goalText.value.isNotEmpty ? home.goalText.value : 'Weight Loss';
     } catch (_) {}
+
+    // Explicit day override, e.g. "View Diet Plan" on the Workout Complete
+    // screen passes the day that was just finished.
+    final args = Get.arguments;
+    if (args is Map && args['day'] is int) {
+      currentDay.value = args['day'] as int;
+    }
   }
 
   Future<void> loadData() async {
@@ -98,32 +105,32 @@ class DietController extends GetxController {
         if (g != null && g.isNotEmpty) goal.value = _goalDisplay(g);
       }
 
-      final plans = await api.getDietPlans();
-      Map<String, dynamic>? match;
-      if (plans.isNotEmpty) {
-        match = plans.cast<Map<String, dynamic>>().firstWhereOrNull(
-          (p) => _typeMatches(p['type'] as String?, dietStyle.value),
-        );
-        match ??= plans.first as Map<String, dynamic>;
-      }
-
-      if (match != null) {
-        caloriesTarget.value = (match['calories'] as num?)?.toInt() ?? 1350;
-        planImageUrl.value = match['imageUrl'] as String? ?? '';
-        final mealsJson = match['meals'];
-        if (mealsJson is Map && mealsJson['items'] is List) {
-          meals.value = (mealsJson['items'] as List)
-              .map((m) => MealSlot.fromJson(Map<String, dynamic>.from(m as Map)))
-              .toList();
-          focusTags.value = List<String>.from(
-              (mealsJson['tags'] as List?)?.cast<String>() ?? []);
-          final wt = mealsJson['waterTarget'];
-          if (wt != null) waterTarget.value = (wt as num).toDouble();
+      // Preferred path: server resolves plan + per-day meals in one call.
+      final today = await api.getDietToday(currentDay.value);
+      if (today != null) {
+        final plan = today['plan'] as Map<String, dynamic>?;
+        if (plan != null) {
+          caloriesTarget.value = (plan['calories'] as num?)?.toInt() ?? 1350;
+          planImageUrl.value = plan['imageUrl'] as String? ?? '';
+        }
+        _applyMeals(today['meals']);
+      } else {
+        // Fallback: old client-side matching over the plan list.
+        final plans = await api.getDietPlans();
+        Map<String, dynamic>? match;
+        if (plans.isNotEmpty) {
+          match = plans.cast<Map<String, dynamic>>().firstWhereOrNull(
+            (p) => _typeMatches(p['type'] as String?, dietStyle.value),
+          );
+          match ??= plans.first as Map<String, dynamic>;
+        }
+        if (match != null) {
+          caloriesTarget.value = (match['calories'] as num?)?.toInt() ?? 1350;
+          planImageUrl.value = match['imageUrl'] as String? ?? '';
+          _applyMeals(match['meals']);
         } else {
           meals.value = _defaultMeals();
         }
-      } else {
-        meals.value = _defaultMeals();
       }
 
       if (focusTags.isEmpty) _setDefaultTags();
@@ -133,6 +140,20 @@ class DietController extends GetxController {
       _setDefaultTags();
     } finally {
       isLoading(false);
+    }
+  }
+
+  void _applyMeals(dynamic mealsJson) {
+    if (mealsJson is Map && mealsJson['items'] is List) {
+      meals.value = (mealsJson['items'] as List)
+          .map((m) => MealSlot.fromJson(Map<String, dynamic>.from(m as Map)))
+          .toList();
+      focusTags.value = List<String>.from(
+          (mealsJson['tags'] as List?)?.cast<String>() ?? []);
+      final wt = mealsJson['waterTarget'];
+      if (wt != null) waterTarget.value = (wt as num).toDouble();
+    } else {
+      meals.value = _defaultMeals();
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -92,7 +93,10 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
           const Spacer(),
           _iconCircle(Icons.upload_rounded),
           const SizedBox(width: 10),
-          _iconCircle(Icons.home_outlined),
+          GestureDetector(
+            onTap: () => Get.offAllNamed(Routes.home),
+            child: _iconCircle(Icons.home_outlined),
+          ),
         ],
       ),
     );
@@ -222,118 +226,200 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
   }
 
   Widget _buildBadge() {
-    return Image.asset(
-      'assets/images/workout_complete_badge.png',
+    return SizedBox(
       width: 130,
-      errorBuilder: (_, __, ___) => SizedBox(
-        width: 120,
-        height: 120,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            Container(
-              width: 100,
-              height: 100,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [Color(0xFFFF136B), Color(0xFFFF5590)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: _pink.withValues(alpha: 0.4),
-                    blurRadius: 20,
-                    offset: const Offset(0, 8),
+      height: 130,
+      child: Stack(
+        alignment: Alignment.bottomCenter,
+        children: [
+          Image.asset(
+            'assets/images/workout_complete_badge.png',
+            width: 130,
+            errorBuilder: (_, __, ___) => SizedBox(
+              width: 120,
+              height: 120,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 100,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF136B), Color(0xFFFF5590)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: _pink.withValues(alpha: 0.4),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.verified_rounded,
+                        color: Colors.white, size: 48),
                   ),
                 ],
               ),
-              child: const Icon(Icons.verified_rounded,
-                  color: Colors.white, size: 48),
             ),
-          ],
-        ),
+          ),
+          Positioned(
+            bottom: 4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: _pink,
+                borderRadius: BorderRadius.circular(4),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Text(
+                'DAY ${widget.day} COMPLETE',
+                style: GoogleFonts.poppins(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  // ─── STATS CARD ───────────────────────────────────────────────────────────
+  // ─── STATS GRID ───────────────────────────────────────────────────────────
 
   Widget _buildStatsCard() {
+    return Column(
+      children: [
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _statTile(
+                  icon: Icons.local_fire_department_rounded,
+                  iconBg: const Color(0xFFFFE0EC),
+                  iconColor: _pink,
+                  value: '${widget.caloriesBurned}',
+                  unit: 'kcal',
+                  label: 'Calories\nBurned',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _statTile(
+                  icon: Icons.access_time_rounded,
+                  iconBg: const Color(0xFFE3F2FD),
+                  iconColor: const Color(0xFF2196F3),
+                  value: widget.totalTime,
+                  unit: 'min',
+                  label: 'Total Time',
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _statTile(
+                  icon: Icons.open_in_full_rounded,
+                  iconBg: const Color(0xFFE3F2FD),
+                  iconColor: const Color(0xFF2196F3),
+                  value:
+                      '${widget.exercisesCompleted}/${widget.totalExercises}',
+                  unit: '',
+                  label: 'Exercises\nCompleted',
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _statTile(
+                  icon: Icons.emoji_events_rounded,
+                  iconBg: const Color(0xFFFFF3CD),
+                  iconColor: const Color(0xFFEAB308),
+                  value: '100%',
+                  unit: '',
+                  label: 'Workout\nCompleted',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _statTile({
+    required IconData icon,
+    required Color iconBg,
+    required Color iconColor,
+    required String value,
+    required String unit,
+    required String label,
+  }) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                  child: _statCell(
-                      '🔥', '${widget.caloriesBurned}', 'kcal', 'Calories\nBurned')),
-              Container(width: 1, height: 60, color: Colors.grey[100]),
-              Expanded(
-                  child: _statCell('🕐', widget.totalTime, 'min', 'Total Time')),
-            ],
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            child: Icon(icon, size: 16, color: iconColor),
           ),
-          Divider(height: 24, thickness: 1, color: Colors.grey[100]),
-          Row(
-            children: [
-              Expanded(
-                  child: _statCell('✦',
-                      '${widget.exercisesCompleted}/${widget.totalExercises}', '', 'Exercises\nCompleted')),
-              Container(width: 1, height: 60, color: Colors.grey[100]),
-              Expanded(
-                  child:
-                      _statCell('🏆', '100%', '', 'Workout\nCompleted')),
-            ],
+          const SizedBox(height: 8),
+          RichText(
+            text: TextSpan(children: [
+              TextSpan(
+                text: value,
+                style: GoogleFonts.poppins(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: _darkText,
+                ),
+              ),
+              if (unit.isNotEmpty)
+                TextSpan(
+                  text: ' $unit',
+                  style: GoogleFonts.poppins(
+                      fontSize: 11, color: Colors.grey[500]),
+                ),
+            ]),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.poppins(fontSize: 11, color: Colors.grey[500]),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _statCell(String emoji, String value, String unit, String label) {
-    return Column(
-      children: [
-        Text(emoji, style: const TextStyle(fontSize: 22)),
-        const SizedBox(height: 6),
-        RichText(
-          text: TextSpan(children: [
-            TextSpan(
-              text: value,
-              style: GoogleFonts.poppins(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: _darkText,
-              ),
-            ),
-            if (unit.isNotEmpty)
-              TextSpan(
-                text: ' $unit',
-                style: GoogleFonts.poppins(
-                    fontSize: 11, color: Colors.grey[500]),
-              ),
-          ]),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style:
-              GoogleFonts.poppins(fontSize: 10, color: Colors.grey[500]),
-        ),
-      ],
     );
   }
 
@@ -411,10 +497,18 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      Icons.check_circle_rounded,
-                      size: 16,
-                      color: done ? _pink : Colors.grey[300],
+                    Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color:
+                            done ? const Color(0xFF22C55E) : Colors.grey[200],
+                        shape: BoxShape.circle,
+                      ),
+                      child: done
+                          ? const Icon(Icons.check_rounded,
+                              size: 11, color: Colors.white)
+                          : null,
                     ),
                     const SizedBox(height: 2),
                     Text(
@@ -510,7 +604,10 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
                   ),
                   const SizedBox(height: 10),
                   ElevatedButton(
-                    onPressed: () {},
+                    onPressed: () => Get.toNamed(
+                      Routes.diet,
+                      arguments: {'day': widget.day},
+                    ),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: _pink,
                       foregroundColor: Colors.white,

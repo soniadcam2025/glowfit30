@@ -115,13 +115,30 @@ model Progress {
 
 model DietPlan {
   id        String   @id @default(uuid()) @db.Uuid
-  type      String
+  type      String   // diet style: Vegetarian | Non-Vegetarian | Vegan | Balanced
+  goal      String?  // optional fitness-goal tag: Weight Loss, Muscle Gain, ...
   calories  Int
-  meals     Json
+  meals     Json     // legacy plan-level meals; per-day meals live in DietPlanDay
   imageUrl  String?  @map("image_url")
   createdAt DateTime @default(now()) @map("created_at")
 
+  days      DietPlanDay[]
+
   @@map("diet_plans")
+}
+
+model DietPlanDay {
+  id         String   @id @default(uuid()) @db.Uuid
+  dietPlanId String   @map("diet_plan_id") @db.Uuid
+  dietPlan   DietPlan @relation(fields: [dietPlanId], references: [id], onDelete: Cascade)
+  dayNumber  Int      @map("day_number")
+  // Same shape the app already parses: { items: [...], tags: [...], waterTarget: n }
+  meals      Json
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@unique([dietPlanId, dayNumber])
+  @@index([dietPlanId])
+  @@map("diet_plan_days")
 }
 
 model BeautyPost {
