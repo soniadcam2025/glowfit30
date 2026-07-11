@@ -82,6 +82,27 @@ class ApiService extends GetxService {
     }
   }
 
+  // ── Workout Library ──────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getWorkoutLibraryItems() async {
+    try {
+      final r = await _client.get('/workout-library');
+      final d = _data(r) as Map<String, dynamic>?;
+      return d?['items'] as List<dynamic>? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> getWorkoutLibraryItem(String id) async {
+    try {
+      final r = await _client.get('/workout-library/$id');
+      return _data(r) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Progress ─────────────────────────────────────────────────────────────────
 
   Future<bool> logProgress({

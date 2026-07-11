@@ -1061,6 +1061,7 @@ class _HomeScreenState extends State<HomeScreen> {
               return GestureDetector(
                 onTap: () {
                   setState(() => _selectedIndex = i);
+                  if (i == 1) Get.toNamed(Routes.workoutLibrary);
                   if (i == 2) Get.toNamed(Routes.diet);
                 },
                 behavior: HitTestBehavior.opaque,

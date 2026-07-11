@@ -112,6 +112,40 @@ export type DietPlan = {
   _count?: { days: number };
 };
 
+export type WorkoutLibraryTag = {
+  emoji: string;
+  label: string;
+  background: string;
+  foreground: string;
+};
+
+export type WorkoutLibraryExercise = {
+  id: string;
+  workoutLibraryItemId: string;
+  name: string;
+  durationSeconds: number;
+  imageUrl?: string;
+  videoUrl?: string;
+  order: number;
+};
+
+export type WorkoutLibraryItem = {
+  id: string;
+  category: string;
+  titleLine1: string;
+  titleScript: string;
+  description: string;
+  heroImageUrl?: string;
+  durationMinutes: number;
+  kcalLabel: string;
+  focusLabel: string;
+  tags: WorkoutLibraryTag[];
+  order: number;
+  createdAt: string;
+  exercises?: WorkoutLibraryExercise[];
+  _count?: { exercises: number };
+};
+
 export type UserDetail = UserItem & {
   dietStyle?: string | null;
   targetWeight?: number | null;

@@ -16,6 +16,10 @@ class WorkoutCompleteScreen extends StatefulWidget {
   final int exercisesCompleted;
   final int totalExercises;
   final int streakDays;
+  // Overrides for standalone (non-30-day-program) workouts, e.g. library
+  // workouts, where "Day X Complete!" / "Continue to Day X+1" don't apply.
+  final String? programLabel;
+  final String? continueLabel;
 
   const WorkoutCompleteScreen({
     super.key,
@@ -27,6 +31,8 @@ class WorkoutCompleteScreen extends StatefulWidget {
     required this.exercisesCompleted,
     required this.totalExercises,
     this.streakDays = 7,
+    this.programLabel,
+    this.continueLabel,
   });
 
   @override
@@ -34,6 +40,8 @@ class WorkoutCompleteScreen extends StatefulWidget {
 }
 
 class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
+  String get _dayLabel => widget.programLabel ?? 'Day ${widget.day}';
+
   @override
   void initState() {
     super.initState();
@@ -64,8 +72,11 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
                     _buildStatsCard(),
                     const SizedBox(height: 14),
                     _buildStreakCard(),
-                    const SizedBox(height: 14),
-                    _buildDietCard(),
+                    // Day-based diet plan only applies to the 30-day program.
+                    if (widget.programLabel == null) ...[
+                      const SizedBox(height: 14),
+                      _buildDietCard(),
+                    ],
                     const SizedBox(height: 20),
                     _buildContinueButton(context),
                     const SizedBox(height: 24),
@@ -133,7 +144,7 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
             child: RichText(
               text: TextSpan(children: [
                 TextSpan(
-                  text: 'Day ${widget.day} Complete! ',
+                  text: '$_dayLabel Complete! ',
                   style: GoogleFonts.poppins(
                     fontSize: 20,
                     fontWeight: FontWeight.w700,
@@ -193,7 +204,7 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
                           fontSize: 14, color: Colors.grey[600]),
                     ),
                     Text(
-                      'Day ${widget.day}',
+                      _dayLabel,
                       style: GoogleFonts.poppins(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
@@ -282,7 +293,7 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
                 ],
               ),
               child: Text(
-                'DAY ${widget.day} COMPLETE',
+                '${_dayLabel.toUpperCase()} COMPLETE',
                 style: GoogleFonts.poppins(
                   fontSize: 9,
                   fontWeight: FontWeight.w800,
@@ -663,7 +674,7 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Text(
-                'Continue to Day ${widget.day + 1}',
+                widget.continueLabel ?? 'Continue to Day ${widget.day + 1}',
                 style: GoogleFonts.poppins(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,

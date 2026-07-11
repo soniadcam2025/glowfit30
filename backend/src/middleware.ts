@@ -8,6 +8,7 @@ const adminRoutes = [
   "/dashboard",
   "/users",
   "/workouts",
+  "/workout-library",
   "/diet",
   "/beauty",
   "/notifications",

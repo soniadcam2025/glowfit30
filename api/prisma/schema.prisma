@@ -141,6 +141,40 @@ model DietPlanDay {
   @@map("diet_plan_days")
 }
 
+model WorkoutLibraryItem {
+  id              String   @id @default(uuid()) @db.Uuid
+  category        String   // tag shown on the detail screen, e.g. "Abs"
+  titleLine1      String   @map("title_line1") // "Belly Fat"
+  titleScript     String   @map("title_script") // "Blast"
+  description     String   @db.Text
+  heroImageUrl    String?  @map("hero_image_url")
+  durationMinutes Int      @map("duration_minutes")
+  kcalLabel       String   @map("kcal_label") // e.g. "120-160", free text estimate
+  focusLabel      String   @map("focus_label") // e.g. "Core Focus"
+  tags            Json     // [{ emoji, label, background, foreground }]
+  order           Int      @default(0)
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  exercises       WorkoutLibraryExercise[]
+
+  @@map("workout_library_items")
+}
+
+model WorkoutLibraryExercise {
+  id                   String             @id @default(uuid()) @db.Uuid
+  workoutLibraryItemId String             @map("workout_library_item_id") @db.Uuid
+  item                 WorkoutLibraryItem @relation(fields: [workoutLibraryItemId], references: [id], onDelete: Cascade)
+  name                 String
+  durationSeconds      Int                @map("duration_seconds")
+  imageUrl             String?            @map("image_url")
+  videoUrl             String?            @map("video_url")
+  order                Int                @default(0)
+  createdAt            DateTime           @default(now()) @map("created_at")
+
+  @@index([workoutLibraryItemId])
+  @@map("workout_library_exercises")
+}
+
 model BeautyPost {
   id        String   @id @default(uuid()) @db.Uuid
   title     String
