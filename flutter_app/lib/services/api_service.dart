@@ -84,11 +84,18 @@ class ApiService extends GetxService {
 
   // ── Workout Library ──────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getWorkoutLibraryItems({String? category}) async {
+  Future<List<dynamic>> getWorkoutLibraryItems({
+    String? category,
+    bool? featured,
+  }) async {
     try {
+      final query = <String, dynamic>{
+        if (category != null) 'category': category,
+        if (featured != null) 'featured': '$featured',
+      };
       final r = await _client.get(
         '/workout-library',
-        queryParameters: category != null ? {'category': category} : null,
+        queryParameters: query.isEmpty ? null : query,
       );
       final d = _data(r) as Map<String, dynamic>?;
       return d?['items'] as List<dynamic>? ?? [];

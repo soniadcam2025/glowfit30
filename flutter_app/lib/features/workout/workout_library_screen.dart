@@ -130,7 +130,8 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
   }
 
   Future<void> _loadFeatured() async {
-    final items = await Get.find<ApiService>().getWorkoutLibraryItems();
+    final items =
+        await Get.find<ApiService>().getWorkoutLibraryItems(featured: true);
     if (!mounted) return;
     setState(() => _libraryItems = items);
   }

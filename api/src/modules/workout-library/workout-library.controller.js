@@ -53,7 +53,9 @@ export async function removeCategory(req, res, next) {
 
 export async function list(req, res, next) {
   try {
-    const items = await svc.listItems(req.query.category);
+    const featured =
+      req.query.featured === 'true' ? true : req.query.featured === 'false' ? false : undefined;
+    const items = await svc.listItems({ category: req.query.category, featured });
     return sendSuccess(res, { items }, 'OK');
   } catch (e) {
     next(e);

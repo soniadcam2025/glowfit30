@@ -37,9 +37,13 @@ export async function deleteCategory(id) {
 
 // ── Items ─────────────────────────────────────────────────────────────────────
 
-export function listItems(category) {
+export function listItems({ category, featured } = {}) {
+  const where = {};
+  if (category) where.category = category;
+  if (featured !== undefined) where.isFeatured = featured;
+
   return prisma.workoutLibraryItem.findMany({
-    where: category ? { category } : undefined,
+    where,
     orderBy: { order: 'asc' },
     include: { _count: { select: { exercises: true } } },
   });

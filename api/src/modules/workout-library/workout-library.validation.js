@@ -24,6 +24,7 @@ export const createCategorySchema = z.object({
 export const updateCategorySchema = createCategorySchema.partial();
 
 export const createItemSchema = z.object({
+  isFeatured: z.boolean().default(false),
   category: z.string().min(1).max(100),
   difficulty: z.enum(['Beginner', 'Intermediate', 'Advanced']).default('Beginner'),
   titleLine1: z.string().min(1).max(200),

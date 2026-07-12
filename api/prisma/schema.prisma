@@ -157,6 +157,7 @@ model WorkoutLibraryCategory {
 
 model WorkoutLibraryItem {
   id              String   @id @default(uuid()) @db.Uuid
+  isFeatured      Boolean  @default(false) @map("is_featured") // true = hero card on the library screen
   category        String   // tag shown on the detail screen, e.g. "Abs"
   difficulty      String   @default("Beginner") // Beginner | Intermediate | Advanced
   titleLine1      String   @map("title_line1") // "Belly Fat"

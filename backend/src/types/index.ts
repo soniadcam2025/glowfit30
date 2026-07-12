@@ -145,6 +145,7 @@ export type WorkoutLibraryExercise = {
 
 export type WorkoutLibraryItem = {
   id: string;
+  isFeatured: boolean;
   category: string;
   difficulty: WorkoutLibraryDifficulty;
   titleLine1: string;

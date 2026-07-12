@@ -670,6 +670,7 @@ function ItemCard({ item, categoryNames, onDeleted }: {
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
 export default function WorkoutLibraryPage() {
+  const [creatingFeatured, setCreatingFeatured] = useState(false);
   const [creating, setCreating] = useState(false);
   const [creatingCategory, setCreatingCategory] = useState(false);
   const qc = useQueryClient();
@@ -685,12 +686,16 @@ export default function WorkoutLibraryPage() {
   });
 
   const categoryNames = categories.map((c) => c.name);
+  const featuredItems = items.filter((i) => i.isFeatured);
+  const categoryItems = items.filter((i) => !i.isFeatured);
 
   const create = useMutation({
-    mutationFn: (f: ItemForm) => workoutLibraryService.create(formToPayload(f)),
+    mutationFn: ({ f, isFeatured }: { f: ItemForm; isFeatured: boolean }) =>
+      workoutLibraryService.create({ ...formToPayload(f), isFeatured }),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["workout-library"] });
       setCreating(false);
+      setCreatingFeatured(false);
       toast.success("Workout created");
     },
     onError: () => toast.error("Failed to create workout"),
@@ -707,22 +712,62 @@ export default function WorkoutLibraryPage() {
   });
 
   const workoutCountFor = (name: string) =>
-    items.filter((i) => i.category === name).length;
+    categoryItems.filter((i) => i.category === name).length;
+
+  const refreshItems = () => void qc.invalidateQueries({ queryKey: ["workout-library"] });
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Workout Library"
-        description="Standalone browsable workouts (e.g. Belly Fat Blast) shown in the app's Workout Library screen."
+        description="Content for the app's Workout Library screen: the hero card, the category cards' browse screens, and the workouts inside them."
       />
 
-      {/* ── Categories ── */}
+      {/* ── 1. Hero (featured) workout ── */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">Categories</h2>
+          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">1 · Hero Workout (top card)</h2>
           <p className="text-xs text-slate-400">
-            Header content for each category browse screen (Abs, Full Body, …). The name must
-            match the category tag used on workouts below.
+            The big &quot;Recommended for you&quot; card at the top of the Workout Library.
+            Tapping it opens this workout&apos;s exercise list directly. If you add more than
+            one, the app shows the one with the lowest sort order.
+          </p>
+        </div>
+        {!creatingFeatured && (
+          <Button onClick={() => setCreatingFeatured(true)}>+ New Hero Workout</Button>
+        )}
+      </div>
+
+      {creatingFeatured && (
+        <ItemFormPanel
+          initial={empty()}
+          categoryNames={categoryNames}
+          onSave={(f) => create.mutate({ f, isFeatured: true })}
+          onCancel={() => setCreatingFeatured(false)}
+          loading={create.isPending}
+        />
+      )}
+
+      {isLoading ? (
+        <Card><p className="text-sm text-slate-400">Loading…</p></Card>
+      ) : featuredItems.length === 0 ? (
+        <Card><p className="text-sm text-slate-400">No hero workout yet — the app hero card shows placeholder text until you create one.</p></Card>
+      ) : (
+        <div className="space-y-3">
+          {featuredItems.map((item) => (
+            <ItemCard key={item.id} item={item} categoryNames={categoryNames} onDeleted={refreshItems} />
+          ))}
+        </div>
+      )}
+
+      {/* ── 2. Categories ── */}
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">2 · Categories (browse-screen headers)</h2>
+          <p className="text-xs text-slate-400">
+            Header content (heading, description, tags, image) for each category browse screen.
+            The name must exactly match the app card: Full Body, Abs, Arms, Bodyweight Workouts,
+            Bed Workouts, Stretching, Recovery, PCOS Friendly, Postpartum Recovery, Knee Friendly.
           </p>
         </div>
         {!creatingCategory && (
@@ -756,12 +801,13 @@ export default function WorkoutLibraryPage() {
         </div>
       )}
 
-      {/* ── Workouts ── */}
+      {/* ── 3. Category workouts ── */}
       <div className="flex items-center justify-between pt-2">
         <div>
-          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">Workouts</h2>
+          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">3 · Category Workouts</h2>
           <p className="text-xs text-slate-400">
-            Individual workouts. The first one (lowest sort order) is featured on the library hero card.
+            The workouts listed inside a category browse screen. Pick the category each one
+            belongs to; tapping it in the app opens its exercise list.
           </p>
         </div>
         {!creating && <Button onClick={() => setCreating(true)}>+ New Workout</Button>}
@@ -771,7 +817,7 @@ export default function WorkoutLibraryPage() {
         <ItemFormPanel
           initial={empty()}
           categoryNames={categoryNames}
-          onSave={(f) => create.mutate(f)}
+          onSave={(f) => create.mutate({ f, isFeatured: false })}
           onCancel={() => setCreating(false)}
           loading={create.isPending}
         />
@@ -779,17 +825,12 @@ export default function WorkoutLibraryPage() {
 
       {isLoading ? (
         <Card><p className="text-sm text-slate-400">Loading workouts…</p></Card>
-      ) : items.length === 0 ? (
-        <Card><p className="text-sm text-slate-400">No library workouts yet. Create one above.</p></Card>
+      ) : categoryItems.length === 0 ? (
+        <Card><p className="text-sm text-slate-400">No category workouts yet. Create one above.</p></Card>
       ) : (
         <div className="space-y-3">
-          {items.map((item) => (
-            <ItemCard
-              key={item.id}
-              item={item}
-              categoryNames={categoryNames}
-              onDeleted={() => void qc.invalidateQueries({ queryKey: ["workout-library"] })}
-            />
+          {categoryItems.map((item) => (
+            <ItemCard key={item.id} item={item} categoryNames={categoryNames} onDeleted={refreshItems} />
           ))}
         </div>
       )}
