@@ -3,8 +3,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
+import 'workout_category_screen.dart';
 import 'workout_detail_screen.dart';
-import 'workout_plan_screen.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -138,10 +138,17 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
   Map<String, dynamic>? get _featured =>
       _libraryItems.isNotEmpty ? _libraryItems.first as Map<String, dynamic> : null;
 
-  void _openWorkoutPlan() {
+  void _openCategory(_LibraryCategory c) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const WorkoutPlanScreen()),
+      MaterialPageRoute(
+        builder: (_) => WorkoutCategoryScreen(
+          categoryName: c.title,
+          fallbackImage: c.image,
+          fallbackBackground: c.background,
+          fallbackTitleColor: c.titleColor,
+        ),
+      ),
     );
   }
 
@@ -467,7 +474,7 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
 
   Widget _buildCategoryCard(_LibraryCategory c) {
     return GestureDetector(
-      onTap: _openWorkoutPlan,
+      onTap: () => _openCategory(c),
       child: Container(
         width: 155,
         decoration: BoxDecoration(

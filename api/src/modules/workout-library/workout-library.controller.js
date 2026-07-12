@@ -2,11 +2,58 @@ import { sendError, sendSuccess } from '../../utils/response.js';
 import { logAdminAction } from '../../utils/adminLog.js';
 import * as svc from './workout-library.service.js';
 
+// ── Categories ────────────────────────────────────────────────────────────────
+
+export async function listCategories(_req, res, next) {
+  try {
+    const categories = await svc.listCategories();
+    return sendSuccess(res, { categories }, 'OK');
+  } catch (e) {
+    next(e);
+  }
+}
+
+export async function createCategory(req, res, next) {
+  try {
+    const row = await svc.createCategory(req.body);
+    await logAdminAction(req.user.id, 'workoutLibrary.category.create', { id: row.id });
+    return sendSuccess(res, row, 'Created', 201);
+  } catch (e) {
+    if (e.code === 'P2002') return sendError(res, 'Category name already exists', 409);
+    next(e);
+  }
+}
+
+export async function updateCategory(req, res, next) {
+  try {
+    const row = await svc.updateCategory(req.params.categoryId, req.body);
+    await logAdminAction(req.user.id, 'workoutLibrary.category.update', { id: row.id });
+    return sendSuccess(res, row, 'Updated');
+  } catch (e) {
+    if (e.code === 'P2025') return sendError(res, 'Not found', 404);
+    if (e.code === 'P2002') return sendError(res, 'Category name already exists', 409);
+    next(e);
+  }
+}
+
+export async function removeCategory(req, res, next) {
+  try {
+    await svc.deleteCategory(req.params.categoryId);
+    await logAdminAction(req.user.id, 'workoutLibrary.category.delete', {
+      id: req.params.categoryId,
+    });
+    return sendSuccess(res, null, 'Deleted');
+  } catch (e) {
+    if (e.code === 'P2025') return sendError(res, 'Not found', 404);
+    next(e);
+  }
+}
+
 // ── Items ─────────────────────────────────────────────────────────────────────
 
-export async function list(_req, res, next) {
+export async function list(req, res, next) {
   try {
-    const items = await svc.listItems();
+    const items = await svc.listItems(req.query.category);
     return sendSuccess(res, { items }, 'OK');
   } catch (e) {
     next(e);

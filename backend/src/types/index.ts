@@ -119,6 +119,20 @@ export type WorkoutLibraryTag = {
   foreground: string;
 };
 
+export type WorkoutLibraryCategory = {
+  id: string;
+  name: string;
+  headingLine1: string;
+  headingLine2: string;
+  description: string;
+  heroImageUrl?: string;
+  tags: WorkoutLibraryTag[];
+  order: number;
+  createdAt: string;
+};
+
+export type WorkoutLibraryDifficulty = "Beginner" | "Intermediate" | "Advanced";
+
 export type WorkoutLibraryExercise = {
   id: string;
   workoutLibraryItemId: string;
@@ -132,6 +146,7 @@ export type WorkoutLibraryExercise = {
 export type WorkoutLibraryItem = {
   id: string;
   category: string;
+  difficulty: WorkoutLibraryDifficulty;
   titleLine1: string;
   titleScript: string;
   description: string;

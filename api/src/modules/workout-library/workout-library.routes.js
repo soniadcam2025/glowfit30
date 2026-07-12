@@ -3,16 +3,37 @@ import { verifyToken, requireRole } from '../../middleware/auth.js';
 import { validateBody, validateParams } from '../../middleware/validate.js';
 import * as ctrl from './workout-library.controller.js';
 import {
+  categoryIdParamSchema,
+  createCategorySchema,
   createExerciseSchema,
   createItemSchema,
   exerciseIdParamSchema,
   idParamSchema,
+  updateCategorySchema,
   updateExerciseSchema,
   updateItemSchema,
 } from './workout-library.validation.js';
 
 const router = Router();
 const adminOnly = [verifyToken, requireRole('admin', 'super_admin')];
+
+// ── Categories (public read / admin write) ──────────────────────────────────
+// NOTE: must be registered before '/:id' (that param is validated as a uuid).
+router.get('/categories', verifyToken, ctrl.listCategories);
+router.post('/categories', ...adminOnly, validateBody(createCategorySchema), ctrl.createCategory);
+router.patch(
+  '/categories/:categoryId',
+  ...adminOnly,
+  validateParams(categoryIdParamSchema),
+  validateBody(updateCategorySchema),
+  ctrl.updateCategory,
+);
+router.delete(
+  '/categories/:categoryId',
+  ...adminOnly,
+  validateParams(categoryIdParamSchema),
+  ctrl.removeCategory,
+);
 
 // ── Items (public read / admin write) ───────────────────────────────────────
 router.get('/', verifyToken, ctrl.list);

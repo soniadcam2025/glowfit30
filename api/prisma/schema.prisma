@@ -141,9 +141,24 @@ model DietPlanDay {
   @@map("diet_plan_days")
 }
 
+model WorkoutLibraryCategory {
+  id           String   @id @default(uuid()) @db.Uuid
+  name         String   @unique // matches WorkoutLibraryItem.category, e.g. "Abs"
+  headingLine1 String   @map("heading_line1") // "ABS" (pink)
+  headingLine2 String   @map("heading_line2") // "WORKOUTS" (dark)
+  description  String   @db.Text // "Stronger core. Flatter stomach. Confident you."
+  heroImageUrl String?  @map("hero_image_url")
+  tags         Json     // [{ emoji, label, background, foreground }]
+  order        Int      @default(0)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("workout_library_categories")
+}
+
 model WorkoutLibraryItem {
   id              String   @id @default(uuid()) @db.Uuid
   category        String   // tag shown on the detail screen, e.g. "Abs"
+  difficulty      String   @default("Beginner") // Beginner | Intermediate | Advanced
   titleLine1      String   @map("title_line1") // "Belly Fat"
   titleScript     String   @map("title_script") // "Blast"
   description     String   @db.Text

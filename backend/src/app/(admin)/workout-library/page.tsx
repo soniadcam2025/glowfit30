@@ -11,12 +11,74 @@ import { ConfirmModal } from "@/components/ui/modal";
 import { ImageUploadField } from "@/components/common/image-upload-field";
 import { VideoUploadField } from "@/components/common/video-upload-field";
 import { workoutLibraryService } from "@/services/workout-library.service";
-import type { WorkoutLibraryExercise, WorkoutLibraryItem, WorkoutLibraryTag } from "@/types";
+import type {
+  WorkoutLibraryCategory,
+  WorkoutLibraryDifficulty,
+  WorkoutLibraryExercise,
+  WorkoutLibraryItem,
+  WorkoutLibraryTag,
+} from "@/types";
+
+const DIFFICULTIES: WorkoutLibraryDifficulty[] = ["Beginner", "Intermediate", "Advanced"];
+
+const selectCls =
+  "h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200";
+
+// ─── Tag editor (shared by item + category forms) ────────────────────────────
+
+function TagEditor({ tags, onChange }: {
+  tags: WorkoutLibraryTag[];
+  onChange: (tags: WorkoutLibraryTag[]) => void;
+}) {
+  const setTag = (i: number, patch: Partial<WorkoutLibraryTag>) =>
+    onChange(tags.map((t, idx) => (idx === i ? { ...t, ...patch } : t)));
+
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-semibold text-slate-500">Tags (e.g. Fat Burn, Core Focus, No Equipment)</p>
+      {tags.map((t, i) => (
+        <div key={i} className="grid grid-cols-[56px_1fr_90px_90px_auto] items-center gap-2">
+          <Input value={t.emoji} onChange={(e) => setTag(i, { emoji: e.target.value })} placeholder="🔥" />
+          <Input value={t.label} onChange={(e) => setTag(i, { label: e.target.value })} placeholder="Fat Burn" />
+          <input
+            type="color"
+            value={t.background}
+            onChange={(e) => setTag(i, { background: e.target.value })}
+            className="h-9 w-full rounded-lg border border-slate-300 dark:border-slate-700"
+            title="Background color"
+          />
+          <input
+            type="color"
+            value={t.foreground}
+            onChange={(e) => setTag(i, { foreground: e.target.value })}
+            className="h-9 w-full rounded-lg border border-slate-300 dark:border-slate-700"
+            title="Text color"
+          />
+          <Button
+            variant="ghost"
+            className="text-xs px-2 py-2 text-red-500"
+            onClick={() => onChange(tags.filter((_, idx) => idx !== i))}
+          >
+            Remove
+          </Button>
+        </div>
+      ))}
+      <Button
+        variant="secondary"
+        className="text-xs px-3 py-1.5"
+        onClick={() => onChange([...tags, emptyTag()])}
+      >
+        + Add Tag
+      </Button>
+    </div>
+  );
+}
 
 // ─── Item form ────────────────────────────────────────────────────────────────
 
 type ItemForm = {
   category: string;
+  difficulty: WorkoutLibraryDifficulty;
   titleLine1: string;
   titleScript: string;
   description: string;
@@ -37,6 +99,7 @@ const emptyTag = (): WorkoutLibraryTag => ({
 
 const empty = (): ItemForm => ({
   category: "",
+  difficulty: "Beginner",
   titleLine1: "",
   titleScript: "",
   description: "",
@@ -51,6 +114,7 @@ const empty = (): ItemForm => ({
 function itemToForm(i: WorkoutLibraryItem): ItemForm {
   return {
     category: i.category,
+    difficulty: i.difficulty ?? "Beginner",
     titleLine1: i.titleLine1,
     titleScript: i.titleScript,
     description: i.description,
@@ -66,6 +130,7 @@ function itemToForm(i: WorkoutLibraryItem): ItemForm {
 function formToPayload(f: ItemForm) {
   return {
     category: f.category.trim(),
+    difficulty: f.difficulty,
     titleLine1: f.titleLine1.trim(),
     titleScript: f.titleScript.trim(),
     description: f.description.trim(),
@@ -78,8 +143,9 @@ function formToPayload(f: ItemForm) {
   };
 }
 
-function ItemFormPanel({ initial, onSave, onCancel, loading }: {
+function ItemFormPanel({ initial, categoryNames, onSave, onCancel, loading }: {
   initial: ItemForm;
+  categoryNames: string[];
   onSave: (f: ItemForm) => void;
   onCancel: () => void;
   loading?: boolean;
@@ -88,18 +154,30 @@ function ItemFormPanel({ initial, onSave, onCancel, loading }: {
   const set = <K extends keyof ItemForm>(k: K, v: ItemForm[K]) =>
     setF((p) => ({ ...p, [k]: v }));
 
-  const setTag = (i: number, patch: Partial<WorkoutLibraryTag>) =>
-    setF((p) => ({
-      ...p,
-      tags: p.tags.map((t, idx) => (idx === i ? { ...t, ...patch } : t)),
-    }));
-
   return (
     <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-4">
         <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-500">Category tag *</label>
-          <Input value={f.category} onChange={(e) => set("category", e.target.value)} placeholder="Abs" />
+          <label className="text-xs font-semibold text-slate-500">Category *</label>
+          <Input
+            value={f.category}
+            onChange={(e) => set("category", e.target.value)}
+            placeholder="Abs"
+            list="wl-category-names"
+          />
+          <datalist id="wl-category-names">
+            {categoryNames.map((n) => <option key={n} value={n} />)}
+          </datalist>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-slate-500">Difficulty *</label>
+          <select
+            className={selectCls}
+            value={f.difficulty}
+            onChange={(e) => set("difficulty", e.target.value as WorkoutLibraryDifficulty)}
+          >
+            {DIFFICULTIES.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
         </div>
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-500">Title (bold part) *</label>
@@ -146,43 +224,7 @@ function ItemFormPanel({ initial, onSave, onCancel, loading }: {
         folder="exercises"
       />
 
-      <div className="space-y-2">
-        <p className="text-xs font-semibold text-slate-500">Tags (e.g. Fat Burn, Core Focus, No Equipment)</p>
-        {f.tags.map((t, i) => (
-          <div key={i} className="grid grid-cols-[56px_1fr_90px_90px_auto] items-center gap-2">
-            <Input value={t.emoji} onChange={(e) => setTag(i, { emoji: e.target.value })} placeholder="🔥" />
-            <Input value={t.label} onChange={(e) => setTag(i, { label: e.target.value })} placeholder="Fat Burn" />
-            <input
-              type="color"
-              value={t.background}
-              onChange={(e) => setTag(i, { background: e.target.value })}
-              className="h-9 w-full rounded-lg border border-slate-300 dark:border-slate-700"
-              title="Background color"
-            />
-            <input
-              type="color"
-              value={t.foreground}
-              onChange={(e) => setTag(i, { foreground: e.target.value })}
-              className="h-9 w-full rounded-lg border border-slate-300 dark:border-slate-700"
-              title="Text color"
-            />
-            <Button
-              variant="ghost"
-              className="text-xs px-2 py-2 text-red-500"
-              onClick={() => setF((p) => ({ ...p, tags: p.tags.filter((_, idx) => idx !== i) }))}
-            >
-              Remove
-            </Button>
-          </div>
-        ))}
-        <Button
-          variant="secondary"
-          className="text-xs px-3 py-1.5"
-          onClick={() => setF((p) => ({ ...p, tags: [...p.tags, emptyTag()] }))}
-        >
-          + Add Tag
-        </Button>
-      </div>
+      <TagEditor tags={f.tags} onChange={(tags) => setF((p) => ({ ...p, tags }))} />
 
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
@@ -191,6 +233,191 @@ function ItemFormPanel({ initial, onSave, onCancel, loading }: {
         </Button>
       </div>
     </div>
+  );
+}
+
+// ─── Category form + card ─────────────────────────────────────────────────────
+
+type CategoryForm = {
+  name: string;
+  headingLine1: string;
+  headingLine2: string;
+  description: string;
+  heroImageUrl: string;
+  tags: WorkoutLibraryTag[];
+  order: string;
+};
+
+const emptyCategory = (): CategoryForm => ({
+  name: "",
+  headingLine1: "",
+  headingLine2: "WORKOUTS",
+  description: "",
+  heroImageUrl: "",
+  tags: [emptyTag()],
+  order: "0",
+});
+
+function categoryToForm(c: WorkoutLibraryCategory): CategoryForm {
+  return {
+    name: c.name,
+    headingLine1: c.headingLine1,
+    headingLine2: c.headingLine2,
+    description: c.description,
+    heroImageUrl: c.heroImageUrl ?? "",
+    tags: c.tags.length > 0 ? c.tags : [emptyTag()],
+    order: String(c.order),
+  };
+}
+
+function categoryFormToPayload(f: CategoryForm) {
+  return {
+    name: f.name.trim(),
+    headingLine1: f.headingLine1.trim(),
+    headingLine2: f.headingLine2.trim(),
+    description: f.description.trim(),
+    heroImageUrl: f.heroImageUrl.trim() || undefined,
+    tags: f.tags.filter((t) => t.label.trim()),
+    order: parseInt(f.order) || 0,
+  };
+}
+
+function CategoryFormPanel({ initial, onSave, onCancel, loading }: {
+  initial: CategoryForm;
+  onSave: (f: CategoryForm) => void;
+  onCancel: () => void;
+  loading?: boolean;
+}) {
+  const [f, setF] = useState(initial);
+  const set = <K extends keyof CategoryForm>(k: K, v: CategoryForm[K]) =>
+    setF((p) => ({ ...p, [k]: v }));
+
+  return (
+    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+      <div className="grid gap-3 sm:grid-cols-4">
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-slate-500">Name (must match app card) *</label>
+          <Input value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Abs" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-slate-500">Heading line 1 (pink) *</label>
+          <Input value={f.headingLine1} onChange={(e) => set("headingLine1", e.target.value)} placeholder="ABS" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-slate-500">Heading line 2 (dark) *</label>
+          <Input value={f.headingLine2} onChange={(e) => set("headingLine2", e.target.value)} placeholder="WORKOUTS" />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-semibold text-slate-500">Sort order</label>
+          <Input type="number" value={f.order} onChange={(e) => set("order", e.target.value)} />
+        </div>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-xs font-semibold text-slate-500">Description *</label>
+        <Input
+          value={f.description}
+          onChange={(e) => set("description", e.target.value)}
+          placeholder="Stronger core. Flatter stomach. Confident you."
+        />
+      </div>
+
+      <ImageUploadField
+        label="Header image (optional — app falls back to its built-in category art)"
+        value={f.heroImageUrl}
+        onChange={(url) => set("heroImageUrl", url)}
+        folder="exercises"
+      />
+
+      <TagEditor tags={f.tags} onChange={(tags) => setF((p) => ({ ...p, tags }))} />
+
+      <div className="flex justify-end gap-2">
+        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+        <Button onClick={() => onSave(f)} disabled={loading || !f.name.trim()}>
+          {loading ? "Saving…" : "Save Category"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function CategoryCard({ category, workoutCount, onDeleted }: {
+  category: WorkoutLibraryCategory;
+  workoutCount: number;
+  onDeleted: () => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const qc = useQueryClient();
+
+  const update = useMutation({
+    mutationFn: (f: CategoryForm) =>
+      workoutLibraryService.updateCategory(category.id, categoryFormToPayload(f)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["workout-library-categories"] });
+      setEditing(false);
+      toast.success("Category updated");
+    },
+    onError: () => toast.error("Failed to update category"),
+  });
+
+  const del = useMutation({
+    mutationFn: () => workoutLibraryService.deleteCategory(category.id),
+    onSuccess: () => { onDeleted(); toast.success("Category deleted"); },
+    onError: () => toast.error("Failed to delete category"),
+  });
+
+  if (editing) {
+    return (
+      <CategoryFormPanel
+        initial={categoryToForm(category)}
+        onSave={(f) => update.mutate(f)}
+        onCancel={() => setEditing(false)}
+        loading={update.isPending}
+      />
+    );
+  }
+
+  return (
+    <>
+      <Card className="p-4">
+        <div className="flex items-center justify-between gap-4">
+          {category.heroImageUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={category.heroImageUrl} alt="" className="h-12 w-12 shrink-0 rounded-lg object-cover" />
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="rounded-full bg-violet-100 px-3 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
+                {category.name}
+              </span>
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+                {category.headingLine1} {category.headingLine2}
+              </span>
+              <span className="text-xs text-slate-400">
+                {workoutCount} workout{workoutCount === 1 ? "" : "s"}
+              </span>
+            </div>
+            <p className="line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{category.description}</p>
+          </div>
+          <div className="flex shrink-0 gap-2">
+            <Button variant="secondary" className="text-xs px-3 py-1.5" onClick={() => setEditing(true)}>Edit</Button>
+            <Button variant="danger" className="text-xs px-3 py-1.5" onClick={() => setConfirmDelete(true)}>Delete</Button>
+          </div>
+        </div>
+      </Card>
+
+      <ConfirmModal
+        open={confirmDelete}
+        title="Delete Category?"
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => { del.mutate(); setConfirmDelete(false); }}
+        confirmLabel="Delete"
+      >
+        &quot;{category.name}&quot; will be deleted. Workouts tagged with it are kept but the app
+        will show a generic header for this category.
+      </ConfirmModal>
+    </>
   );
 }
 
@@ -344,7 +571,17 @@ function ExerciseManager({ item }: { item: WorkoutLibraryItem }) {
 
 // ─── Item card ────────────────────────────────────────────────────────────────
 
-function ItemCard({ item, onDeleted }: { item: WorkoutLibraryItem; onDeleted: () => void }) {
+const difficultyBadgeCls: Record<WorkoutLibraryDifficulty, string> = {
+  Beginner: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300",
+  Intermediate: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300",
+  Advanced: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300",
+};
+
+function ItemCard({ item, categoryNames, onDeleted }: {
+  item: WorkoutLibraryItem;
+  categoryNames: string[];
+  onDeleted: () => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [managingExercises, setManagingExercises] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -370,6 +607,7 @@ function ItemCard({ item, onDeleted }: { item: WorkoutLibraryItem; onDeleted: ()
     return (
       <ItemFormPanel
         initial={itemToForm(item)}
+        categoryNames={categoryNames}
         onSave={(f) => update.mutate(f)}
         onCancel={() => setEditing(false)}
         loading={update.isPending}
@@ -391,6 +629,9 @@ function ItemCard({ item, onDeleted }: { item: WorkoutLibraryItem; onDeleted: ()
             <div className="flex flex-wrap items-center gap-2">
               <span className="rounded-full bg-pink-100 px-3 py-0.5 text-xs font-semibold text-pink-700 dark:bg-pink-900/30 dark:text-pink-300">
                 {item.category}
+              </span>
+              <span className={`rounded-full px-3 py-0.5 text-xs font-semibold ${difficultyBadgeCls[item.difficulty] ?? difficultyBadgeCls.Beginner}`}>
+                {item.difficulty}
               </span>
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 {item.titleLine1} {item.titleScript}
@@ -430,12 +671,20 @@ function ItemCard({ item, onDeleted }: { item: WorkoutLibraryItem; onDeleted: ()
 
 export default function WorkoutLibraryPage() {
   const [creating, setCreating] = useState(false);
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const qc = useQueryClient();
 
   const { data: items = [], isLoading } = useQuery({
     queryKey: ["workout-library"],
     queryFn: () => workoutLibraryService.list(),
   });
+
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
+    queryKey: ["workout-library-categories"],
+    queryFn: () => workoutLibraryService.listCategories(),
+  });
+
+  const categoryNames = categories.map((c) => c.name);
 
   const create = useMutation({
     mutationFn: (f: ItemForm) => workoutLibraryService.create(formToPayload(f)),
@@ -447,19 +696,81 @@ export default function WorkoutLibraryPage() {
     onError: () => toast.error("Failed to create workout"),
   });
 
+  const createCategory = useMutation({
+    mutationFn: (f: CategoryForm) => workoutLibraryService.createCategory(categoryFormToPayload(f)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["workout-library-categories"] });
+      setCreatingCategory(false);
+      toast.success("Category created");
+    },
+    onError: () => toast.error("Failed to create category"),
+  });
+
+  const workoutCountFor = (name: string) =>
+    items.filter((i) => i.category === name).length;
+
   return (
     <div className="space-y-5">
+      <PageHeader
+        title="Workout Library"
+        description="Standalone browsable workouts (e.g. Belly Fat Blast) shown in the app's Workout Library screen."
+      />
+
+      {/* ── Categories ── */}
       <div className="flex items-center justify-between">
-        <PageHeader
-          title="Workout Library"
-          description="Standalone browsable workouts (e.g. Belly Fat Blast) shown in the app's Workout Library screen."
+        <div>
+          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">Categories</h2>
+          <p className="text-xs text-slate-400">
+            Header content for each category browse screen (Abs, Full Body, …). The name must
+            match the category tag used on workouts below.
+          </p>
+        </div>
+        {!creatingCategory && (
+          <Button variant="secondary" onClick={() => setCreatingCategory(true)}>+ New Category</Button>
+        )}
+      </div>
+
+      {creatingCategory && (
+        <CategoryFormPanel
+          initial={emptyCategory()}
+          onSave={(f) => createCategory.mutate(f)}
+          onCancel={() => setCreatingCategory(false)}
+          loading={createCategory.isPending}
         />
+      )}
+
+      {categoriesLoading ? (
+        <Card><p className="text-sm text-slate-400">Loading categories…</p></Card>
+      ) : categories.length === 0 ? (
+        <Card><p className="text-sm text-slate-400">No categories yet. Create one above so the app can show a proper category header.</p></Card>
+      ) : (
+        <div className="space-y-3">
+          {categories.map((c) => (
+            <CategoryCard
+              key={c.id}
+              category={c}
+              workoutCount={workoutCountFor(c.name)}
+              onDeleted={() => void qc.invalidateQueries({ queryKey: ["workout-library-categories"] })}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Workouts ── */}
+      <div className="flex items-center justify-between pt-2">
+        <div>
+          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">Workouts</h2>
+          <p className="text-xs text-slate-400">
+            Individual workouts. The first one (lowest sort order) is featured on the library hero card.
+          </p>
+        </div>
         {!creating && <Button onClick={() => setCreating(true)}>+ New Workout</Button>}
       </div>
 
       {creating && (
         <ItemFormPanel
           initial={empty()}
+          categoryNames={categoryNames}
           onSave={(f) => create.mutate(f)}
           onCancel={() => setCreating(false)}
           loading={create.isPending}
@@ -476,6 +787,7 @@ export default function WorkoutLibraryPage() {
             <ItemCard
               key={item.id}
               item={item}
+              categoryNames={categoryNames}
               onDeleted={() => void qc.invalidateQueries({ queryKey: ["workout-library"] })}
             />
           ))}

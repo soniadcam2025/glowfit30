@@ -84,13 +84,30 @@ class ApiService extends GetxService {
 
   // ── Workout Library ──────────────────────────────────────────────────────────
 
-  Future<List<dynamic>> getWorkoutLibraryItems() async {
+  Future<List<dynamic>> getWorkoutLibraryItems({String? category}) async {
     try {
-      final r = await _client.get('/workout-library');
+      final r = await _client.get(
+        '/workout-library',
+        queryParameters: category != null ? {'category': category} : null,
+      );
       final d = _data(r) as Map<String, dynamic>?;
       return d?['items'] as List<dynamic>? ?? [];
     } catch (_) {
       return [];
+    }
+  }
+
+  Future<Map<String, dynamic>?> getWorkoutLibraryCategory(String name) async {
+    try {
+      final r = await _client.get('/workout-library/categories');
+      final d = _data(r) as Map<String, dynamic>?;
+      final categories = d?['categories'] as List<dynamic>? ?? [];
+      return categories.cast<Map<String, dynamic>?>().firstWhere(
+            (c) => (c?['name'] as String?)?.toLowerCase() == name.toLowerCase(),
+            orElse: () => null,
+          );
+    } catch (_) {
+      return null;
     }
   }
 

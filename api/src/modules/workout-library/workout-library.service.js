@@ -5,10 +5,41 @@ function exerciseFileUrls(exercise) {
   return [exercise.imageUrl, exercise.videoUrl];
 }
 
+// ── Categories ────────────────────────────────────────────────────────────────
+
+export function listCategories() {
+  return prisma.workoutLibraryCategory.findMany({ orderBy: { order: 'asc' } });
+}
+
+export function getCategory(id) {
+  return prisma.workoutLibraryCategory.findUnique({ where: { id } });
+}
+
+export function createCategory(data) {
+  return prisma.workoutLibraryCategory.create({ data });
+}
+
+export function updateCategory(id, data) {
+  return prisma.workoutLibraryCategory.update({ where: { id }, data });
+}
+
+export async function deleteCategory(id) {
+  const category = await prisma.workoutLibraryCategory.findUnique({ where: { id } });
+
+  const row = await prisma.workoutLibraryCategory.delete({ where: { id } });
+
+  if (category) {
+    await deleteFiles([category.heroImageUrl]);
+  }
+
+  return row;
+}
+
 // ── Items ─────────────────────────────────────────────────────────────────────
 
-export function listItems() {
+export function listItems(category) {
   return prisma.workoutLibraryItem.findMany({
+    where: category ? { category } : undefined,
     orderBy: { order: 'asc' },
     include: { _count: { select: { exercises: true } } },
   });
