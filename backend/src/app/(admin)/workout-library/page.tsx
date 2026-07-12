@@ -21,6 +21,12 @@ import type {
 
 const DIFFICULTIES: WorkoutLibraryDifficulty[] = ["Beginner", "Intermediate", "Advanced"];
 
+/** Surface the API's validation message instead of a generic toast. */
+function apiMessage(err: unknown, fallback: string): string {
+  const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+  return msg ? `${fallback} — ${msg}` : fallback;
+}
+
 const selectCls =
   "h-9 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200";
 
@@ -138,9 +144,24 @@ function formToPayload(f: ItemForm) {
     durationMinutes: parseInt(f.durationMinutes) || 0,
     kcalLabel: f.kcalLabel.trim(),
     focusLabel: f.focusLabel.trim(),
-    tags: f.tags.filter((t) => t.label.trim()),
+    tags: f.tags
+      .filter((t) => t.label.trim())
+      .map((t) => ({ ...t, emoji: t.emoji.trim() || "🔥", label: t.label.trim() })),
     order: parseInt(f.order) || 0,
   };
+}
+
+/** Human-readable list of required item fields still missing. */
+function itemMissing(f: ItemForm): string[] {
+  const missing: string[] = [];
+  if (!f.category.trim()) missing.push("Category");
+  if (!f.titleLine1.trim()) missing.push("Title (bold part)");
+  if (!f.titleScript.trim()) missing.push("Title (script part)");
+  if (!f.description.trim()) missing.push("Description");
+  if (!((parseInt(f.durationMinutes) || 0) > 0)) missing.push("Duration (min)");
+  if (!f.kcalLabel.trim()) missing.push("Kcal label");
+  if (!f.focusLabel.trim()) missing.push("Focus label");
+  return missing;
 }
 
 function ItemFormPanel({ initial, categoryNames, onSave, onCancel, loading }: {
@@ -226,9 +247,14 @@ function ItemFormPanel({ initial, categoryNames, onSave, onCancel, loading }: {
 
       <TagEditor tags={f.tags} onChange={(tags) => setF((p) => ({ ...p, tags }))} />
 
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-3">
+        {itemMissing(f).length > 0 && (
+          <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+            Still required: {itemMissing(f).join(", ")}
+          </p>
+        )}
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(f)} disabled={loading}>
+        <Button onClick={() => onSave(f)} disabled={loading || itemMissing(f).length > 0}>
           {loading ? "Saving…" : "Save Workout"}
         </Button>
       </div>
@@ -277,9 +303,21 @@ function categoryFormToPayload(f: CategoryForm) {
     headingLine2: f.headingLine2.trim(),
     description: f.description.trim(),
     heroImageUrl: f.heroImageUrl.trim() || undefined,
-    tags: f.tags.filter((t) => t.label.trim()),
+    tags: f.tags
+      .filter((t) => t.label.trim())
+      .map((t) => ({ ...t, emoji: t.emoji.trim() || "🔥", label: t.label.trim() })),
     order: parseInt(f.order) || 0,
   };
+}
+
+/** Human-readable list of required category fields still missing. */
+function categoryMissing(f: CategoryForm): string[] {
+  const missing: string[] = [];
+  if (!f.name.trim()) missing.push("Name");
+  if (!f.headingLine1.trim()) missing.push("Heading line 1");
+  if (!f.headingLine2.trim()) missing.push("Heading line 2");
+  if (!f.description.trim()) missing.push("Description");
+  return missing;
 }
 
 function CategoryFormPanel({ initial, onSave, onCancel, loading }: {
@@ -331,9 +369,14 @@ function CategoryFormPanel({ initial, onSave, onCancel, loading }: {
 
       <TagEditor tags={f.tags} onChange={(tags) => setF((p) => ({ ...p, tags }))} />
 
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-3">
+        {categoryMissing(f).length > 0 && (
+          <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+            Still required: {categoryMissing(f).join(", ")}
+          </p>
+        )}
         <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(f)} disabled={loading || !f.name.trim()}>
+        <Button onClick={() => onSave(f)} disabled={loading || categoryMissing(f).length > 0}>
           {loading ? "Saving…" : "Save Category"}
         </Button>
       </div>
@@ -358,13 +401,13 @@ function CategoryCard({ category, workoutCount, onDeleted }: {
       setEditing(false);
       toast.success("Category updated");
     },
-    onError: () => toast.error("Failed to update category"),
+    onError: (err) => toast.error(apiMessage(err, "Failed to update category")),
   });
 
   const del = useMutation({
     mutationFn: () => workoutLibraryService.deleteCategory(category.id),
     onSuccess: () => { onDeleted(); toast.success("Category deleted"); },
-    onError: () => toast.error("Failed to delete category"),
+    onError: (err) => toast.error(apiMessage(err, "Failed to delete category")),
   });
 
   if (editing) {
@@ -467,13 +510,13 @@ function ExerciseRow({ itemId, exercise, order, onSaved, onDeleted }: {
         : workoutLibraryService.createExercise(itemId, payload);
     },
     onSuccess: () => { setEditing(false); onSaved(); toast.success("Exercise saved"); },
-    onError: () => toast.error("Failed to save exercise"),
+    onError: (err) => toast.error(apiMessage(err, "Failed to save exercise")),
   });
 
   const del = useMutation({
     mutationFn: () => workoutLibraryService.deleteExercise(exercise!.id),
     onSuccess: () => { onDeleted(); toast.success("Exercise removed"); },
-    onError: () => toast.error("Failed to remove exercise"),
+    onError: (err) => toast.error(apiMessage(err, "Failed to remove exercise")),
   });
 
   if (!editing && exercise) {
@@ -594,13 +637,13 @@ function ItemCard({ item, categoryNames, onDeleted }: {
       setEditing(false);
       toast.success("Workout updated");
     },
-    onError: () => toast.error("Failed to update"),
+    onError: (err) => toast.error(apiMessage(err, "Failed to update")),
   });
 
   const del = useMutation({
     mutationFn: () => workoutLibraryService.delete(item.id),
     onSuccess: () => { onDeleted(); toast.success("Workout deleted"); },
-    onError: () => toast.error("Failed to delete"),
+    onError: (err) => toast.error(apiMessage(err, "Failed to delete")),
   });
 
   if (editing) {
@@ -698,7 +741,7 @@ export default function WorkoutLibraryPage() {
       setCreatingFeatured(false);
       toast.success("Workout created");
     },
-    onError: () => toast.error("Failed to create workout"),
+    onError: (err) => toast.error(apiMessage(err, "Failed to create workout")),
   });
 
   const createCategory = useMutation({
@@ -708,7 +751,7 @@ export default function WorkoutLibraryPage() {
       setCreatingCategory(false);
       toast.success("Category created");
     },
-    onError: () => toast.error("Failed to create category"),
+    onError: (err) => toast.error(apiMessage(err, "Failed to create category")),
   });
 
   const workoutCountFor = (name: string) =>
