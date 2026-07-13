@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/diet_controller.dart';
+import '../../routes/app_pages.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -686,9 +687,18 @@ class _DietScreenState extends State<DietScreen> {
               final color = selected ? _pink : Colors.grey[500]!;
               return GestureDetector(
                 onTap: () {
-                  // Diet is the current screen; any other tab returns to Home
-                  // (where the nav lives).
-                  if (i != dietIndex) Get.back();
+                  if (i == dietIndex) return;
+                  switch (i) {
+                    case 0:
+                      Get.offAllNamed(Routes.home);
+                      break;
+                    case 1:
+                      Get.offAllNamed(Routes.workoutLibrary);
+                      break;
+                    case 3:
+                      Get.offAllNamed(Routes.progress);
+                      break;
+                  }
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Column(

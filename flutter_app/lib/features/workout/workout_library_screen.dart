@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
 import 'workout_category_screen.dart';
 import 'workout_detail_screen.dart';
@@ -574,9 +575,18 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
               final color = selected ? _pink : Colors.grey[500]!;
               return GestureDetector(
                 onTap: () {
-                  // Workout Library is the current screen; any other tab
-                  // returns to Home (where the nav lives).
-                  if (i != workoutIndex) Get.back();
+                  if (i == workoutIndex) return;
+                  switch (i) {
+                    case 0:
+                      Get.offAllNamed(Routes.home);
+                      break;
+                    case 2:
+                      Get.offAllNamed(Routes.diet);
+                      break;
+                    case 3:
+                      Get.offAllNamed(Routes.progress);
+                      break;
+                  }
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Column(

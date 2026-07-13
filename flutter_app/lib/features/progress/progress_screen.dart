@@ -5,6 +5,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -1294,9 +1295,18 @@ class _ProgressScreenState extends State<ProgressScreen> {
               final color = selected ? _pink : Colors.grey[500]!;
               return GestureDetector(
                 onTap: () {
-                  // Progress is the current screen; any other tab returns to
-                  // Home (where the nav lives).
-                  if (i != progressIndex) Get.back();
+                  if (i == progressIndex) return;
+                  switch (i) {
+                    case 0:
+                      Get.offAllNamed(Routes.home);
+                      break;
+                    case 1:
+                      Get.offAllNamed(Routes.workoutLibrary);
+                      break;
+                    case 2:
+                      Get.offAllNamed(Routes.diet);
+                      break;
+                  }
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Column(

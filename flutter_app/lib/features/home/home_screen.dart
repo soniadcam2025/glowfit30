@@ -18,8 +18,6 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  int _selectedIndex = 0;
-
   @override
   void initState() {
     super.initState();
@@ -1032,6 +1030,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _NavItem(svg: 'assets/icons/nav_progress.svg', label: 'Progress'),
       _NavItem(png: 'assets/icons/glowfit_ico_selected.png', label: 'GlowFit'),
     ];
+    const homeIndex = 0;
 
     return Container(
       decoration: BoxDecoration(
@@ -1056,14 +1055,22 @@ class _HomeScreenState extends State<HomeScreen> {
             children: items.asMap().entries.map((e) {
               final i = e.key;
               final item = e.value;
-              final selected = i == _selectedIndex;
+              final selected = i == homeIndex;
               final color = selected ? _pink : Colors.grey[500]!;
               return GestureDetector(
                 onTap: () {
-                  setState(() => _selectedIndex = i);
-                  if (i == 1) Get.toNamed(Routes.workoutLibrary);
-                  if (i == 2) Get.toNamed(Routes.diet);
-                  if (i == 3) Get.toNamed(Routes.progress);
+                  if (i == homeIndex) return;
+                  switch (i) {
+                    case 1:
+                      Get.offAllNamed(Routes.workoutLibrary);
+                      break;
+                    case 2:
+                      Get.offAllNamed(Routes.diet);
+                      break;
+                    case 3:
+                      Get.offAllNamed(Routes.progress);
+                      break;
+                  }
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Column(
