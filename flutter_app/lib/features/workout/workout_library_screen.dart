@@ -586,6 +586,9 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
                     case 3:
                       Get.offAllNamed(Routes.progress);
                       break;
+                    case 4:
+                      Get.offAllNamed(Routes.profile);
+                      break;
                   }
                 },
                 behavior: HitTestBehavior.opaque,

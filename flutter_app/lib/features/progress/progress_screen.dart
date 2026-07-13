@@ -1306,6 +1306,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                     case 2:
                       Get.offAllNamed(Routes.diet);
                       break;
+                    case 4:
+                      Get.offAllNamed(Routes.profile);
+                      break;
                   }
                 },
                 behavior: HitTestBehavior.opaque,

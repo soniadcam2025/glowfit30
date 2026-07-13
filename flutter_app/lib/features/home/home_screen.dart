@@ -59,7 +59,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHeader() {
     return Obx(() => Row(
           children: [
-            Stack(
+            GestureDetector(
+              onTap: () => Get.toNamed(Routes.profile),
+              child: Stack(
               clipBehavior: Clip.none,
               children: [
                 CircleAvatar(
@@ -103,6 +105,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ],
+              ),
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -1069,6 +1072,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       break;
                     case 3:
                       Get.offAllNamed(Routes.progress);
+                      break;
+                    case 4:
+                      Get.offAllNamed(Routes.profile);
                       break;
                   }
                 },
