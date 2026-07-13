@@ -699,7 +699,7 @@ class _DietScreenState extends State<DietScreen> {
                       Get.offAllNamed(Routes.progress);
                       break;
                     case 4:
-                      Get.offAllNamed(Routes.profile);
+                      Get.offAllNamed(Routes.glow);
                       break;
                   }
                 },

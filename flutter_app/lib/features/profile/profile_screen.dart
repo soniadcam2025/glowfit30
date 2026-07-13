@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../routes/app_pages.dart';
@@ -104,7 +103,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFFDF7F9),
-      bottomNavigationBar: _buildBottomNav(),
       body: SafeArea(
         child: _loading
             ? const Center(child: CircularProgressIndicator(color: _pink))
@@ -135,6 +133,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        GestureDetector(
+          onTap: () => Get.back(),
+          child: Container(
+            width: 42,
+            height: 42,
+            margin: const EdgeInsets.only(right: 10, top: 2),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 16, color: _darkText),
+          ),
+        ),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -787,105 +806,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  // ─── BOTTOM NAV ───────────────────────────────────────────────────────────
-
-  Widget _buildBottomNav() {
-    const items = [
-      (svg: 'assets/icons/nav_home.svg', png: null, label: 'Home'),
-      (svg: 'assets/icons/nav_workout.svg', png: null, label: 'Workout'),
-      (svg: 'assets/icons/nav_diet.svg', png: null, label: 'Diet'),
-      (svg: 'assets/icons/nav_progress.svg', png: null, label: 'Progress'),
-      (
-        svg: null,
-        png: 'assets/icons/glowfit_ico_selected.png',
-        label: 'GlowFit'
-      ),
-    ];
-    const profileIndex = 4;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(24),
-          topRight: Radius.circular(24),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: items.asMap().entries.map((e) {
-              final i = e.key;
-              final item = e.value;
-              final selected = i == profileIndex;
-              final color = selected ? _pink : Colors.grey[500]!;
-              return GestureDetector(
-                onTap: () {
-                  if (i == profileIndex) return;
-                  switch (i) {
-                    case 0:
-                      Get.offAllNamed(Routes.home);
-                      break;
-                    case 1:
-                      Get.offAllNamed(Routes.workoutLibrary);
-                      break;
-                    case 2:
-                      Get.offAllNamed(Routes.diet);
-                      break;
-                    case 3:
-                      Get.offAllNamed(Routes.progress);
-                      break;
-                  }
-                },
-                behavior: HitTestBehavior.opaque,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (item.svg != null)
-                      SvgPicture.asset(
-                        item.svg!,
-                        width: 26,
-                        height: 26,
-                        colorFilter: ColorFilter.mode(color, BlendMode.srcIn),
-                      )
-                    else
-                      Image.asset(
-                        item.png!,
-                        width: 26,
-                        height: 26,
-                        color: color,
-                        errorBuilder: (_, __, ___) => Icon(
-                          Icons.auto_awesome_rounded,
-                          size: 26,
-                          color: color,
-                        ),
-                      ),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.label,
-                      style: GoogleFonts.poppins(
-                        fontSize: 10,
-                        fontWeight:
-                            selected ? FontWeight.w700 : FontWeight.w400,
-                        color: color,
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
 }

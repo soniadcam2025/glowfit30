@@ -1307,7 +1307,7 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       Get.offAllNamed(Routes.diet);
                       break;
                     case 4:
-                      Get.offAllNamed(Routes.profile);
+                      Get.offAllNamed(Routes.glow);
                       break;
                   }
                 },

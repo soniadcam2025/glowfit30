@@ -1074,7 +1074,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       Get.offAllNamed(Routes.progress);
                       break;
                     case 4:
-                      Get.offAllNamed(Routes.profile);
+                      Get.offAllNamed(Routes.glow);
                       break;
                   }
                 },

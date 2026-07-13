@@ -587,7 +587,7 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
                       Get.offAllNamed(Routes.progress);
                       break;
                     case 4:
-                      Get.offAllNamed(Routes.profile);
+                      Get.offAllNamed(Routes.glow);
                       break;
                   }
                 },
