@@ -30,6 +30,7 @@ export async function getUserProgress(userId) {
           id: true,
           title: true,
           dayNumber: true,
+          imageUrl: true,
           workout: { select: { id: true, title: true, level: true } },
         },
       },

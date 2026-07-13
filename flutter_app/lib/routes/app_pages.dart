@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import '../features/home/home_screen.dart';
 import '../features/diet/diet_screen.dart';
 import '../features/workout/workout_library_screen.dart';
+import '../features/progress/progress_screen.dart';
 import '../features/onboarding/splash_screen.dart';
 import '../features/onboarding/language_screen.dart';
 import '../features/onboarding/motivation_screen.dart';
@@ -30,6 +31,7 @@ class AppPages {
     GetPage(name: Routes.home,          page: () => const HomeScreen(),           transition: Transition.fadeIn),
     GetPage(name: Routes.diet,          page: () => const DietScreen(),           transition: Transition.rightToLeft),
     GetPage(name: Routes.workoutLibrary, page: () => const WorkoutLibraryScreen(), transition: Transition.rightToLeft),
+    GetPage(name: Routes.progress,       page: () => const ProgressScreen(),       transition: Transition.rightToLeft),
     GetPage(name: Routes.welcome,       page: () => const WelcomeScreen(),        binding: OnboardingBinding(), transition: Transition.rightToLeft),
     GetPage(name: Routes.language,      page: () => const LanguageScreen(),       binding: OnboardingBinding(), transition: Transition.rightToLeft),
     GetPage(name: Routes.motivation,    page: () => const MotivationScreen(),     binding: OnboardingBinding(), transition: Transition.rightToLeft),
@@ -53,6 +55,7 @@ abstract class Routes {
   static const home          = '/home';
   static const diet          = '/diet';
   static const workoutLibrary = '/workoutLibrary';
+  static const progress       = '/progress';
   static const welcome       = '/welcome';
   static const language      = '/language';
   static const motivation    = '/motivation';

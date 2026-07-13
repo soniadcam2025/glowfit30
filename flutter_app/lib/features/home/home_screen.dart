@@ -1063,6 +1063,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   setState(() => _selectedIndex = i);
                   if (i == 1) Get.toNamed(Routes.workoutLibrary);
                   if (i == 2) Get.toNamed(Routes.diet);
+                  if (i == 3) Get.toNamed(Routes.progress);
                 },
                 behavior: HitTestBehavior.opaque,
                 child: Column(
