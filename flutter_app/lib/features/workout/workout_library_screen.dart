@@ -10,6 +10,14 @@ import 'workout_detail_screen.dart';
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
 
+Color _hexColor(String? hex, Color fallback) {
+  if (hex == null || hex.isEmpty) return fallback;
+  var v = hex.replaceAll('#', '');
+  if (v.length == 6) v = 'FF$v';
+  final parsed = int.tryParse(v, radix: 16);
+  return parsed != null ? Color(parsed) : fallback;
+}
+
 class _LibraryCategory {
   final String title;
   final String description;
@@ -32,6 +40,24 @@ class _LibrarySection {
   const _LibrarySection({required this.title, required this.categories});
 }
 
+/// Local illustration used as an image fallback for admin-managed categories
+/// that match one of the app's original built-in category names and haven't
+/// had a card image uploaded yet.
+const _defaultCategoryAssets = {
+  'Full Body': 'assets/images/workout_cat_full_body.png',
+  'Abs': 'assets/images/workout_cat_abs.png',
+  'Arms': 'assets/images/workout_cat_arms.png',
+  'Bodyweight Workouts': 'assets/images/workout_cat_bodyweight.png',
+  'Bed Workouts': 'assets/images/workout_cat_bed.png',
+  'Stretching': 'assets/images/workout_cat_stretching.png',
+  'Recovery': 'assets/images/workout_cat_recovery.png',
+  'PCOS Friendly': 'assets/images/workout_cat_pcos.png',
+  'Postpartum Recovery': 'assets/images/workout_cat_postpartum.png',
+  'Knee Friendly': 'assets/images/workout_cat_knee.png',
+};
+
+/// Static fallback shown only when the admin hasn't created any workout
+/// library categories yet — kept so the screen never looks broken/empty.
 const _sections = [
   _LibrarySection(title: 'Body Goals', categories: [
     _LibraryCategory(
@@ -123,32 +149,56 @@ class WorkoutLibraryScreen extends StatefulWidget {
 class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
   bool _bookmarked = false;
   List<dynamic> _libraryItems = [];
+  List<dynamic> _categories = [];
 
   @override
   void initState() {
     super.initState();
-    _loadFeatured();
+    _load();
   }
 
-  Future<void> _loadFeatured() async {
-    final items =
-        await Get.find<ApiService>().getWorkoutLibraryItems(featured: true);
+  Future<void> _load() async {
+    final api = Get.find<ApiService>();
+    final results = await Future.wait([
+      api.getWorkoutLibraryItems(featured: true),
+      api.getWorkoutLibraryCategories(),
+    ]);
     if (!mounted) return;
-    setState(() => _libraryItems = items);
+    setState(() {
+      _libraryItems = results[0];
+      _categories = results[1];
+    });
   }
 
   Map<String, dynamic>? get _featured =>
       _libraryItems.isNotEmpty ? _libraryItems.first as Map<String, dynamic> : null;
 
-  void _openCategory(_LibraryCategory c) {
+  /// Groups admin-managed categories by their `section` field, preserving
+  /// the order categories were first seen in (categories already arrive
+  /// sorted by the admin's `order` field).
+  List<MapEntry<String, List<dynamic>>> get _groupedSections {
+    final map = <String, List<dynamic>>{};
+    for (final cat in _categories) {
+      final section = ((cat as Map)['section'] as String?) ?? 'Body Goals';
+      map.putIfAbsent(section, () => []).add(cat);
+    }
+    return map.entries.toList();
+  }
+
+  void _openCategoryByName(
+    String name, {
+    required String fallbackImage,
+    required Color fallbackBackground,
+    required Color fallbackTitleColor,
+  }) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => WorkoutCategoryScreen(
-          categoryName: c.title,
-          fallbackImage: c.image,
-          fallbackBackground: c.background,
-          fallbackTitleColor: c.titleColor,
+          categoryName: name,
+          fallbackImage: fallbackImage,
+          fallbackBackground: fallbackBackground,
+          fallbackTitleColor: fallbackTitleColor,
         ),
       ),
     );
@@ -186,12 +236,20 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
               _buildSearchBar(),
               const SizedBox(height: 18),
               _buildHeroCard(),
-              for (final section in _sections) ...[
-                const SizedBox(height: 26),
-                _buildSectionHeader(section.title),
-                const SizedBox(height: 12),
-                _buildCategoryRow(section.categories),
-              ],
+              if (_categories.isNotEmpty)
+                for (final section in _groupedSections) ...[
+                  const SizedBox(height: 26),
+                  _buildSectionHeader(section.key),
+                  const SizedBox(height: 12),
+                  _buildDynamicCategoryRow(section.value),
+                ]
+              else
+                for (final section in _sections) ...[
+                  const SizedBox(height: 26),
+                  _buildSectionHeader(section.title),
+                  const SizedBox(height: 12),
+                  _buildCategoryRow(section.categories),
+                ],
             ],
           ),
         ),
@@ -475,51 +533,128 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
   }
 
   Widget _buildCategoryCard(_LibraryCategory c) {
+    return _buildCategoryCardRaw(
+      title: c.title,
+      tagline: c.description,
+      background: c.background,
+      titleColor: c.titleColor,
+      image: Image.asset(
+        c.image,
+        width: 130,
+        fit: BoxFit.contain,
+        alignment: Alignment.bottomRight,
+        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+      ),
+      onTap: () => _openCategoryByName(
+        c.title,
+        fallbackImage: c.image,
+        fallbackBackground: c.background,
+        fallbackTitleColor: c.titleColor,
+      ),
+    );
+  }
+
+  Widget _buildDynamicCategoryRow(List<dynamic> categories) {
+    return SizedBox(
+      height: 190,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: categories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (_, i) =>
+            _buildDynamicCategoryCard(categories[i] as Map<String, dynamic>),
+      ),
+    );
+  }
+
+  Widget _buildDynamicCategoryCard(Map<String, dynamic> cat) {
+    final name = cat['name'] as String? ?? '';
+    final tagline = (cat['cardTagline'] as String?)?.trim();
+    final background =
+        _hexColor(cat['cardBackground'] as String?, const Color(0xFFEAE3FA));
+    final titleColor =
+        _hexColor(cat['cardTitleColor'] as String?, const Color(0xFF3D2E7C));
+    final cardImageUrl = cat['cardImageUrl'] as String?;
+    final defaultAsset = _defaultCategoryAssets[name];
+
+    Widget fallbackImage() => defaultAsset != null
+        ? Image.asset(
+            defaultAsset,
+            width: 130,
+            fit: BoxFit.contain,
+            alignment: Alignment.bottomRight,
+            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          )
+        : const SizedBox.shrink();
+
+    return _buildCategoryCardRaw(
+      title: name,
+      tagline: (tagline == null || tagline.isEmpty)
+          ? (cat['description'] as String? ?? '')
+          : tagline,
+      background: background,
+      titleColor: titleColor,
+      image: (cardImageUrl != null && cardImageUrl.isNotEmpty)
+          ? Image.network(
+              cardImageUrl,
+              width: 130,
+              fit: BoxFit.contain,
+              alignment: Alignment.bottomRight,
+              errorBuilder: (_, __, ___) => fallbackImage(),
+            )
+          : fallbackImage(),
+      onTap: () => _openCategoryByName(
+        name,
+        fallbackImage: defaultAsset ?? 'assets/images/workout_cat_full_body.png',
+        fallbackBackground: background,
+        fallbackTitleColor: titleColor,
+      ),
+    );
+  }
+
+  Widget _buildCategoryCardRaw({
+    required String title,
+    required String tagline,
+    required Color background,
+    required Color titleColor,
+    required Widget image,
+    required VoidCallback onTap,
+  }) {
     return GestureDetector(
-      onTap: () => _openCategory(c),
+      onTap: onTap,
       child: Container(
         width: 155,
         decoration: BoxDecoration(
-          color: c.background,
+          color: background,
           borderRadius: BorderRadius.circular(20),
         ),
         clipBehavior: Clip.antiAlias,
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Positioned(
-              right: -10,
-              bottom: 0,
-              child: Image.asset(
-                c.image,
-                width: 130,
-                fit: BoxFit.contain,
-                alignment: Alignment.bottomRight,
-                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-              ),
-            ),
+            Positioned(right: -10, bottom: 0, child: image),
             Padding(
               padding: const EdgeInsets.fromLTRB(14, 16, 14, 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    c.title,
+                    title,
                     style: GoogleFonts.playfairDisplay(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       fontStyle: FontStyle.italic,
-                      color: c.titleColor,
+                      color: titleColor,
                       height: 1.1,
                     ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    c.description,
+                    tagline,
                     style: GoogleFonts.poppins(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: c.titleColor.withValues(alpha: 0.8),
+                      color: titleColor.withValues(alpha: 0.8),
                       height: 1.3,
                     ),
                   ),

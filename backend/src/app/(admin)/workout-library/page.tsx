@@ -271,8 +271,15 @@ type CategoryForm = {
   description: string;
   heroImageUrl: string;
   tags: WorkoutLibraryTag[];
+  section: string;
+  cardTagline: string;
+  cardImageUrl: string;
+  cardBackground: string;
+  cardTitleColor: string;
   order: string;
 };
+
+const KNOWN_SECTIONS = ["Body Goals", "Body Weight Workouts", "Recovery & Relax", "Special Care"];
 
 const emptyCategory = (): CategoryForm => ({
   name: "",
@@ -281,6 +288,11 @@ const emptyCategory = (): CategoryForm => ({
   description: "",
   heroImageUrl: "",
   tags: [emptyTag()],
+  section: "Body Goals",
+  cardTagline: "",
+  cardImageUrl: "",
+  cardBackground: "#EAE3FA",
+  cardTitleColor: "#3D2E7C",
   order: "0",
 });
 
@@ -292,6 +304,11 @@ function categoryToForm(c: WorkoutLibraryCategory): CategoryForm {
     description: c.description,
     heroImageUrl: c.heroImageUrl ?? "",
     tags: c.tags.length > 0 ? c.tags : [emptyTag()],
+    section: c.section,
+    cardTagline: c.cardTagline,
+    cardImageUrl: c.cardImageUrl ?? "",
+    cardBackground: c.cardBackground,
+    cardTitleColor: c.cardTitleColor,
     order: String(c.order),
   };
 }
@@ -306,6 +323,11 @@ function categoryFormToPayload(f: CategoryForm) {
     tags: f.tags
       .filter((t) => t.label.trim())
       .map((t) => ({ ...t, emoji: t.emoji.trim() || "🔥", label: t.label.trim() })),
+    section: f.section.trim() || "Body Goals",
+    cardTagline: f.cardTagline.trim(),
+    cardImageUrl: f.cardImageUrl.trim() || undefined,
+    cardBackground: f.cardBackground.trim() || "#EAE3FA",
+    cardTitleColor: f.cardTitleColor.trim() || "#3D2E7C",
     order: parseInt(f.order) || 0,
   };
 }
@@ -317,6 +339,7 @@ function categoryMissing(f: CategoryForm): string[] {
   if (!f.headingLine1.trim()) missing.push("Heading line 1");
   if (!f.headingLine2.trim()) missing.push("Heading line 2");
   if (!f.description.trim()) missing.push("Description");
+  if (!f.cardTagline.trim()) missing.push("Card tagline");
   return missing;
 }
 
@@ -368,6 +391,62 @@ function CategoryFormPanel({ initial, onSave, onCancel, loading }: {
       />
 
       <TagEditor tags={f.tags} onChange={(tags) => setF((p) => ({ ...p, tags }))} />
+
+      <div className="space-y-3 rounded-lg border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+        <p className="text-xs font-semibold text-slate-500">
+          Card grid appearance (the small card on the main Workout Library screen)
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-1">
+            <label className="text-xs text-slate-400">Section group *</label>
+            <Input
+              value={f.section}
+              onChange={(e) => set("section", e.target.value)}
+              placeholder="Body Goals"
+              list="wl-known-sections"
+            />
+            <datalist id="wl-known-sections">
+              {KNOWN_SECTIONS.map((s) => <option key={s} value={s} />)}
+            </datalist>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-slate-400">Card tagline (2 lines) *</label>
+            <Input
+              value={f.cardTagline}
+              onChange={(e) => set("cardTagline", e.target.value)}
+              placeholder={"One Workout.\\nFull Impact."}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-[1fr_100px_100px] items-end gap-2">
+          <div className="space-y-1">
+            <ImageUploadField
+              label="Card image (small illustration/photo)"
+              value={f.cardImageUrl}
+              onChange={(url) => set("cardImageUrl", url)}
+              folder="exercises"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-slate-400">Card background</label>
+            <input
+              type="color"
+              value={f.cardBackground}
+              onChange={(e) => set("cardBackground", e.target.value)}
+              className="h-9 w-full rounded-lg border border-slate-300 dark:border-slate-700"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs text-slate-400">Card title color</label>
+            <input
+              type="color"
+              value={f.cardTitleColor}
+              onChange={(e) => set("cardTitleColor", e.target.value)}
+              className="h-9 w-full rounded-lg border border-slate-300 dark:border-slate-700"
+            />
+          </div>
+        </div>
+      </div>
 
       <div className="flex items-center justify-end gap-3">
         {categoryMissing(f).length > 0 && (
@@ -434,6 +513,9 @@ function CategoryCard({ category, workoutCount, onDeleted }: {
               <span className="rounded-full bg-violet-100 px-3 py-0.5 text-xs font-semibold text-violet-700 dark:bg-violet-900/30 dark:text-violet-300">
                 {category.name}
               </span>
+              <span className="rounded-full bg-slate-100 px-3 py-0.5 text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                {category.section}
+              </span>
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
                 {category.headingLine1} {category.headingLine2}
               </span>
@@ -442,6 +524,9 @@ function CategoryCard({ category, workoutCount, onDeleted }: {
               </span>
             </div>
             <p className="line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{category.description}</p>
+            {category.cardTagline && (
+              <p className="line-clamp-1 text-xs italic text-slate-400">Card: &quot;{category.cardTagline.replace(/\n/g, " ")}&quot;</p>
+            )}
           </div>
           <div className="flex shrink-0 gap-2">
             <Button variant="secondary" className="text-xs px-3 py-1.5" onClick={() => setEditing(true)}>Edit</Button>

@@ -18,6 +18,11 @@ export const createCategorySchema = z.object({
   description: z.string().min(1),
   heroImageUrl: z.string().url().optional(),
   tags: z.array(tagSchema).default([]),
+  section: z.string().min(1).max(100).default('Body Goals'),
+  cardTagline: z.string().max(200).default(''),
+  cardImageUrl: z.string().url().optional(),
+  cardBackground: z.string().min(1).max(20).default('#EAE3FA'),
+  cardTitleColor: z.string().min(1).max(20).default('#3D2E7C'),
   order: z.coerce.number().int().min(0).default(0),
 });
 

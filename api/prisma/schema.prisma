@@ -142,15 +142,21 @@ model DietPlanDay {
 }
 
 model WorkoutLibraryCategory {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String   @unique // matches WorkoutLibraryItem.category, e.g. "Abs"
-  headingLine1 String   @map("heading_line1") // "ABS" (pink)
-  headingLine2 String   @map("heading_line2") // "WORKOUTS" (dark)
-  description  String   @db.Text // "Stronger core. Flatter stomach. Confident you."
-  heroImageUrl String?  @map("hero_image_url")
-  tags         Json     // [{ emoji, label, background, foreground }]
-  order        Int      @default(0)
-  createdAt    DateTime @default(now()) @map("created_at")
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String   @unique // matches WorkoutLibraryItem.category, e.g. "Abs"
+  headingLine1    String   @map("heading_line1") // detail screen: "ABS" (pink)
+  headingLine2    String   @map("heading_line2") // detail screen: "WORKOUTS" (dark)
+  description     String   @db.Text // detail screen paragraph
+  heroImageUrl    String?  @map("hero_image_url") // detail screen header photo
+  tags            Json     // [{ emoji, label, background, foreground }]
+  // -- card grid (main Workout Library screen) --
+  section         String   @default("Body Goals") // groups cards: "Body Goals", "Body Weight Workouts", ...
+  cardTagline     String   @default("") @map("card_tagline") // short 2-line hook, e.g. "One Workout.\nFull Impact."
+  cardImageUrl    String?  @map("card_image_url") // small card illustration/photo
+  cardBackground  String   @default("#EAE3FA") @map("card_background") // hex
+  cardTitleColor  String   @default("#3D2E7C") @map("card_title_color") // hex
+  order           Int      @default(0)
+  createdAt       DateTime @default(now()) @map("created_at")
 
   @@map("workout_library_categories")
 }

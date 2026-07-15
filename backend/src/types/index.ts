@@ -127,6 +127,11 @@ export type WorkoutLibraryCategory = {
   description: string;
   heroImageUrl?: string;
   tags: WorkoutLibraryTag[];
+  section: string;
+  cardTagline: string;
+  cardImageUrl?: string;
+  cardBackground: string;
+  cardTitleColor: string;
   order: number;
   createdAt: string;
 };

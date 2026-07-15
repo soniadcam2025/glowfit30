@@ -104,6 +104,16 @@ class ApiService extends GetxService {
     }
   }
 
+  Future<List<dynamic>> getWorkoutLibraryCategories() async {
+    try {
+      final r = await _client.get('/workout-library/categories');
+      final d = _data(r) as Map<String, dynamic>?;
+      return d?['categories'] as List<dynamic>? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<Map<String, dynamic>?> getWorkoutLibraryCategory(String name) async {
     try {
       final r = await _client.get('/workout-library/categories');
