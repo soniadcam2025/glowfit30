@@ -1,7 +1,7 @@
 import { prisma } from '../../database/prisma.js';
 
 export function listPosts() {
-  return prisma.beautyPost.findMany({ orderBy: { createdAt: 'desc' } });
+  return prisma.beautyPost.findMany({ orderBy: { order: 'asc' } });
 }
 
 export function getPost(id) {

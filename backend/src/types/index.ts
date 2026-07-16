@@ -201,3 +201,38 @@ export type AnalyticsData = {
   totalSignupsThisWeek: number;
   totalCompletionsThisWeek: number;
 };
+
+// ─── Glow screen content ────────────────────────────────────────────────────
+
+export type BeautyPost = {
+  id: string;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  tag: string;
+  tagColor: string;
+  tagBackground: string;
+  minutesRead: number;
+  order: number;
+  createdAt: string;
+};
+
+export type GlowCategory = {
+  id: string;
+  emoji: string;
+  title: string;
+  subtitle: string;
+  background: string;
+  order: number;
+  createdAt: string;
+};
+
+export type GlowShort = {
+  id: string;
+  imageUrl?: string;
+  duration: string;
+  title: string;
+  views: string;
+  order: number;
+  createdAt: string;
+};

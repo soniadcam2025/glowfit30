@@ -23,7 +23,7 @@ export const adminNavItems = [
   { href: "/workouts", label: "Workouts", icon: Dumbbell },
   { href: "/workout-library", label: "Workout Library", icon: Library },
   { href: "/diet", label: "Diet", icon: UtensilsCrossed },
-  { href: "/beauty", label: "Beauty", icon: Sparkles },
+  { href: "/beauty", label: "Glow Content", icon: Sparkles },
   { href: "/analytics", label: "Analytics", icon: BarChart2 },
   { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/settings", label: "Settings", icon: Settings },

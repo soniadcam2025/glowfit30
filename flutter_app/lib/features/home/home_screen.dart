@@ -21,7 +21,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    Get.put(HomeController());
+    Get.put(HomeController(), permanent: true);
   }
 
   HomeController get _c => Get.find<HomeController>();

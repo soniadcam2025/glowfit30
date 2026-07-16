@@ -137,6 +137,38 @@ class ApiService extends GetxService {
     }
   }
 
+  // ── Glow ──────────────────────────────────────────────────────────────────────
+
+  Future<List<dynamic>> getGlowCategories() async {
+    try {
+      final r = await _client.get('/glow/categories');
+      final d = _data(r) as Map<String, dynamic>?;
+      return d?['categories'] as List<dynamic>? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getGlowReads() async {
+    try {
+      final r = await _client.get('/beauty');
+      final d = _data(r) as Map<String, dynamic>?;
+      return d?['items'] as List<dynamic>? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<dynamic>> getGlowShorts() async {
+    try {
+      final r = await _client.get('/glow/shorts');
+      final d = _data(r) as Map<String, dynamic>?;
+      return d?['shorts'] as List<dynamic>? ?? [];
+    } catch (_) {
+      return [];
+    }
+  }
+
   // ── Progress ─────────────────────────────────────────────────────────────────
 
   Future<bool> logProgress({

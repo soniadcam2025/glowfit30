@@ -4,9 +4,18 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/home_controller.dart';
 import '../../routes/app_pages.dart';
+import '../../services/api_service.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
+
+Color _hexColor(String? hex, Color fallback) {
+  if (hex == null || hex.isEmpty) return fallback;
+  var v = hex.replaceAll('#', '');
+  if (v.length == 6) v = 'FF$v';
+  final parsed = int.tryParse(v, radix: 16);
+  return parsed != null ? Color(parsed) : fallback;
+}
 
 class _GoalItem {
   final String emoji;
@@ -20,7 +29,7 @@ class _GoalItem {
       required this.subtitle});
 }
 
-const _goals = [
+const _fallbackGoals = [
   _GoalItem(
       emoji: '🧖‍♀️',
       bg: Color(0xFFFCE4EC),
@@ -64,7 +73,7 @@ class _ReadItem {
       required this.minutes});
 }
 
-const _reads = [
+const _fallbackReads = [
   _ReadItem(
     image: 'assets/images/glow_read_serum.png',
     tag: 'SKINCARE',
@@ -103,13 +112,13 @@ class _ShortItem {
       required this.views});
 }
 
-const _shortBig = _ShortItem(
+const _fallbackShortBig = _ShortItem(
   image: 'assets/images/glow_short_detox.png',
   duration: '0:45',
   title: 'Morning Detox for Energy Boost',
   views: '10.2k views',
 );
-const _shortsSmall = [
+const _fallbackShortsSmall = [
   _ShortItem(
     image: 'assets/images/glow_short_massage.png',
     duration: '0:28',
@@ -134,12 +143,32 @@ class GlowScreen extends StatefulWidget {
 class _GlowScreenState extends State<GlowScreen> {
   HomeController get _c => Get.find<HomeController>();
 
+  List<dynamic> _apiCategories = [];
+  List<dynamic> _apiReads = [];
+  List<dynamic> _apiShorts = [];
+
   @override
   void initState() {
     super.initState();
     if (!Get.isRegistered<HomeController>()) {
-      Get.put(HomeController());
+      Get.put(HomeController(), permanent: true);
     }
+    _load();
+  }
+
+  Future<void> _load() async {
+    final api = Get.find<ApiService>();
+    final results = await Future.wait([
+      api.getGlowCategories(),
+      api.getGlowReads(),
+      api.getGlowShorts(),
+    ]);
+    if (!mounted) return;
+    setState(() {
+      _apiCategories = results[0];
+      _apiReads = results[1];
+      _apiShorts = results[2];
+    });
   }
 
   @override
@@ -553,41 +582,79 @@ class _GlowScreenState extends State<GlowScreen> {
   // ─── EXPLORE BY GOALS ─────────────────────────────────────────────────────
 
   Widget _buildGoalsRow() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [for (final g in _goals) _goalItem(g)],
+    if (_apiCategories.isEmpty) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [for (final g in _fallbackGoals) _goalItemRaw(
+              emoji: g.emoji,
+              bg: g.bg,
+              title: g.title,
+              subtitle: g.subtitle,
+            )],
+      );
+    }
+    return SizedBox(
+      height: 92,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: _apiCategories.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemBuilder: (_, i) {
+          final cat = _apiCategories[i] as Map<String, dynamic>;
+          return _goalItemRaw(
+            emoji: (cat['emoji'] as String?) ?? '✨',
+            bg: _hexColor(cat['background'] as String?, const Color(0xFFFCE4EC)),
+            title: (cat['title'] as String?) ?? '',
+            subtitle: (cat['subtitle'] as String?) ?? '',
+          );
+        },
+      ),
     );
   }
 
-  Widget _goalItem(_GoalItem g) {
+  Widget _goalItemRaw({
+    required String emoji,
+    required Color bg,
+    required String title,
+    required String subtitle,
+  }) {
     return GestureDetector(
       onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${g.title} is coming soon.')),
+        SnackBar(content: Text('$title is coming soon.')),
       ),
-      child: Column(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(color: g.bg, shape: BoxShape.circle),
-            child: Center(
-              child: Text(g.emoji, style: const TextStyle(fontSize: 24)),
+      child: SizedBox(
+        width: 70,
+        child: Column(
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(color: bg, shape: BoxShape.circle),
+              child: Center(
+                child: Text(emoji, style: const TextStyle(fontSize: 24)),
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            g.title,
-            style: GoogleFonts.poppins(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: _darkText,
+            const SizedBox(height: 6),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: _darkText,
+              ),
             ),
-          ),
-          Text(
-            g.subtitle,
-            style: GoogleFonts.poppins(fontSize: 8.5, color: Colors.grey[500]),
-          ),
-        ],
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(fontSize: 8.5, color: Colors.grey[500]),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -595,21 +662,86 @@ class _GlowScreenState extends State<GlowScreen> {
   // ─── GLOW READS ───────────────────────────────────────────────────────────
 
   Widget _buildReadsRow() {
+    if (_apiReads.isEmpty) {
+      return SizedBox(
+        height: 210,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: _fallbackReads.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (_, i) {
+            final r = _fallbackReads[i];
+            return _readCardRaw(
+              image: Image.asset(
+                r.image,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _readImageFallback(r.tagBg, r.tagColor),
+              ),
+              tag: r.tag,
+              tagColor: r.tagColor,
+              tagBg: r.tagBg,
+              title: r.title,
+              minutesLabel: r.minutes,
+            );
+          },
+        ),
+      );
+    }
     return SizedBox(
       height: 210,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: _reads.length,
+        itemCount: _apiReads.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
-        itemBuilder: (_, i) => _readCard(_reads[i]),
+        itemBuilder: (_, i) {
+          final read = _apiReads[i] as Map<String, dynamic>;
+          final tagColor = _hexColor(read['tagColor'] as String?, const Color(0xFFC4185A));
+          final tagBg = _hexColor(read['tagBackground'] as String?, const Color(0xFFFCE4EC));
+          final imageUrl = read['imageUrl'] as String?;
+          final minutesRead = read['minutesRead'];
+          return _readCardRaw(
+            image: (imageUrl != null && imageUrl.isNotEmpty)
+                ? Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => _readImageFallback(tagBg, tagColor),
+                  )
+                : _readImageFallback(tagBg, tagColor),
+            tag: (read['tag'] as String?) ?? '',
+            tagColor: tagColor,
+            tagBg: tagBg,
+            title: (read['title'] as String?) ?? '',
+            minutesLabel: '$minutesRead min read',
+          );
+        },
       ),
     );
   }
 
-  Widget _readCard(_ReadItem r) {
+  Widget _readImageFallback(Color tagBg, Color tagColor) {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [tagBg, tagColor.withValues(alpha: 0.3)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: Icon(Icons.image_rounded, color: tagColor.withValues(alpha: 0.5), size: 28),
+    );
+  }
+
+  Widget _readCardRaw({
+    required Widget image,
+    required String tag,
+    required Color tagColor,
+    required Color tagBg,
+    required String title,
+    required String minutesLabel,
+  }) {
     return GestureDetector(
       onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${r.title} is coming soon.')),
+        SnackBar(content: Text('$title is coming soon.')),
       ),
       child: Container(
         width: 150,
@@ -634,21 +766,7 @@ class _GlowScreenState extends State<GlowScreen> {
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  Image.asset(
-                    r.image,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [r.tagBg, r.tagColor.withValues(alpha: 0.3)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                      ),
-                      child: Icon(Icons.image_rounded,
-                          color: r.tagColor.withValues(alpha: 0.5), size: 28),
-                    ),
-                  ),
+                  image,
                   Positioned(
                     top: 8,
                     left: 8,
@@ -656,15 +774,15 @@ class _GlowScreenState extends State<GlowScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: r.tagBg,
+                        color: tagBg,
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        r.tag,
+                        tag,
                         style: GoogleFonts.poppins(
                           fontSize: 8,
                           fontWeight: FontWeight.w800,
-                          color: r.tagColor,
+                          color: tagColor,
                         ),
                       ),
                     ),
@@ -690,7 +808,7 @@ class _GlowScreenState extends State<GlowScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    r.title,
+                    title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
@@ -708,7 +826,7 @@ class _GlowScreenState extends State<GlowScreen> {
                       const SizedBox(width: 3),
                       Expanded(
                         child: Text(
-                          r.minutes,
+                          minutesLabel,
                           style: GoogleFonts.poppins(
                               fontSize: 9.5, color: Colors.grey[500]),
                         ),
@@ -735,19 +853,69 @@ class _GlowScreenState extends State<GlowScreen> {
   // ─── SHORTS & QUICK TIPS ──────────────────────────────────────────────────
 
   Widget _buildShortsRow() {
+    if (_apiShorts.isEmpty) {
+      return SizedBox(
+        height: 210,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: _shortTileRaw(
+                image: Image.asset(
+                  _fallbackShortBig.image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _shortImageFallback(),
+                ),
+                duration: _fallbackShortBig.duration,
+                title: _fallbackShortBig.title,
+                views: _fallbackShortBig.views,
+                big: true,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                children: [
+                  for (final s in _fallbackShortsSmall) ...[
+                    Expanded(
+                      child: _shortTileRaw(
+                        image: Image.asset(
+                          s.image,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _shortImageFallback(),
+                        ),
+                        duration: s.duration,
+                        title: s.title,
+                        views: s.views,
+                      ),
+                    ),
+                    if (s != _fallbackShortsSmall.last) const SizedBox(height: 10),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final big = _apiShorts.first as Map<String, dynamic>;
+    final small = _apiShorts.skip(1).take(2).toList();
+
     return SizedBox(
       height: 210,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(child: _shortTile(_shortBig, big: true)),
+          Expanded(child: _shortTileFromApi(big, big: true)),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
               children: [
-                Expanded(child: _shortTile(_shortsSmall[0])),
-                const SizedBox(height: 10),
-                Expanded(child: _shortTile(_shortsSmall[1])),
+                for (final s in small) ...[
+                  Expanded(child: _shortTileFromApi(s as Map<String, dynamic>)),
+                  if (s != small.last) const SizedBox(height: 10),
+                ],
               ],
             ),
           ),
@@ -756,31 +924,54 @@ class _GlowScreenState extends State<GlowScreen> {
     );
   }
 
-  Widget _shortTile(_ShortItem s, {bool big = false}) {
+  Widget _shortImageFallback() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF3A2E3D), Color(0xFF1A1A2E)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Icon(Icons.play_circle_fill_rounded,
+          color: Colors.white38, size: 32),
+    );
+  }
+
+  Widget _shortTileFromApi(Map<String, dynamic> s, {bool big = false}) {
+    final imageUrl = s['imageUrl'] as String?;
+    return _shortTileRaw(
+      image: (imageUrl != null && imageUrl.isNotEmpty)
+          ? Image.network(
+              imageUrl,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => _shortImageFallback(),
+            )
+          : _shortImageFallback(),
+      duration: (s['duration'] as String?) ?? '',
+      title: (s['title'] as String?) ?? '',
+      views: (s['views'] as String?) ?? '',
+      big: big,
+    );
+  }
+
+  Widget _shortTileRaw({
+    required Widget image,
+    required String duration,
+    required String title,
+    required String views,
+    bool big = false,
+  }) {
     return GestureDetector(
       onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${s.title} is coming soon.')),
+        SnackBar(content: Text('$title is coming soon.')),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Image.asset(
-              s.image,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Color(0xFF3A2E3D), Color(0xFF1A1A2E)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                ),
-                child: const Icon(Icons.play_circle_fill_rounded,
-                    color: Colors.white38, size: 32),
-              ),
-            ),
+            image,
             Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -805,7 +996,7 @@ class _GlowScreenState extends State<GlowScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  s.duration,
+                  duration,
                   style: GoogleFonts.poppins(
                     fontSize: 9.5,
                     fontWeight: FontWeight.w600,
@@ -835,7 +1026,7 @@ class _GlowScreenState extends State<GlowScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    s.title,
+                    title,
                     maxLines: big ? 2 : 2,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.poppins(
@@ -853,7 +1044,7 @@ class _GlowScreenState extends State<GlowScreen> {
                           size: 10, color: Colors.white.withValues(alpha: 0.85)),
                       const SizedBox(width: 3),
                       Text(
-                        s.views,
+                        views,
                         style: GoogleFonts.poppins(
                           fontSize: 9,
                           color: Colors.white.withValues(alpha: 0.85),

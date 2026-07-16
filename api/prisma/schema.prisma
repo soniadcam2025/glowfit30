@@ -198,13 +198,42 @@ model WorkoutLibraryExercise {
 }
 
 model BeautyPost {
-  id        String   @id @default(uuid()) @db.Uuid
-  title     String
-  content   String   @db.Text
-  imageUrl  String?  @map("image_url")
-  createdAt DateTime @default(now()) @map("created_at")
+  id            String   @id @default(uuid()) @db.Uuid
+  title         String
+  content       String   @db.Text
+  imageUrl      String?  @map("image_url")
+  tag           String   @default("SKINCARE") // e.g. "SKINCARE", "NUTRITION", "ROUTINE" — Glow Reads chip
+  tagColor      String   @default("#C4185A") @map("tag_color")
+  tagBackground String   @default("#FCE4EC") @map("tag_background")
+  minutesRead   Int      @default(4) @map("minutes_read")
+  order         Int      @default(0)
+  createdAt     DateTime @default(now()) @map("created_at")
 
   @@map("beauty_posts")
+}
+
+model GlowCategory {
+  id         String   @id @default(uuid()) @db.Uuid
+  emoji      String
+  title      String
+  subtitle   String
+  background String   @default("#FCE4EC")
+  order      Int      @default(0)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("glow_categories")
+}
+
+model GlowShort {
+  id        String   @id @default(uuid()) @db.Uuid
+  imageUrl  String?  @map("image_url")
+  duration  String // e.g. "0:45"
+  title     String
+  views     String   @default("0 views") // free-text display estimate, e.g. "10.2k views"
+  order     Int      @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("glow_shorts")
 }
 
 model AdminLog {

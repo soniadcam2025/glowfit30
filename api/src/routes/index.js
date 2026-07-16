@@ -8,6 +8,7 @@ import workoutsRoutes from '../modules/workouts/workouts.routes.js';
 import workoutLibraryRoutes from '../modules/workout-library/workout-library.routes.js';
 import dietRoutes from '../modules/diet/diet.routes.js';
 import beautyRoutes from '../modules/beauty/beauty.routes.js';
+import glowRoutes from '../modules/glow/glow.routes.js';
 import notificationsRoutes from '../modules/notifications/notifications.routes.js';
 import uploadsRoutes from '../modules/uploads/uploads.routes.js';
 
@@ -22,6 +23,7 @@ router.use('/workouts', workoutsRoutes);
 router.use('/workout-library', workoutLibraryRoutes);
 router.use('/diet', dietRoutes);
 router.use('/beauty', beautyRoutes);
+router.use('/glow', glowRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/uploads', uploadsRoutes);
 

@@ -82,7 +82,7 @@ Admin dashboard login → `POST /auth/login` (email + password, admins only)
 > Close remaining gaps where the app still shows static/hardcoded content instead of admin-managed data.
 
 - [x] 26. Workout Library category cards (Full Body, Arms, etc.) — added `section`/`cardTagline`/`cardImageUrl`/`cardBackground`/`cardTitleColor` fields to `WorkoutLibraryCategory`, admin form updated, Flutter card grid now fetches + groups categories from `/workout-library/categories` (falls back to the old static list only if the admin has zero categories). All 10 original categories seeded with their real content. Verified end-to-end on emulator ✓
-- [ ] 27. Glow screen content (Explore by Goals, Glow Reads, Shorts & Quick Tips, Premium banner) — currently static placeholder data; build DB schema + API + admin CRUD + Flutter wiring
+- [x] 27. Glow screen content (Explore by Goals, Glow Reads, Shorts & Quick Tips) — extended `BeautyPost` (tag/color/minutesRead/order) for Glow Reads, added `GlowCategory` + `GlowShort` models, new `/glow` API module, rebuilt the admin page (was a non-functional stub) into full CRUD for all 3 content types, Flutter screen now fetches all 3 with graceful fallback to the old static content if the admin has nothing yet. Premium banner intentionally left static (a monetization upsell, not content). Seeded sample content with real uploaded images. Fixed a real bug along the way: `HomeController` (shared with the Progress/Profile screens) wasn't marked `permanent`, so GetX's smart-management silently disposed it whenever a screen replaced the whole route stack (`Get.offAllNamed`), crashing any screen — including Home itself on a later visit — that read it after. Verified end-to-end on emulator ✓
 - [ ] 28. Profile settings rows (Workout Preferences, Diet Preferences, Notifications, App Settings) — currently show a "coming soon" message; build out each screen
 
 ---
@@ -95,8 +95,8 @@ Admin dashboard login → `POST /auth/login` (email + password, admins only)
 | Phase 2 — Flutter Integration | 8 | 8 | ✅ Complete |
 | Phase 3 — Admin Dashboard | 5 | 5 | ✅ Complete |
 | Phase 4 — Polish | 4 | 4 | ✅ Complete |
-| Phase 5 — Content Completion | 3 | 1 | 🔄 In Progress |
-| **Total** | **28** | **26** | 🔄 In Progress |
+| Phase 5 — Content Completion | 3 | 2 | 🔄 In Progress |
+| **Total** | **28** | **27** | 🔄 In Progress |
 
 ---
 
