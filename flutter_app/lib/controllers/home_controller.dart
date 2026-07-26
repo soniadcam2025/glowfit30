@@ -21,6 +21,9 @@ class HomeController extends GetxController {
   final goalText     = 'WEIGHT LOSS'.obs;
   final exerciseCount = 0.obs;
 
+  // Preferences
+  final waterGoalLiters = 3.0.obs;
+
   // UI state
   final isLoading = true.obs;
   final hasError  = false.obs;
@@ -56,6 +59,7 @@ class HomeController extends GetxController {
         photoUrl(profile['photoUrl'] as String? ?? '');
         final goal = profile['goal'] as String? ?? 'Loss weight';
         goalText(_goalToDisplay(goal));
+        waterGoalLiters((profile['waterGoalLiters'] as num?)?.toDouble() ?? 3.0);
       }
 
       if (progress != null) {

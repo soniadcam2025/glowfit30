@@ -10,4 +10,6 @@ export const patchProfileSchema = z.object({
   dob:          z.string().datetime({ offset: true }).optional(),
   height:       z.number().positive().optional(),
   weight:       z.number().positive().optional(),
+  waterGoalLiters: z.number().positive().optional(),
+  pushEnabled:     z.boolean().optional(),
 }).strict();

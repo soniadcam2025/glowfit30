@@ -1,0 +1,206 @@
+# GlowFit — Project Master
+**Single source of truth for the entire GlowFit project.** Merges `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `ROADMAP.md`, `CHANGELOG.md`, `deployment-report.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `RELEASE_NOTES.md`, `SECURITY.md`, and `TODO.md`. Those files remain the detailed/standalone versions of their domain; this document is the merged overview that should be read first.
+
+**Last Updated: 2026-07-26** · Maintained per `PROJECT_RULES.md` — updated after every completed feature, sections revised in place, nothing deleted (see `PROJECT_MEMORY.md`'s Update Log for the full append-only history this document draws from).
+
+---
+
+## 1. Executive Summary
+
+GlowFit is a three-tier fitness + beauty platform: a Flutter mobile app, an Express/Prisma API, and a Next.js admin panel, backed by PostgreSQL + Redis on a single Ubuntu VPS behind Cloudflare. The original 28-task integration plan (`App-Admin-Api connection Task.md`) is **27/28 complete** — the platform has full end-to-end content management for workouts, diet, and beauty/Glow content, with push notifications, media uploads, streak tracking, and admin analytics all working. What remains before a confident v1.0 launch is not features but **hardening**: a hardcoded password-reset vulnerability, plaintext credentials committed to git, unverified HTTPS, a likely-broken analytics endpoint, and zero automated test coverage. Overall weighted completion: **~75%**.
+
+## 2. Project Health
+
+**Score: 6.5 / 10 — Functional beta, needs a hardening pass before production.**
+
+| Dimension | Score | Notes |
+|---|---|---|
+| Feature completeness | 8.5/10 | 27/28 planned tasks done, broad content-management surface |
+| Code organization | 7.5/10 | Consistent modular API pattern; admin panel has duplicated CRUD boilerplate |
+| Security posture | 4/10 | Hardcoded reset password, JWT in localStorage, plaintext creds in git |
+| Deployment maturity | 4/10 | Works, but fully manual, no CI/CD, HTTPS unverified |
+| Test coverage | 1/10 | Zero automated tests anywhere |
+| Documentation accuracy | 5/10 → improving | Task tracker accurate; `docs/ARCHITECTURE.md`/`documentation.md` stale/aspirational (this document is now the accurate source) |
+| Git hygiene | 6.5/10 | Consistent Conventional Commits for 2 months; some junk commits early; no branches ever used |
+
+**Trend: positive.** Feature velocity is strong; production hardening has lagged behind it — expected for a fast-moving solo-developer MVP.
+
+## 3. Architecture
+
+```
+Flutter mobile app (flutter_app/, GetX, Dio)  ──┐
+                                                  ├──HTTP/JSON──▶  Express + Prisma API (api/)  ──▶ PostgreSQL + Redis
+Next.js admin panel (backend/, React Query)  ────┘                                            └──▶ Vultr S3-compatible storage
+                                                                                                 └──▶ Firebase (Auth + FCM push)
+```
+
+- **`api/`** — the real backend. Node.js (ESM) + Express 4 + Prisma 6 + PostgreSQL, modular controller/service/routes/validation pattern per feature, optional Redis read-through caching, Firebase Admin for social login + push, JWT (cookie + Bearer) auth.
+- **`backend/`** — **misleadingly named**; this is the admin **web frontend** (Next.js 16 App Router, React 19, TanStack React Query, Tailwind v4). No direct DB access despite leftover unused Prisma boilerplate.
+- **`flutter_app/`** — Flutter mobile app, GetX state management, Firebase Auth (Google Sign-In), Dio networking.
+- **`server/`** — nginx + PM2 + provisioning docs for the single VPS.
+- **Documentation drift:** `docs/ARCHITECTURE.md` describes an aspirational future state (Zustand, refresh tokens, a `subscriptions` module, Cloudflare R2, a `/mobile` folder) that doesn't match reality — treat it as a roadmap/vision doc, not current fact. This master document is the accurate current-state reference.
+- **Architecture change policy:** per `PROJECT_RULES.md`, no architecture change may ship without updating this section first.
+
+## 4. Folder Structure
+
+```
+glowfit/
+├── api/                  Express + Prisma backend (the real backend)
+│   ├── prisma/           schema.prisma + migrations/
+│   ├── scripts/          seed.mjs, seed-admin.mjs, test-db.js
+│   └── src/
+│       ├── config/       env.js, firebase.js, storage.js
+│       ├── database/     prisma.js, redis.js
+│       ├── middleware/   auth.js, errorHandler.js, validate.js
+│       ├── modules/      admin, analytics(stub), auth, beauty, diet, glow,
+│       │                 notifications, profile, progress, uploads, users,
+│       │                 workout-library, workouts
+│       ├── routes/       index.js
+│       └── utils/        adminLog.js, response.js
+├── backend/              Next.js admin WEB FRONTEND (name is misleading)
+│   └── src/app/(admin)/  dashboard, users, workouts, workout-library, diet, beauty, analytics, notifications, settings
+├── flutter_app/          Flutter mobile app (GetX, Dio)
+├── server/               nginx config + VPS provisioning docs
+├── client-builds/        untracked, dated APK zip exports
+├── docs/                 ARCHITECTURE.md (aspirational), API_CONVENTIONS.md, BACKEND_RULES.md, FLUTTER_RULES.md, ADMIN_RULES.md
+└── (root docs)           PROJECT_MASTER.md (this file), PROJECT_RULES.md, SPRINT.md, RELEASE_PROCESS.md,
+                          PROJECT_STATUS.md, PROJECT_MEMORY.md, ROADMAP.md, CHANGELOG.md, deployment-report.md,
+                          API_REFERENCE.md, DATABASE_SCHEMA.md, RELEASE_NOTES.md, SECURITY.md, TODO.md
+```
+
+## 5. Database
+
+PostgreSQL via Prisma, **14 models**, all relations `onDelete: Cascade`, no many-to-many. Full detail in `DATABASE_SCHEMA.md`.
+
+`User` · `Workout`→`WorkoutDay`→`Exercise` · `Progress` (User+WorkoutDay) · `DietPlan`→`DietPlanDay` · `WorkoutLibraryCategory` (soft-linked, no FK) / `WorkoutLibraryItem`→`WorkoutLibraryExercise` · `BeautyPost` · `GlowCategory` · `GlowShort` · `AdminLog`.
+
+**11 migrations**, chronological from `20250409120000_init` to `20260714020000_add_user_preferences`.
+
+**⚠️ Known drift:** `User.fcmToken`, `Exercise.videoUrl`, `DietPlan.imageUrl` exist in `schema.prisma` with no matching migration — must be reconciled before v1.0 (see `TODO.md` 🔴).
+
+## 6. API Modules
+
+12 modules, **51 route+method combinations**, each mounted at both `/api/*` and bare `/*` (unresolved double-mount, see Technical Debt). Full detail + auth requirements in `API_REFERENCE.md`.
+
+`auth · profile · progress · users · admin · workouts · workout-library · diet · beauty · glow · notifications · uploads`. `analytics` module is an empty stub — metrics live in `admin` module instead.
+
+**⚠️ Known bug:** `GET /admin/chart-data` uses raw SQL with mismatched table-name casing — likely broken at runtime.
+
+## 7. Admin Panel
+
+Next.js 16 App Router, React 19, TypeScript, TanStack React Query, Axios, Tailwind v4. Pages: Dashboard, Users, Workouts, Workout Library, Diet, Beauty/Glow, Analytics, Notifications, Settings (non-functional stub), Login.
+
+- **Auth:** BFF pattern — login proxied through a same-origin Next.js route that sets an httpOnly cookie + returns the JWT for client-side `localStorage` storage (⚠️ XSS exposure, see Security).
+- **Routing:** edge middleware guards auth + mobile-UA redirect + role (`routeRoleMap`); a client-side `withRoleGuard` HOC additionally guards only `/settings` (inconsistent — should extend to all role-restricted routes).
+- **State:** React Query for server state; no global auth/UI store (re-fetches `/auth/me` as needed).
+- **Known dead code:** `content.service.ts` (fake mocked methods), unused table/skeleton/filter components, empty stub routes (`(auth)/login`, `api/health/db/`).
+
+## 8. Flutter App
+
+Dart SDK ≥3.0, GetX 4.6 (state management), Dio 5.3 (networking), get_storage + flutter_secure_storage, Firebase Auth/Core/Messaging, Google Sign-In, fl_chart, video_player. Version `1.0.0+1`. Auth flow: Google Sign-In → Firebase ID token → `POST /auth/firebase` → API JWT stored in GetStorage. All core screens (home, workouts, workout-library, diet, Glow, progress, profile) wired to live API data. Current build artifacts are **Android APKs only** (`client-builds/`) — no iOS release yet.
+
+## 9. Infrastructure
+
+- Single Ubuntu 22.04 VPS (Vultr, IP `139.84.149.147`, hostname `api-glowfit`), behind Cloudflare.
+- PostgreSQL (`glowfit_db`) + Redis, both bound to `127.0.0.1` only.
+- `ufw` (22/80/443 only) + `fail2ban` (SSH jail) enabled.
+- PM2 boot persistence via generated systemd unit `pm2-sprsadmin` (not repo-tracked).
+- **No backups configured** for PostgreSQL yet.
+- Root SSH login + password auth still enabled — pending hardening.
+
+## 10. Deployment
+
+- **API:** PM2 fork mode (`glowfit-api`), deployed via `api/deploy.sh` (git pull → npm ci → prisma migrate deploy → prisma generate → pm2 restart) — **manual SSH trigger only, no webhook/CI**.
+- **Admin:** no ecosystem file, no deploy script — manual tar/upload/build/PM2-start process, not reproducible from git.
+- **nginx:** subdomain routing (`api.glowfit30.com`→:4000, `admin.glowfit30.com`→:3000) behind Cloudflare; committed config is **HTTP-only, no 443 blocks**.
+- **HTTPS:** last recorded check (2026-04-09) showed Cloudflare 521 on both subdomains — unverified since.
+- **CI/CD:** none exists. Full detail in `deployment-report.md` and target-state process in `RELEASE_PROCESS.md`.
+
+## 11. Git Status
+
+- Branch: `main` only (local + remote), no branching model ever used, no merges in 32-commit history.
+- Remote: `origin` → `github.com/soniadcam2025/glowfit30.git`.
+- No git tags/releases cut yet.
+- Commit style: Conventional Commits, consistently followed for the last ~2 months (~78% of all-time history); a handful of early junk commits (`fc1`, `test deploy`) exist as historical noise, not a current problem.
+- As of last check: `main` was ahead of `origin/main` with several modified/untracked files corresponding to the in-progress Task 28 work (see Current Sprint).
+
+## 12. Security
+
+Full detail in `SECURITY.md`. Top findings, ranked:
+1. **Hardcoded password-reset default** (`Admin12345`) — critical, no OTP/token verification.
+2. **JWT in admin panel `localStorage`** — XSS exposure alongside the httpOnly cookie meant to prevent it.
+3. **Plaintext VPS/DB credentials committed to git** (`server/SERVER_SETUP_SUMMARY.md`, `help`) — already pushed to the remote.
+4. Likely-broken `/admin/chart-data` (reliability, not itself a vuln).
+5. No CSRF defense beyond CORS allow-list; HTTPS status unverified; inconsistent enumeration protection between register/reset-password; no automated tests.
+
+## 13. Current Sprint
+
+See `SPRINT.md` for full detail. **Sprint goal:** finish Task 28 (profile settings sub-screens) and clear the v1.0 Critical/Security punch list. In progress: Workout/Diet/Notification/App Settings screens (Flutter) + `user_preferences` API/DB support — uncommitted, coherent, nearly done.
+
+## 14. Completed Features
+
+Per `App-Admin-Api connection Task.md` (27/28) plus later work — see `CHANGELOG.md` for the full chronological log:
+
+- **Phase 1 — API Foundation** (8/8): profile schema, WorkoutDay/Exercise/Progress models, Firebase auth, profile CRUD, workout day/exercise endpoints, progress+streak, seed script.
+- **Phase 2 — Flutter↔API Integration** (8/8): ApiService, Google Sign-In→Firebase→JWT, live data wiring across home/workout/diet screens, progress logging, 401 auto-logout.
+- **Phase 3 — Admin Content Management** (5/5): workout builder, exercise manager, diet plan form, dashboard stats, user detail page.
+- **Phase 4 — Polish** (4/4): push notifications, media uploads (Vultr S3), streak logic, analytics page.
+- **Phase 5 — Content Completion** (2/3): Workout Library category cards, Glow screen (full CRUD from stub) — fixed a `HomeController` GetX `permanent` bug along the way.
+- **Beyond original scope:** standalone browsable Workout Library with category browse + difficulty filter + hero/featured separation.
+
+## 15. Pending Features
+
+- Task 28 (profile settings sub-screens) — in progress, see Current Sprint.
+- Functional Admin Settings page.
+- Real FK between `WorkoutLibraryCategory` and `WorkoutLibraryItem`.
+- Password-reset hardening.
+- v2.0 scope: subscriptions/monetization, gamification, iOS release, AI recommendations, OTP login, wearable integration (see `ROADMAP.md`).
+
+## 16. Known Issues
+
+- `GET /admin/chart-data` table-name casing bug (likely broken).
+- Hardcoded password-reset default, displayed in plaintext in the admin UI.
+- Schema/migration drift on 3 columns.
+- nginx missing `client_max_body_size` — likely rejects the API's 100MB video-upload endpoint with a 413.
+- HTTPS status on both public subdomains unverified since 2026-04-09.
+- Plaintext VPS/DB credentials committed to git.
+- ~~`HomeController` GetX `permanent` bug~~ — **fixed** (commit `41232a0`).
+
+## 17. Technical Debt
+
+- No automated tests anywhere in the repo.
+- No devDependencies/linter in `api/`.
+- Double route mounting (`/api/*` and bare `/*`) — undocumented intent.
+- In-memory rate limiting + admin-stats cache — single-instance only, won't survive PM2 cluster mode without rework.
+- Dead/mock code in `backend/` (`content.service.ts`, unused components, empty stub routes).
+- Free-text fields that should be enums (`DietPlan.type`, `Workout.level`, `WorkoutLibraryItem.difficulty`).
+- No graceful-shutdown hook on process signal.
+- CRUD boilerplate duplicated across admin content pages instead of shared components.
+- Missing index on `Progress.workoutDayId`.
+
+## 18. Upcoming Milestones
+
+Per `ROADMAP.md`:
+1. **v1.0 — Production Launch:** close every item in Known Issues above; nothing new, pure hardening.
+2. **v1.1 — Stabilize & Scale-Ready:** Redis-backed rate limiting/cache, consistent RBAC, real test coverage, structured logging, shared admin components.
+3. **v2.0 — Growth & Monetization:** subscriptions, gamification, iOS release, AI recommendations, OTP login.
+4. **v3.0 — Platform Maturity & Scale:** multi-region infra, managed DB, compliance/audit tooling, marketplace/BI (intentionally speculative, to be re-scoped against real usage data).
+
+## 19. Version History
+
+No git tags exist yet. Per-app versions: `api` `1.0.0`, `backend` `0.1.0`, `flutter_app` `1.0.0+1` — all still scaffolding defaults. See `RELEASE_NOTES.md` for the milestone-level narrative and `RELEASE_PROCESS.md` → Version Numbering for the proposed scheme once `v1.0.0` is ready to tag.
+
+## 20. Next Recommended Tasks
+
+In priority order (also tracked in `TODO.md`):
+1. Finish + commit Task 28.
+2. Rotate exposed VPS/DB credentials; scrub from tracked files.
+3. Fix the hardcoded password-reset flow.
+4. Fix `/admin/chart-data` table-casing bug.
+5. Generate the missing Prisma migration for schema drift.
+6. Confirm/complete HTTPS; commit the 443 nginx config back into the repo.
+7. Add `client_max_body_size` to nginx.
+8. Stand up minimal CI + a real deploy trigger for the API.
+
+---
+*This document is updated after every completed feature per `PROJECT_RULES.md`. Sections are revised in place; the append-only historical record lives in `PROJECT_MEMORY.md`'s Update Log and `CHANGELOG.md`.*

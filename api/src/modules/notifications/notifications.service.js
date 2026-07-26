@@ -13,7 +13,7 @@ export async function sendToAll({ title, body }) {
   ensureFirebase();
 
   const users = await prisma.user.findMany({
-    where: { fcmToken: { not: null }, role: 'user' },
+    where: { fcmToken: { not: null }, role: 'user', pushEnabled: true },
     select: { id: true, fcmToken: true },
   });
 

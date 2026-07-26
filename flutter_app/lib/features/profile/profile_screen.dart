@@ -5,7 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import 'app_settings_screen.dart';
+import 'diet_preferences_screen.dart';
 import 'edit_profile_screen.dart';
+import 'notifications_screen.dart';
+import 'workout_preferences_screen.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -621,26 +625,38 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _settingsRow(
           icon: Icons.fitness_center_rounded,
           title: 'Workout Preferences',
-          subtitle: 'Goals, reminders, equipment & more',
-          onTap: () => _comingSoon('Workout Preferences'),
+          subtitle: 'Fitness level, main goal & focus areas',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const WorkoutPreferencesScreen()),
+          ),
         ),
         _settingsRow(
           icon: Icons.restaurant_menu_rounded,
           title: 'Diet Preferences',
-          subtitle: 'Diet type, meal settings, water goal',
-          onTap: () => _comingSoon('Diet Preferences'),
+          subtitle: 'Diet type & daily water goal',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const DietPreferencesScreen()),
+          ),
         ),
         _settingsRow(
           icon: Icons.notifications_none_rounded,
           title: 'Notifications',
-          subtitle: 'Manage reminders & alerts',
-          onTap: () => _comingSoon('Notifications'),
+          subtitle: 'Manage push notifications',
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+          ),
         ),
         _settingsRow(
           icon: Icons.settings_outlined,
           title: 'App Settings',
           subtitle: 'Language, privacy, appearance & more',
-          onTap: () => _comingSoon('App Settings'),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const AppSettingsScreen()),
+          ),
           showDivider: false,
         ),
       ],

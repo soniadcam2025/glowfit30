@@ -39,6 +39,10 @@ model User {
   height       Float?    @map("height")
   weight       Float?    @map("weight")
 
+  // Preferences
+  waterGoalLiters Float   @default(3.0) @map("water_goal_liters")
+  pushEnabled     Boolean @default(true) @map("push_enabled")
+
   adminLogs    AdminLog[]
   progress     Progress[]
 

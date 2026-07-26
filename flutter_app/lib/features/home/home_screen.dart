@@ -146,7 +146,8 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             _buildStatChip('🔥', _c.streak.value.toString(), 'Day Streak'),
             const SizedBox(width: 8),
-            _buildStatChip('💧', '2.3L', 'of 3L'),
+            _buildStatChip('💧', '2.3L',
+                'of ${_c.waterGoalLiters.value.toStringAsFixed(1)}L'),
           ],
         ));
   }
