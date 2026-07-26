@@ -113,16 +113,16 @@ Dart SDK ≥3.0, GetX 4.6 (state management), Dio 5.3 (networking), get_storage 
 - **API:** PM2 fork mode (`glowfit-api`), deployed via `api/deploy.sh` (git pull → npm ci → prisma migrate deploy → prisma generate → pm2 restart) — **manual SSH trigger only, no webhook/CI**.
 - **Admin:** no ecosystem file, no deploy script — manual tar/upload/build/PM2-start process, not reproducible from git.
 - **nginx:** subdomain routing (`api.glowfit30.com`→:4000, `admin.glowfit30.com`→:3000) behind Cloudflare; committed config is **HTTP-only, no 443 blocks**.
-- **HTTPS:** last recorded check (2026-04-09) showed Cloudflare 521 on both subdomains — unverified since.
+- **HTTPS:** ✅ verified live 2026-07-26 — both subdomains reachable over HTTPS, API returns a healthy JSON payload (uptime ~12.8 days). The committed nginx config is still HTTP-only, so the live certbot config needs to be pulled back into the repo (doc-drift, not a live outage).
 - **CI/CD:** none exists. Full detail in `deployment-report.md` and target-state process in `RELEASE_PROCESS.md`.
 
 ## 11. Git Status
 
-- Branch: `main` only (local + remote), no branching model ever used, no merges in 32-commit history.
+- Branch: `main` only (local + remote), no branching model ever used, no merges in 33-commit history.
 - Remote: `origin` → `github.com/soniadcam2025/glowfit30.git`.
 - No git tags/releases cut yet.
-- Commit style: Conventional Commits, consistently followed for the last ~2 months (~78% of all-time history); a handful of early junk commits (`fc1`, `test deploy`) exist as historical noise, not a current problem.
-- As of last check: `main` was ahead of `origin/main` with several modified/untracked files corresponding to the in-progress Task 28 work (see Current Sprint).
+- Commit style: Conventional Commits, consistently followed for ~2 months — **with one 2026-07-26 exception**: commit `52e4983` used a bare, non-Conventional message (`"26072026"`) and bundled the Task 28 feature together with the entire new documentation suite, a stray `VPS` file, and two APK zips (`client-builds/*.zip`). Already pushed to `origin/main`; not rewritten (destructive). Flagged in `PROJECT_MEMORY.md`/`TODO.md` as a one-off to prevent recurring, not treated as a new pattern.
+- Working tree is currently clean and in sync with `origin/main` (verified 2026-07-26).
 
 ## 12. Security
 
@@ -135,22 +135,21 @@ Full detail in `SECURITY.md`. Top findings, ranked:
 
 ## 13. Current Sprint
 
-See `SPRINT.md` for full detail. **Sprint goal:** finish Task 28 (profile settings sub-screens) and clear the v1.0 Critical/Security punch list. In progress: Workout/Diet/Notification/App Settings screens (Flutter) + `user_preferences` API/DB support — uncommitted, coherent, nearly done.
+See `SPRINT.md` for full detail. **Sprint goal:** clear the v1.0 Critical/Security punch list. Task 28 (profile settings sub-screens) is now **complete and pushed** (`52e4983`, 2026-07-26) — the original 28-task plan is 28/28. Focus shifts entirely to hardening: chart-data bug fix, credential rotation, password-reset fix, HTTPS confirmation, schema-drift migration.
 
 ## 14. Completed Features
 
-Per `App-Admin-Api connection Task.md` (27/28) plus later work — see `CHANGELOG.md` for the full chronological log:
+Per `App-Admin-Api connection Task.md` (**28/28 — complete as of 2026-07-26**) plus later work — see `CHANGELOG.md` for the full chronological log:
 
 - **Phase 1 — API Foundation** (8/8): profile schema, WorkoutDay/Exercise/Progress models, Firebase auth, profile CRUD, workout day/exercise endpoints, progress+streak, seed script.
 - **Phase 2 — Flutter↔API Integration** (8/8): ApiService, Google Sign-In→Firebase→JWT, live data wiring across home/workout/diet screens, progress logging, 401 auto-logout.
 - **Phase 3 — Admin Content Management** (5/5): workout builder, exercise manager, diet plan form, dashboard stats, user detail page.
 - **Phase 4 — Polish** (4/4): push notifications, media uploads (Vultr S3), streak logic, analytics page.
-- **Phase 5 — Content Completion** (2/3): Workout Library category cards, Glow screen (full CRUD from stub) — fixed a `HomeController` GetX `permanent` bug along the way.
-- **Beyond original scope:** standalone browsable Workout Library with category browse + difficulty filter + hero/featured separation.
+- **Phase 5 — Content Completion** (3/3 ✅): Workout Library category cards, Glow screen (full CRUD from stub) — fixed a `HomeController` GetX `permanent` bug along the way. Task 28 (profile settings sub-screens: Workout/Diet/Notification/App Settings) completed and pushed 2026-07-26.
+- **Beyond original scope:** standalone browsable Workout Library with category browse + difficulty filter + hero/featured separation; full project documentation suite (this file plus 13 others).
 
 ## 15. Pending Features
 
-- Task 28 (profile settings sub-screens) — in progress, see Current Sprint.
 - Functional Admin Settings page.
 - Real FK between `WorkoutLibraryCategory` and `WorkoutLibraryItem`.
 - Password-reset hardening.
@@ -162,7 +161,6 @@ Per `App-Admin-Api connection Task.md` (27/28) plus later work — see `CHANGELO
 - Hardcoded password-reset default, displayed in plaintext in the admin UI.
 - Schema/migration drift on 3 columns.
 - nginx missing `client_max_body_size` — likely rejects the API's 100MB video-upload endpoint with a 413.
-- HTTPS status on both public subdomains unverified since 2026-04-09.
 - Plaintext VPS/DB credentials committed to git.
 - ~~`HomeController` GetX `permanent` bug~~ — **fixed** (commit `41232a0`).
 
@@ -177,6 +175,10 @@ Per `App-Admin-Api connection Task.md` (27/28) plus later work — see `CHANGELO
 - No graceful-shutdown hook on process signal.
 - CRUD boilerplate duplicated across admin content pages instead of shared components.
 - Missing index on `Progress.workoutDayId`.
+- No API versioning (`/v1/` prefix) and no Repository layer — target architecture per the current operating rules, not yet implemented; any move toward it must be documented (Rule 2) before/alongside the change.
+- `client-builds/` and stray `VPS` file now committed to git history (via `52e4983`) — add to `.gitignore` to stop recurrence.
+- **Admin panel: 3 ESLint errors + 4 warnings** discovered via live `npm run lint` run during the 2026-07-26 Project Health Audit — see `PROJECT_HEALTH_REPORT.md` for detail. Not previously tracked since no CI/lint gate exists yet.
+- `api/` has no lint script/tooling at all (`backend/` does).
 
 ## 18. Upcoming Milestones
 
@@ -193,12 +195,12 @@ No git tags exist yet. Per-app versions: `api` `1.0.0`, `backend` `0.1.0`, `flut
 ## 20. Next Recommended Tasks
 
 In priority order (also tracked in `TODO.md`):
-1. Finish + commit Task 28.
+1. Fix `/admin/chart-data` table-casing bug.
 2. Rotate exposed VPS/DB credentials; scrub from tracked files.
-3. Fix the hardcoded password-reset flow.
-4. Fix `/admin/chart-data` table-casing bug.
+3. Add `client-builds/` and `VPS` to `.gitignore`.
+4. Fix the hardcoded password-reset flow.
 5. Generate the missing Prisma migration for schema drift.
-6. Confirm/complete HTTPS; commit the 443 nginx config back into the repo.
+6. Pull the live certbot-modified nginx config back into the repo (HTTPS itself is confirmed working, just undocumented in git).
 7. Add `client_max_body_size` to nginx.
 8. Stand up minimal CI + a real deploy trigger for the API.
 

@@ -52,12 +52,14 @@ WorkoutLibraryCategory ⇢ WorkoutLibraryItem   (soft/string-matched, NOT a real
 
 Migrations after `init` use defensive `IF NOT EXISTS`/`DO $$ EXCEPTION` guards — historically mixed `prisma migrate` and `prisma db push` usage across environments.
 
-## ⚠️ Known Schema/Migration Drift
+## ⚠️ Known Migration-History Gap (confirmed, not a live bug)
 
-These fields exist in `schema.prisma` with **no corresponding migration SQL** — running `prisma migrate dev` today would generate a new auto-migration for them:
-- `User.fcmToken`
-- `Exercise.videoUrl`
-- `DietPlan.imageUrl`
+**Verified live 2026-07-26** (via `information_schema.columns` query against the actual database, and `prisma migrate diff`): all three of the columns below **already exist in the live database** — this is not an active schema mismatch or runtime risk. The gap is purely in the committed migration history: no migration file adds these columns, meaning they were applied out-of-band (almost certainly via `prisma db push`, consistent with the defensive `IF NOT EXISTS` guards seen in migrations after `init`). A fresh environment built from `prisma migrate deploy` alone (new staging server, CI, disaster recovery) would **not** get these columns and would drift from production. Still needs a migration generated and committed for reproducibility — just not urgent as a live-data risk:
+- `User.fcmToken` (confirmed present in DB)
+- `Exercise.videoUrl` (confirmed present in DB)
+- `DietPlan.imageUrl` (confirmed present in DB)
+
+`prisma migrate status` reports "Database schema is up to date!" (all 11 committed migrations applied) — this check does NOT catch the gap above since it only compares applied-migration records, not actual column-level schema; that's why the manual `information_schema` check was needed to confirm reality.
 
 Additionally, the DB has a unique index `workout_days_workout_id_day_number_key` (workout_id, day_number) not mirrored by `@@unique` in the Prisma model.
 

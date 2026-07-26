@@ -28,12 +28,11 @@ Per `App-Admin-Api connection Task.md` (27/28 tasks) plus later work:
 - **Phase 2 — Flutter ↔ API Integration**: `ApiService` (Dio), Google Sign-In → Firebase → JWT flow, home/workout/diet screens wired to live data, progress logging, 401 auto-logout.
 - **Phase 3 — Admin Content Management**: workout day-by-day builder, exercise manager with image upload, diet plan form, dashboard stats, user detail page with progress history.
 - **Phase 4 — Polish**: push notifications (FCM), image/video upload (Vultr S3), user streak logic, analytics page (Recharts).
-- **Phase 5 — Content Completion (2/3)**: Workout Library category cards (admin-managed, seeded, verified), Glow screen (Explore by Goals / Glow Reads / Shorts, full CRUD rebuilt from stub) — fixed a `HomeController` GetX `permanent` bug found along the way.
-- **Beyond original scope**: standalone browsable Workout Library (separate from day-plan Workouts) with category browse + difficulty filter + hero/featured workout separation.
+- **Phase 5 — Content Completion (3/3 ✅ as of 2026-07-26)**: Workout Library category cards (admin-managed, seeded, verified), Glow screen (Explore by Goals / Glow Reads / Shorts, full CRUD rebuilt from stub) — fixed a `HomeController` GetX `permanent` bug found along the way. **Task 28 — Profile settings sub-screens (Workout/Diet/Notification/App Settings)** — committed and pushed in `52e4983` (2026-07-26), closing out the original 28-task plan at 28/28.
+- **Beyond original scope**: standalone browsable Workout Library (separate from day-plan Workouts) with category browse + difficulty filter + hero/featured workout separation. Full documentation suite (`PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `TODO.md`, `CHANGELOG.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `RELEASE_NOTES.md`, `DEPLOYMENT.md`, `ROADMAP.md`) established.
 
 ### Pending Features
 
-- [ ] **Task 28** — Profile settings sub-screens (Workout/Diet/Notification/App Settings) — in progress as of last check (uncommitted Flutter screens + API preference fields).
 - [ ] Functional Admin Settings page (currently a non-functional stub).
 - [ ] Real FK between `WorkoutLibraryCategory` and `WorkoutLibraryItem` (currently string-matched).
 - [ ] Password-reset hardening (token/OTP instead of hardcoded default).
@@ -127,6 +126,9 @@ PostgreSQL via Prisma (`api/prisma/schema.prisma`), 14 models, all relations `on
 - No graceful shutdown hook (Prisma/HTTP server) on process signal.
 - Plaintext VPS/DB credentials committed to git-tracked files (`server/SERVER_SETUP_SUMMARY.md`, `help`) — needs rotation + history purge if repo could go public.
 - CRUD boilerplate duplicated across admin content pages instead of shared components.
+- **Git hygiene incident**: commit `52e4983` (2026-07-26, message `"26072026"`) bundled the Task 28 feature, the entire new documentation suite, the stray `VPS` file, and two APK zips (`client-builds/*.zip`, ~57MB combined) into one non-Conventional-Commit push, already merged to `origin/main`. Not reverting/rewriting history (already pushed, would be disruptive) — but `client-builds/` and `VPS` are now permanently in git history and should be added to `.gitignore` to prevent recurrence; future commits must follow Conventional Commits per `PROJECT_RULES.md` rule 6.
+- API has no versioning (no `/v1/` prefix) and no Repository layer (Prisma calls happen directly in services) — both are named as target architecture in the new Lead-Engineer operating rules but don't exist yet; tracked as a deliberate, documented refactor, not implemented silently.
+- No JWT refresh-token mechanism (single 7-day token only) — named as a security checklist item in the new operating rules; still a gap.
 
 ### Next Tasks
 
@@ -147,3 +149,9 @@ PostgreSQL via Prisma (`api/prisma/schema.prisma`), 14 models, all relations `on
 
 ### 2026-07-26 — Initial creation
 Created `PROJECT_MEMORY.md` and populated the Current State snapshot above by aggregating findings already produced this session: the full technical audit (backend/admin/database/deployment), the git repository analysis, the deployment-system analysis (`deployment-report.md`), `PROJECT_STATUS.md`, and `ROADMAP.md`. No code changed — this is a documentation-only baseline. Established the maintenance convention: this file will be updated after every completed feature or bug fix going forward, with the Current State section revised in place and a new dated entry appended here summarizing what changed.
+
+### 2026-07-26 — First Project Health Audit (`PROJECT_HEALTH_REPORT.md`)
+Ran the first scheduled Project Health Audit (standing cadence: every Friday or before any production release). Performed live verification rather than trusting prior written claims: confirmed HTTPS is working on both `api.glowfit30.com` and `admin.glowfit30.com` (updating `DEPLOYMENT.md`/`SECURITY.md`/`TODO.md`/`PROJECT_MASTER.md` accordingly — this had been incorrectly carried forward as "unverified since 2026-04-09"); validated the Prisma schema (`prisma validate` passes); ran `flutter analyze` (8 warnings/info, 0 errors) and `npm run lint` in `backend/` (3 real ESLint errors + 4 warnings, not previously tracked anywhere). Computed a weighted Health Score of 65/100 across 9 categories (git hygiene, docs consistency, security, deployment, tech debt, build status, DB migrations, API docs, Flutter warnings), consistent with the earlier 6.5/10 score in `PROJECT_STATUS.md`. Logged the new admin-lint findings into `TODO.md` and this file's Technical Debt list.
+
+### 2026-07-26 — Task 28 completed & full documentation suite established
+Discovered (via `git log`/`git status`, not via my own commit — I never ran a commit in this session) that commit `52e4983` landed and was already pushed to `origin/main`, containing: the four profile-settings sub-screens (Workout/Diet/Notification/App Settings) plus the supporting `user_preferences` migration and API changes — completing the original 28-task integration plan at **28/28** — bundled together with the entire new documentation suite (`PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `TODO.md`, `CHANGELOG.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `RELEASE_NOTES.md`, `ROADMAP.md`, `deployment-report.md`), the stray `VPS` file, and two APK zips under `client-builds/`. Commit message was a bare date string (`"26072026"`), not a Conventional Commit — flagged as a Technical Debt entry above rather than rewritten (already pushed). Updated this file's Completed/Pending Features accordingly, added `DEPLOYMENT.md` as a new living deployment doc distinct from the point-in-time `deployment-report.md` audit, and adopted a new standing "Lead Engineer" operating mode (production-quality bar, pre-code impact reports, full analyse→design→implement→review→test→document→commit→deploy→verify pipeline) for all future GlowFit30 work.

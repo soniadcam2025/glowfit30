@@ -20,3 +20,32 @@ flutter_app/.flutter-plugins
 flutter_app/.flutter-plugins-dependencies
 flutter_app/.packages
 flutter_app/pubspec.lock
+
+# Build artifacts, mobile binaries, archives — never commit these (Repository Maintenance Mode, rules 1-2)
+*.apk
+*.aab
+*.ipa
+*.exe
+*.dll
+*.so
+*.dylib
+*.zip
+*.tar
+*.tar.gz
+*.7z
+client-builds/
+
+# Secrets, keys, certificates — never commit these (Repository Maintenance Mode, rule 3)
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.cer
+*.keystore
+*.jks
+
+# Stray local/debug artifacts that have accidentally been committed before — see TODO.md
+/VPS
+/api/VPS
+/help

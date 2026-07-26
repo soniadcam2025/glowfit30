@@ -6,15 +6,38 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
-### Added
-- Profile settings sub-screens (Workout Preferences, Diet Preferences, Notifications, App Settings) — in progress, uncommitted.
-- User preference fields (`waterGoalLiters`, `pushEnabled`) on `User` model + migration `20260714020000_add_user_preferences`.
-
 ### Known issues carried into this cycle
 - `GET /admin/chart-data` raw SQL table-name casing bug (likely broken).
 - Hardcoded default password reset (`Admin12345`).
 - Schema/migration drift on `User.fcmToken`, `Exercise.videoUrl`, `DietPlan.imageUrl`.
 - HTTPS status on `api.glowfit30.com` / `admin.glowfit30.com` unverified since 2026-04-09.
+- `client-builds/` and `VPS` committed to git in `52e4983` — need `.gitignore` entries to prevent recurrence.
+
+---
+
+## 2026-07-26 — First Project Health Audit
+
+### Added
+- `PROJECT_HEALTH_REPORT.md` — first run of the new weekly/pre-release health audit (Health Score 65/100).
+
+### Fixed (documentation, not code)
+- Corrected stale "HTTPS unverified" claims across `DEPLOYMENT.md`, `SECURITY.md`, `TODO.md`, `PROJECT_MASTER.md` — live-checked, both subdomains are healthy over HTTPS.
+
+### Discovered
+- 3 ESLint errors + 4 warnings in `backend/` (admin panel), not previously tracked — logged to `TODO.md` and `PROJECT_MASTER.md` Technical Debt.
+- `flutter_app/` has 8 `flutter analyze` issues (all warnings/info, 0 errors).
+
+---
+
+## 2026-07-26 — Task 28 complete: Profile settings sub-screens
+
+### Added
+- Profile settings sub-screens: Workout Preferences, Diet Preferences, Notifications, App Settings (Flutter).
+- User preference fields (`waterGoalLiters`, `pushEnabled`) on `User` model + migration `20260714020000_add_user_preferences`.
+- Full project documentation suite: `PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `RELEASE_PROCESS.md`, `DEPLOYMENT.md`, plus the earlier `PROJECT_STATUS.md`/`PROJECT_MEMORY.md`/`ROADMAP.md`/`deployment-report.md`/`API_REFERENCE.md`/`DATABASE_SCHEMA.md`/`SECURITY.md`/`RELEASE_NOTES.md`/`TODO.md`.
+
+### Process note
+This closes the original 28-task integration plan (`App-Admin-Api connection Task.md`) at **28/28**. Committed as `52e4983` with a non-Conventional-Commit message (`"26072026"`) that also bundled unrelated build artifacts (`client-builds/*.zip`, stray `VPS` file) — flagged in `PROJECT_MEMORY.md` as a git-hygiene item to prevent going forward, not rewritten since already pushed.
 
 ---
 

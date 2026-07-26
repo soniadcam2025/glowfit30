@@ -12,15 +12,20 @@ Close out the last item of the original integration plan (Task 28 — profile se
 
 ## Completed
 
+- [x] **Task 28 — Profile settings sub-screens** (Workout/Diet/Notification/App Settings) + `user_preferences` API/DB support — committed and pushed in `52e4983` (2026-07-26). **Original 28-task integration plan is now 28/28 complete.**
 - [x] Task 27 — Glow screen (Explore by Goals, Glow Reads, Shorts & Quick Tips), full CRUD rebuilt from a non-functional stub.
 - [x] Task 26 — Workout Library category cards made fully admin-managed.
 - [x] Fixed `HomeController` GetX `permanent` bug (found during Task 27 work).
 - [x] Bottom-nav highlight bug fix.
-- [x] Full project documentation baseline created: `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `ROADMAP.md`, `deployment-report.md`, `CHANGELOG.md`, `TODO.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `RELEASE_NOTES.md`, `PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `RELEASE_PROCESS.md`.
+- [x] Full project documentation baseline created: `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `ROADMAP.md`, `deployment-report.md`, `CHANGELOG.md`, `TODO.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `RELEASE_NOTES.md`, `PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `RELEASE_PROCESS.md`, `DEPLOYMENT.md`.
 
 ## In Progress
 
-- [ ] **Task 28 — Profile settings sub-screens.** Workout Preferences, Diet Preferences, Notifications, App Settings screens in Flutter, plus `user_preferences` API/DB support (`waterGoalLiters`, `pushEnabled` on `User`, migration `20260714020000_add_user_preferences`). Currently uncommitted; coherent and nearly complete — needs finishing touches + a build verify + commit.
+*(nothing currently in progress — sprint focus shifts entirely to the v1.0 hardening/security punch list below)*
+
+## ⚠️ Flagged this cycle
+
+- Commit `52e4983` used a non-Conventional-Commit message (`"26072026"`) and bundled unrelated build artifacts (`client-builds/*.zip`, stray `VPS` file) — already pushed, not rewritten; `.gitignore` should be updated to prevent recurrence. See `PROJECT_MEMORY.md` Technical Debt.
 
 ## Blocked
 
@@ -43,8 +48,8 @@ Close out the last item of the original integration plan (Task 28 — profile se
 
 | Scope | % |
 |---|---|
-| This sprint (Task 28 + Critical/Security punch list) | **~35%** — Task 28 near-done; security/HTTPS/bug fixes not yet started |
-| Overall project (weighted, all versions) | **~75%** — see `PROJECT_STATUS.md` |
+| This sprint (Critical/Security punch list, Task 28 now done) | **~10%** — Task 28 complete; security/HTTPS/bug fixes not yet started |
+| Overall project (weighted, all versions) | **~78%** — Task 28 completion + doc suite bumps this slightly from the ~75% baseline in `PROJECT_STATUS.md`; production-readiness dimension is still the drag |
 
 ## Priority Matrix
 
@@ -57,9 +62,9 @@ Work top row first (High Impact); within that row, do Low Effort items immediate
 
 ## Today's Tasks
 
-1. Finish and build-verify Task 28 (Flutter screens + API preference fields).
-2. Fix `GET /admin/chart-data` table-name casing.
-3. Rotate `sprsadmin` and `glowfit_user` passwords; remove plaintext copies from tracked files.
+1. Fix `GET /admin/chart-data` table-name casing.
+2. Rotate `sprsadmin` and `glowfit_user` passwords; remove plaintext copies from tracked files.
+3. Add `client-builds/` and `VPS` to `.gitignore` to prevent the git-hygiene issue from recurring.
 
 ## Next Tasks
 
