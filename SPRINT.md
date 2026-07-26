@@ -26,10 +26,13 @@ Close out the last item of the original integration plan (Task 28 — profile se
 - [x] Bottom-nav highlight bug fix.
 - [x] Full project documentation baseline created: `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `ROADMAP.md`, `deployment-report.md`, `CHANGELOG.md`, `TODO.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `RELEASE_NOTES.md`, `PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `RELEASE_PROCESS.md`, `DEPLOYMENT.md`.
 
+- [x] **GitHub secret setup for auto-deploy** (2026-07-26) — `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY` added by the user; dedicated deploy keypair generated, authorized on the VPS, local key files deleted after confirmation.
+- [x] **CI build-check lint errors fixed** (2026-07-26, `c993b3f`) — the pipeline's first real run caught the 3 pre-existing ESLint errors (see `TODO.md`); fixed and confirmed `npm run lint` exits 0.
+- [x] **Client APK build** (2026-07-26) — `flutter build apk --release`, packaged as `client-builds/GlowFit30-2026-07-26.zip` (debug-signed, no release keystore exists yet — fine for client testing). Now a standing request for future client-test builds.
+
 ## In Progress
 
-- [ ] **GitHub secret setup for auto-deploy** — `.github/workflows/deploy.yml` is built and committed, but needs `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY` added as GitHub repo secrets before it actually deploys anything. This is a one-time manual step only the user can do (no access to their GitHub account settings from here).
-- [ ] Once secrets are added: confirm the first automated deploy run succeeds, and confirm the assumed VPS layout (`/var/www/glowfit/backend`, PM2 process `glowfit-backend`) matches reality.
+- [ ] Confirm the first fully-green Actions run (build-check → deploy → verify) after the lint-fix push; confirm the assumed VPS layout (`/var/www/glowfit/backend`, PM2 process `glowfit-backend`) matches reality.
 
 ## ⚠️ Flagged this cycle
 

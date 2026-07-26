@@ -20,7 +20,7 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 ## 🟡 Should Have (v1.0 / v1.1)
 
 - [ ] Generate + commit the missing Prisma migration for `User.fcmToken`, `Exercise.videoUrl`, `DietPlan.imageUrl` (**confirmed 2026-07-26: all 3 columns already exist live in the DB, added out-of-band via `db push` — this is a reproducibility/CI gap, not an active bug**; downgraded from 🔴 Critical).
-- [ ] Fix 3 admin-panel ESLint errors (found in `PROJECT_HEALTH_REPORT.md` 2026-07-26 audit): unescaped `"` in `(admin)/workouts/page.tsx:362` (×2), `setState` called synchronously in a `useEffect` in `login/page.tsx:124`.
+- [x] ~~Fix 3 admin-panel ESLint errors~~ — done 2026-07-26 (`c993b3f`), found blocking the new CI `build-check` job on its first real run: escaped the literal quotes in `(admin)/workouts/page.tsx`, removed a dead `useEffect`/unused imports in `login/page.tsx`. `npm run lint` now exits 0.
 - [ ] Clean up 4 admin-panel ESLint warnings: two `<img>` tags in `(admin)/users/page.tsx` (use `next/image`), unused `workoutId` var, unused `ChartPoint` type.
 - [ ] Add a lint script to `api/package.json` (currently has none).
 

@@ -15,6 +15,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ### Fixed (2026-07-26, incidental)
 - `beauty.service.js#createPost` was validating `tag`/`tagColor`/`tagBackground`/`minutesRead`/`order` but silently dropping them on creation (only `updatePost` persisted them) — found and fixed while adding category linking to the same function.
+- **CI build-check ESLint errors** (`c993b3f`): the new pipeline's first real run caught 3 pre-existing errors — unescaped quotes in `(admin)/workouts/page.tsx`'s delete-confirmation copy, and a dead `useEffect` in `login/page.tsx` that synchronously called `setState` on pathname change (the real loading-reset logic was already handled correctly in the submit handler's `catch` block). Removed the dead effect and its now-unused imports; `npm run lint` exits 0.
+
+### Ops (2026-07-26)
+- GitHub secrets (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`) configured with a dedicated deploy keypair — auto-deploy pipeline is now fully wired end-to-end.
+- First client-test APK built and packaged: `client-builds/GlowFit30-2026-07-26.zip` (`flutter build apk --release`, debug-signed — no release keystore exists yet).
 
 ### Fixed (2026-07-26)
 - Admin Settings page (`/settings`) is now partially functional — the Legal Content section persists real data; the unrelated "General" fields remain a stub (separately tracked).
