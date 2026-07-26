@@ -13,6 +13,16 @@ export async function listCategories(_req, res, next) {
   }
 }
 
+export async function getCategoryDetail(req, res, next) {
+  try {
+    const category = await svc.getCategoryDetail(req.params.id);
+    if (!category) return sendError(res, 'Not found', 404);
+    return sendSuccess(res, category, 'OK');
+  } catch (e) {
+    next(e);
+  }
+}
+
 export async function createCategory(req, res, next) {
   try {
     const row = await svc.createCategory(req.body);
@@ -47,9 +57,9 @@ export async function removeCategory(req, res, next) {
 
 // ── Shorts ───────────────────────────────────────────────────────────────────
 
-export async function listShorts(_req, res, next) {
+export async function listShorts(req, res, next) {
   try {
-    const shorts = await svc.listShorts();
+    const shorts = await svc.listShorts(req.query.categoryId);
     return sendSuccess(res, { shorts }, 'OK');
   } catch (e) {
     next(e);

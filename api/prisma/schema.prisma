@@ -42,6 +42,8 @@ model User {
   // Preferences
   waterGoalLiters Float   @default(3.0) @map("water_goal_liters")
   pushEnabled     Boolean @default(true) @map("push_enabled")
+  language        String  @default("English") @map("language")
+  appearance      String  @default("System") @map("appearance")
 
   adminLogs    AdminLog[]
   progress     Progress[]
@@ -202,28 +204,43 @@ model WorkoutLibraryExercise {
 }
 
 model BeautyPost {
-  id            String   @id @default(uuid()) @db.Uuid
+  id            String        @id @default(uuid()) @db.Uuid
   title         String
-  content       String   @db.Text
-  imageUrl      String?  @map("image_url")
-  tag           String   @default("SKINCARE") // e.g. "SKINCARE", "NUTRITION", "ROUTINE" — Glow Reads chip
-  tagColor      String   @default("#C4185A") @map("tag_color")
-  tagBackground String   @default("#FCE4EC") @map("tag_background")
-  minutesRead   Int      @default(4) @map("minutes_read")
-  order         Int      @default(0)
-  createdAt     DateTime @default(now()) @map("created_at")
+  content       String        @db.Text
+  imageUrl      String?       @map("image_url")
+  tag           String        @default("SKINCARE") // e.g. "SKINCARE", "NUTRITION", "ROUTINE" — Glow Reads chip
+  tagColor      String        @default("#C4185A") @map("tag_color")
+  tagBackground String        @default("#FCE4EC") @map("tag_background")
+  minutesRead   Int           @default(4) @map("minutes_read")
+  order         Int           @default(0)
+  createdAt     DateTime      @default(now()) @map("created_at")
 
+  categoryId    String?       @map("category_id") @db.Uuid
+  category      GlowCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Detail-screen content (all optional — falls back to plain `content` if unset)
+  resultBadge   String?  @map("result_badge") // e.g. "5 Days Result"
+  chips         Json     @default("[]") @map("chips") // [{ emoji, label }] — small metadata pills, e.g. "Natural Remedy"
+  sections      Json     @default("{}") @map("sections") // { problemCause: [{imageUrl,title,description}], solution: [...], tips: [...] }
+  isPremium     Boolean  @default(false) @map("is_premium")
+
+  @@index([categoryId])
   @@map("beauty_posts")
 }
 
 model GlowCategory {
-  id         String   @id @default(uuid()) @db.Uuid
-  emoji      String
-  title      String
-  subtitle   String
-  background String   @default("#FCE4EC")
-  order      Int      @default(0)
-  createdAt  DateTime @default(now()) @map("created_at")
+  id            String       @id @default(uuid()) @db.Uuid
+  emoji         String
+  title         String
+  subtitle      String
+  background    String       @default("#FCE4EC")
+  heroImageUrl  String?      @map("hero_image_url")
+  topics        Json         @default("[]") // [{ emoji, label }] — "Popular Topics" chips on the category detail screen
+  order         Int          @default(0)
+  createdAt     DateTime     @default(now()) @map("created_at")
+
+  posts  BeautyPost[]
+  shorts GlowShort[]
 
   @@map("glow_categories")
 }
@@ -237,6 +254,17 @@ model GlowShort {
   order     Int      @default(0)
   createdAt DateTime @default(now()) @map("created_at")
 
+  categoryId String?       @map("category_id") @db.Uuid
+  category   GlowCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  // Detail-screen content (all optional)
+  content     String?  @db.Text // optional plain description, shown if `sections` is empty
+  resultBadge String?  @map("result_badge")
+  chips       Json     @default("[]") @map("chips")
+  sections    Json     @default("{}") @map("sections")
+  isPremium   Boolean  @default(false) @map("is_premium")
+
+  @@index([categoryId])
   @@map("glow_shorts")
 }
 
@@ -250,4 +278,13 @@ model AdminLog {
 
   @@index([adminId])
   @@map("admin_logs")
+}
+
+model LegalDocument {
+  id        String   @id @default(uuid()) @db.Uuid
+  title     String   @default("Privacy Policy & Terms")
+  content   String   @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("legal_documents")
 }

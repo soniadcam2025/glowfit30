@@ -1,13 +1,17 @@
 "use client";
 
 import { api } from "@/services/api";
-import type { ApiResponse, BeautyPost, GlowCategory, GlowShort } from "@/types";
+import type { ApiResponse, BeautyPost, GlowCategory, GlowCategoryDetail, GlowShort } from "@/types";
 
 export const glowContentService = {
   // ─── Reads (BeautyPost) ─────────────────────────────────────────────────
   async listReads(): Promise<BeautyPost[]> {
     const { data } = await api.get<ApiResponse<{ items: BeautyPost[] }>>("/beauty");
     return data.data.items ?? [];
+  },
+  async getCategoryDetail(id: string): Promise<GlowCategoryDetail> {
+    const { data } = await api.get<ApiResponse<GlowCategoryDetail>>(`/glow/categories/${id}`);
+    return data.data;
   },
   async createRead(payload: Omit<BeautyPost, "id" | "createdAt">): Promise<BeautyPost> {
     const { data } = await api.post<ApiResponse<BeautyPost>>("/beauty", payload);

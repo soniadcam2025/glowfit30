@@ -1,12 +1,17 @@
 import { Router } from 'express';
 import { verifyToken, requireRole } from '../../middleware/auth.js';
-import { validateBody, validateParams } from '../../middleware/validate.js';
+import { validateBody, validateParams, validateQuery } from '../../middleware/validate.js';
 import * as ctrl from './beauty.controller.js';
-import { createBeautySchema, idParamSchema, updateBeautySchema } from './beauty.validation.js';
+import {
+  createBeautySchema,
+  idParamSchema,
+  listBeautyQuerySchema,
+  updateBeautySchema,
+} from './beauty.validation.js';
 
 const router = Router();
 
-router.get('/', verifyToken, ctrl.list);
+router.get('/', verifyToken, validateQuery(listBeautyQuerySchema), ctrl.list);
 router.get('/:id', verifyToken, validateParams(idParamSchema), ctrl.getOne);
 
 router.post(

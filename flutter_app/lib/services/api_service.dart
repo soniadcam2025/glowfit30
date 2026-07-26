@@ -149,9 +149,21 @@ class ApiService extends GetxService {
     }
   }
 
-  Future<List<dynamic>> getGlowReads() async {
+  Future<Map<String, dynamic>?> getGlowCategoryDetail(String id) async {
     try {
-      final r = await _client.get('/beauty');
+      final r = await _client.get('/glow/categories/$id');
+      return _data(r) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<List<dynamic>> getGlowReads({String? categoryId}) async {
+    try {
+      final r = await _client.get(
+        '/beauty',
+        queryParameters: categoryId != null ? {'categoryId': categoryId} : null,
+      );
       final d = _data(r) as Map<String, dynamic>?;
       return d?['items'] as List<dynamic>? ?? [];
     } catch (_) {
@@ -159,9 +171,12 @@ class ApiService extends GetxService {
     }
   }
 
-  Future<List<dynamic>> getGlowShorts() async {
+  Future<List<dynamic>> getGlowShorts({String? categoryId}) async {
     try {
-      final r = await _client.get('/glow/shorts');
+      final r = await _client.get(
+        '/glow/shorts',
+        queryParameters: categoryId != null ? {'categoryId': categoryId} : null,
+      );
       final d = _data(r) as Map<String, dynamic>?;
       return d?['shorts'] as List<dynamic>? ?? [];
     } catch (_) {
@@ -215,6 +230,17 @@ class ApiService extends GetxService {
   Future<Map<String, dynamic>?> getDietToday(int day) async {
     try {
       final r = await _client.get('/diet/today?day=$day');
+      return _data(r) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // ── Legal ─────────────────────────────────────────────────────────────────
+
+  Future<Map<String, dynamic>?> getLegalDocument() async {
+    try {
+      final r = await _client.get('/legal');
       return _data(r) as Map<String, dynamic>?;
     } catch (_) {
       return null;

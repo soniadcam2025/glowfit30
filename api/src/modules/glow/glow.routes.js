@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { verifyToken, requireRole } from '../../middleware/auth.js';
-import { validateBody, validateParams } from '../../middleware/validate.js';
+import { validateBody, validateParams, validateQuery } from '../../middleware/validate.js';
 import * as ctrl from './glow.controller.js';
 import {
   createCategorySchema,
   createShortSchema,
   idParamSchema,
+  listShortsQuerySchema,
   updateCategorySchema,
   updateShortSchema,
 } from './glow.validation.js';
@@ -15,6 +16,7 @@ const adminOnly = [verifyToken, requireRole('admin', 'super_admin')];
 
 // ── Categories ("Explore by Goals") — public read / admin write ─────────────
 router.get('/categories', verifyToken, ctrl.listCategories);
+router.get('/categories/:id', verifyToken, validateParams(idParamSchema), ctrl.getCategoryDetail);
 router.post('/categories', ...adminOnly, validateBody(createCategorySchema), ctrl.createCategory);
 router.patch(
   '/categories/:id',
@@ -31,7 +33,7 @@ router.delete(
 );
 
 // ── Shorts ("Shorts & Quick Tips") — public read / admin write ──────────────
-router.get('/shorts', verifyToken, ctrl.listShorts);
+router.get('/shorts', verifyToken, validateQuery(listShortsQuerySchema), ctrl.listShorts);
 router.post('/shorts', ...adminOnly, validateBody(createShortSchema), ctrl.createShort);
 router.patch(
   '/shorts/:id',

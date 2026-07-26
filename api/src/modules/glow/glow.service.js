@@ -7,12 +7,27 @@ export function listCategories() {
   return prisma.glowCategory.findMany({ orderBy: { order: 'asc' } });
 }
 
+export async function getCategoryDetail(id) {
+  const category = await prisma.glowCategory.findUnique({ where: { id } });
+  if (!category) return null;
+  const [postsCount, shortsCount] = await Promise.all([
+    prisma.beautyPost.count({ where: { categoryId: id } }),
+    prisma.glowShort.count({ where: { categoryId: id } }),
+  ]);
+  return { ...category, postsCount, shortsCount };
+}
+
+function normalizeHeroImage(data) {
+  if (data.heroImageUrl === '') return { ...data, heroImageUrl: null };
+  return data;
+}
+
 export function createCategory(data) {
-  return prisma.glowCategory.create({ data });
+  return prisma.glowCategory.create({ data: normalizeHeroImage(data) });
 }
 
 export function updateCategory(id, data) {
-  return prisma.glowCategory.update({ where: { id }, data });
+  return prisma.glowCategory.update({ where: { id }, data: normalizeHeroImage(data) });
 }
 
 export function deleteCategory(id) {
@@ -21,16 +36,27 @@ export function deleteCategory(id) {
 
 // ── Shorts ("Shorts & Quick Tips") ──────────────────────────────────────────────
 
-export function listShorts() {
-  return prisma.glowShort.findMany({ orderBy: { order: 'asc' } });
+export function listShorts(categoryId) {
+  return prisma.glowShort.findMany({
+    where: categoryId ? { categoryId } : undefined,
+    orderBy: { order: 'asc' },
+  });
+}
+
+function normalizeCategoryId(data) {
+  const normalized = { ...data };
+  if (normalized.categoryId === '') normalized.categoryId = null;
+  if (normalized.resultBadge === '') normalized.resultBadge = null;
+  if (normalized.content === '') normalized.content = null;
+  return normalized;
 }
 
 export function createShort(data) {
-  return prisma.glowShort.create({ data });
+  return prisma.glowShort.create({ data: normalizeCategoryId(data) });
 }
 
 export function updateShort(id, data) {
-  return prisma.glowShort.update({ where: { id }, data });
+  return prisma.glowShort.update({ where: { id }, data: normalizeCategoryId(data) });
 }
 
 export async function deleteShort(id) {

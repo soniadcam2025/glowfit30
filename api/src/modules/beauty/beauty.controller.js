@@ -2,9 +2,9 @@ import { sendError, sendSuccess } from '../../utils/response.js';
 import { logAdminAction } from '../../utils/adminLog.js';
 import * as svc from './beauty.service.js';
 
-export async function list(_req, res, next) {
+export async function list(req, res, next) {
   try {
-    const items = await svc.listPosts();
+    const items = await svc.listPosts(req.query.categoryId);
     return sendSuccess(res, { items }, 'OK');
   } catch (e) {
     next(e);

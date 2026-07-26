@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/home_controller.dart';
 import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
+import 'glow_category_detail_screen.dart';
+import 'glow_content_detail_screen.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -602,6 +604,7 @@ class _GlowScreenState extends State<GlowScreen> {
         itemBuilder: (_, i) {
           final cat = _apiCategories[i] as Map<String, dynamic>;
           return _goalItemRaw(
+            id: cat['id'] as String?,
             emoji: (cat['emoji'] as String?) ?? '✨',
             bg: _hexColor(cat['background'] as String?, const Color(0xFFFCE4EC)),
             title: (cat['title'] as String?) ?? '',
@@ -613,15 +616,33 @@ class _GlowScreenState extends State<GlowScreen> {
   }
 
   Widget _goalItemRaw({
+    String? id,
     required String emoji,
     required Color bg,
     required String title,
     required String subtitle,
   }) {
     return GestureDetector(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$title is coming soon.')),
-      ),
+      onTap: () {
+        if (id == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$title is coming soon.')),
+          );
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GlowCategoryDetailScreen(
+              categoryId: id,
+              fallbackTitle: title,
+              fallbackSubtitle: subtitle,
+              fallbackEmoji: emoji,
+              fallbackBackground: bg,
+            ),
+          ),
+        );
+      },
       child: SizedBox(
         width: 70,
         child: Column(
@@ -712,6 +733,7 @@ class _GlowScreenState extends State<GlowScreen> {
             tagBg: tagBg,
             title: (read['title'] as String?) ?? '',
             minutesLabel: '$minutesRead min read',
+            item: read,
           );
         },
       ),
@@ -738,11 +760,23 @@ class _GlowScreenState extends State<GlowScreen> {
     required Color tagBg,
     required String title,
     required String minutesLabel,
+    Map<String, dynamic>? item,
   }) {
     return GestureDetector(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$title is coming soon.')),
-      ),
+      onTap: () {
+        if (item == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$title is coming soon.')),
+          );
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GlowContentDetailScreen(item: item, isVideo: false),
+          ),
+        );
+      },
       child: Container(
         width: 150,
         decoration: BoxDecoration(
@@ -952,6 +986,7 @@ class _GlowScreenState extends State<GlowScreen> {
       title: (s['title'] as String?) ?? '',
       views: (s['views'] as String?) ?? '',
       big: big,
+      item: s,
     );
   }
 
@@ -961,11 +996,23 @@ class _GlowScreenState extends State<GlowScreen> {
     required String title,
     required String views,
     bool big = false,
+    Map<String, dynamic>? item,
   }) {
     return GestureDetector(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('$title is coming soon.')),
-      ),
+      onTap: () {
+        if (item == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('$title is coming soon.')),
+          );
+          return;
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => GlowContentDetailScreen(item: item, isVideo: true),
+          ),
+        );
+      },
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: Stack(
@@ -1065,9 +1112,7 @@ class _GlowScreenState extends State<GlowScreen> {
 
   Widget _buildPremiumBanner() {
     return GestureDetector(
-      onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Glow Premium is coming soon.')),
-      ),
+      onTap: () => Get.toNamed(Routes.premium),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: SizedBox(

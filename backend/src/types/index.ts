@@ -204,6 +204,16 @@ export type AnalyticsData = {
 
 // ─── Glow screen content ────────────────────────────────────────────────────
 
+export type GlowTopic = { emoji: string; label: string };
+
+export type GlowSectionItem = { imageUrl?: string; title: string; description: string };
+
+export type GlowSections = {
+  problemCause: GlowSectionItem[];
+  solution: GlowSectionItem[];
+  tips: GlowSectionItem[];
+};
+
 export type BeautyPost = {
   id: string;
   title: string;
@@ -213,6 +223,11 @@ export type BeautyPost = {
   tagColor: string;
   tagBackground: string;
   minutesRead: number;
+  categoryId?: string | null;
+  resultBadge?: string | null;
+  chips: GlowTopic[];
+  sections: Partial<GlowSections>;
+  isPremium: boolean;
   order: number;
   createdAt: string;
 };
@@ -223,8 +238,15 @@ export type GlowCategory = {
   title: string;
   subtitle: string;
   background: string;
+  heroImageUrl?: string | null;
+  topics: GlowTopic[];
   order: number;
   createdAt: string;
+};
+
+export type GlowCategoryDetail = GlowCategory & {
+  postsCount: number;
+  shortsCount: number;
 };
 
 export type GlowShort = {
@@ -233,6 +255,19 @@ export type GlowShort = {
   duration: string;
   title: string;
   views: string;
+  categoryId?: string | null;
+  content?: string | null;
+  resultBadge?: string | null;
+  chips: GlowTopic[];
+  sections: Partial<GlowSections>;
+  isPremium: boolean;
   order: number;
   createdAt: string;
+};
+
+export type LegalDocument = {
+  id: string;
+  title: string;
+  content: string;
+  updatedAt: string;
 };
