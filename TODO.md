@@ -39,12 +39,13 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 
 ## 🟢 Infrastructure / Ops
 
-- [ ] Stand up minimal CI (lint + build) for `api/` and `backend/`.
-- [ ] Add a real deploy trigger (GitHub Actions SSH step or signed webhook) — `deploy.sh` exists but is never auto-invoked.
-- [ ] Add a PM2 `ecosystem.config.cjs` for the admin app (currently started ad hoc, not reproducible from git).
+- [x] ~~Stand up minimal CI (lint + build) for `api/` and `backend/`~~ — done 2026-07-26 as the `build-check` job in `.github/workflows/deploy.yml`.
+- [x] ~~Add a real deploy trigger~~ — done 2026-07-26, GitHub Actions + SSH (`.github/workflows/deploy.yml`). **Needs one-time secret setup** (`VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY`) before it actually deploys — see `DEPLOYMENT.md`.
+- [x] ~~Add a PM2 `ecosystem.config.cjs` for the admin app~~ — done 2026-07-26, `backend/ecosystem.config.cjs` + `backend/deploy.sh` added.
 - [ ] Set up PostgreSQL backups.
 - [ ] Disable root SSH login / password auth on the VPS.
-- [ ] Add deploy locking + a post-restart health check to `deploy.sh`.
+- [ ] Add deploy locking + a post-restart health check to `deploy.sh` (both scripts) — the new CI's health-check `verify` job covers post-deploy detection, but not a lock against overlapping manual+automated runs.
+- [ ] Confirm the assumption in `backend/deploy.sh`/`DEPLOYMENT.md` that the admin app lives at `/var/www/glowfit/backend` with PM2 process name `glowfit-backend` — flagged as unverified (no live SSH access), adjust `APP_DIR`/`PM2_APP_NAME` env vars if the real VPS layout differs.
 - [ ] Add uptime/alerting monitoring.
 
 ## 🔵 Technical Debt (see TECHNICAL DEBT section of PROJECT_MASTER.md for full list)

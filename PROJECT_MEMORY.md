@@ -95,11 +95,11 @@ PostgreSQL via Prisma (`api/prisma/schema.prisma`), 15 models, all relations `on
 
 ### Deployment Status
 
-- **API**: PM2 fork mode (`glowfit-api`, `api/ecosystem.config.cjs`), deployed via `api/deploy.sh` — **manual SSH trigger only**, no webhook/CI.
-- **Admin**: no ecosystem file, no deploy script — manual tar/upload/build/PM2-start process.
-- **nginx**: subdomain routing (`api.glowfit30.com` → :4000, `admin.glowfit30.com` → :3000) behind Cloudflare; committed config is **HTTP-only, no 443 blocks**.
-- **HTTPS**: last recorded check (2026-04-09) showed Cloudflare 521 on both subdomains — **unverified whether ever fixed**.
-- **CI/CD**: none — no `.github/workflows/`, no webhook found anywhere in the repo.
+- **API**: PM2 fork mode (`glowfit-api`, `api/ecosystem.config.cjs`), deployed via `api/deploy.sh`.
+- **Admin**: PM2 fork mode (`glowfit-backend`, `backend/ecosystem.config.cjs` — new 2026-07-26), deployed via `backend/deploy.sh` (new 2026-07-26; was previously a manual tar/upload/build process).
+- **nginx**: subdomain routing (`api.glowfit30.com` → :4000, `admin.glowfit30.com` → :3000) behind Cloudflare; committed config is **HTTP-only, no 443 blocks** (live server has HTTPS working, just not reflected back into the repo's nginx config).
+- **HTTPS**: ✅ confirmed live 2026-07-26 via direct check.
+- **CI/CD**: ✅ implemented 2026-07-26 — `.github/workflows/deploy.yml` (GitHub Actions): push to `main` → build-check → SSH deploy (both `deploy.sh` scripts) → health-check verify. **Pending one-time GitHub secret setup** (`VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY`) before it actually deploys anything.
 
 ### Infrastructure
 
@@ -172,3 +172,8 @@ Added a real `categoryId` FK from `BeautyPost`/`GlowShort` to `GlowCategory` (`o
 
 ### 2026-07-26 — Unified Glow content detail screen (Reads + Shorts)
 Built one `glow_content_detail_screen.dart` for both Glow Reads and Shorts — media header adapts per type (video play button/duration vs. static image), optional tabbed Problem & Cause/Solution/Tips accordion (new `sections` JSON field, fixed 3-tab shape, following the existing `DietPlanDay.meals` JSON-column precedent rather than inventing a new pattern), `resultBadge`/`chips` metadata, `isPremium` lock badge + Watch Ad/Go Premium stub row (no ad SDK or payment backend exists anywhere in this app — confirmed via research before building, so these are intentionally stubs, not broken features). Before starting, confirmed via research that tapping a Read/Short did nothing (dead "coming soon" stubs) and that no tab/accordion widget existed anywhere in the Flutter app — adapted the closest existing patterns (`workout_plan_screen.dart`'s expand/collapse, `workout_category_screen.dart`'s pill-tab row) instead of adding a new dependency. Wired from every tappable Read/Short surface: Glow screen's two content rows, and the category detail screen's Top Videos + Latest Posts & Videos grids (previously stubbed there too). Admin forms extended with a premium checkbox, a shared chips editor (generalized the existing `TopicEditor` rather than duplicating it for `GlowCategory.topics` vs. post/short `chips`), and a nested `SectionsEditor` for the 3 tabs. Added 🔒 Premium / 📑 Has Tabs badges to the admin list-card views (a gap explicitly flagged after the category-linking work, then fixed on request) so admins can tell at a glance without opening the edit form. Fully verified end-to-end on both a Read and a Short via live smoke test; all three apps build/lint/analyze clean.
+
+Both of the above (App Settings, and the combined Premium/category-linking/content-detail work) were committed as 3 commits (`d2e9471`, `6bfe247`, `f2d279e`) and pushed to `origin/main` after the user's approval. Server-side deployment was still manual at that point (no SSH access from this session) — exact `deploy.sh` commands were handed to the user to run themselves.
+
+### 2026-07-26 — Auto-deploy pipeline (GitHub Actions + SSH)
+Before building, re-verified from scratch (not from memory) that no CI/CD/webhook existed anywhere in the repo — searched `.github/`, every `.yml`/`.yaml` file, all code for "webhook", and `server/` (all prior findings held; nothing had changed). Presented 5 auto-deploy options (GitHub Actions+SSH, webhook endpoint on the API, self-hosted Actions runner, polling cron, managed-platform migration) with tradeoffs; user chose GitHub Actions + SSH. Built `.github/workflows/deploy.yml` (`build-check` → `deploy` → `verify` jobs, using `appleboy/ssh-action`), plus `backend/deploy.sh` and `backend/ecosystem.config.cjs` (the admin app had neither before — closes a long-standing TODO item). Flagged two things the user still needs to do that I cannot do myself: (1) add `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY` as GitHub repo secrets, (2) confirm the assumed VPS layout (`/var/www/glowfit/backend`, PM2 process name `glowfit-backend`) since I have no live SSH access to verify it. YAML and shell syntax validated locally before committing.

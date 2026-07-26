@@ -61,8 +61,9 @@ Verification (health check / manual confirmation)
 
 ## Auto Deployment
 
-**Target state:** a GitHub Actions workflow or signed webhook triggers `api/deploy.sh` on push to `main` (see `TODO.md` 🟢). **Current reality:** none exists — `api/deploy.sh` must be run manually over SSH; the admin app (`backend/`) has no deploy script at all and is deployed via a manual tar/upload/build/PM2-start sequence (see `deployment-report.md`).
-- Until automation exists, treat every deploy as a manual runbook step and say so explicitly rather than implying it happened automatically.
+**Implemented 2026-07-26:** `.github/workflows/deploy.yml` triggers on push to `main` — `build-check` (verify API loads, Admin `tsc`+lint) → `deploy` (SSH into the VPS via `appleboy/ssh-action`, run `api/deploy.sh` then `backend/deploy.sh`) → `verify` (curl both public health endpoints, fails the run if either doesn't respond). Requires a one-time secret setup (`VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`) in GitHub repo settings — see `DEPLOYMENT.md` for exact values and generation steps. Until those secrets are added, the `deploy`/`verify` jobs will fail (expected, not a bug) while `build-check` still passes.
+- `workflow_dispatch` is also enabled, so a deploy can be re-triggered manually from the GitHub Actions tab without needing a new commit.
+- Flutter is intentionally not part of this pipeline — it has no server component; mobile release/distribution is a separate, not-yet-scoped process.
 
 ## Verification
 

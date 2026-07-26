@@ -7,23 +7,23 @@
 
 ## 1. Executive Summary
 
-GlowFit is a three-tier fitness + beauty platform: a Flutter mobile app, an Express/Prisma API, and a Next.js admin panel, backed by PostgreSQL + Redis on a single Ubuntu VPS behind Cloudflare. The original 28-task integration plan (`App-Admin-Api connection Task.md`) is **27/28 complete** — the platform has full end-to-end content management for workouts, diet, and beauty/Glow content, with push notifications, media uploads, streak tracking, and admin analytics all working. What remains before a confident v1.0 launch is not features but **hardening**: a hardcoded password-reset vulnerability, plaintext credentials committed to git, unverified HTTPS, a likely-broken analytics endpoint, and zero automated test coverage. Overall weighted completion: **~75%**.
+GlowFit is a three-tier fitness + beauty platform: a Flutter mobile app, an Express/Prisma API, and a Next.js admin panel, backed by PostgreSQL + Redis on a single Ubuntu VPS behind Cloudflare. The original 28-task integration plan (`App-Admin-Api connection Task.md`) is **28/28 complete**, plus substantial beyond-scope work (Premium/paywall screen, a real Glow category system with a detail screen, and a unified tabbed content-detail screen for Reads/Shorts). HTTPS is confirmed live and CI/CD now exists (GitHub Actions → SSH deploy → health check, pending a one-time secret setup). What remains before a confident v1.0 launch: a hardcoded password-reset vulnerability, plaintext credentials committed to git, a likely-broken analytics endpoint, and zero automated test coverage. Overall weighted completion: **~82%**.
 
 ## 2. Project Health
 
-**Score: 6.5 / 10 — Functional beta, needs a hardening pass before production.**
+**Score: 7 / 10 — Feature-complete beta with a real deploy pipeline; security and test coverage are now the main gaps.**
 
 | Dimension | Score | Notes |
 |---|---|---|
-| Feature completeness | 8.5/10 | 27/28 planned tasks done, broad content-management surface |
+| Feature completeness | 9/10 | 28/28 planned tasks done, plus Premium/Glow-category/content-detail work beyond original scope |
 | Code organization | 7.5/10 | Consistent modular API pattern; admin panel has duplicated CRUD boilerplate |
-| Security posture | 4/10 | Hardcoded reset password, JWT in localStorage, plaintext creds in git |
-| Deployment maturity | 4/10 | Works, but fully manual, no CI/CD, HTTPS unverified |
-| Test coverage | 1/10 | Zero automated tests anywhere |
-| Documentation accuracy | 5/10 → improving | Task tracker accurate; `docs/ARCHITECTURE.md`/`documentation.md` stale/aspirational (this document is now the accurate source) |
-| Git hygiene | 6.5/10 | Consistent Conventional Commits for 2 months; some junk commits early; no branches ever used |
+| Security posture | 4/10 | Hardcoded reset password, JWT in localStorage, plaintext creds in git — unchanged, still the top risk |
+| Deployment maturity | 7/10 | GitHub Actions CI/CD implemented 2026-07-26 (build-check → SSH deploy → health verify), both apps now have PM2 ecosystem files, HTTPS confirmed live. Pending: GitHub secrets setup, nginx-config drift, PostgreSQL backups, root SSH hardening |
+| Test coverage | 1/10 | Zero automated tests anywhere — CI's build-check verifies the app *loads/typechecks*, not that it behaves correctly |
+| Documentation accuracy | 8/10 | This doc suite has been kept rigorously current all session; `docs/ARCHITECTURE.md`/`documentation.md` remain stale/aspirational by design (treated as roadmap, not fact) |
+| Git hygiene | 7/10 | Consistent Conventional Commits maintained since the one `52e4983` incident; no branches ever used |
 
-**Trend: positive.** Feature velocity is strong; production hardening has lagged behind it — expected for a fast-moving solo-developer MVP.
+**Trend: positive.** Feature velocity and deployment maturity both improved significantly this cycle; security posture and test coverage are now the clear, unchanged bottlenecks — next hardening pass should target those specifically.
 
 ## 3. Architecture
 
@@ -119,11 +119,11 @@ Dart SDK ≥3.0, GetX 4.6 (state management), Dio 5.3 (networking), get_storage 
 
 ## 10. Deployment
 
-- **API:** PM2 fork mode (`glowfit-api`), deployed via `api/deploy.sh` (git pull → npm ci → prisma migrate deploy → prisma generate → pm2 restart) — **manual SSH trigger only, no webhook/CI**.
-- **Admin:** no ecosystem file, no deploy script — manual tar/upload/build/PM2-start process, not reproducible from git.
+- **API:** PM2 fork mode (`glowfit-api`), deployed via `api/deploy.sh` (git pull → npm ci → prisma migrate deploy → prisma generate → pm2 restart).
+- **Admin:** PM2 fork mode (`glowfit-backend`), `backend/ecosystem.config.cjs` + `backend/deploy.sh` (new 2026-07-26 — was previously a manual tar/upload/build process with no ecosystem file).
 - **nginx:** subdomain routing (`api.glowfit30.com`→:4000, `admin.glowfit30.com`→:3000) behind Cloudflare; committed config is **HTTP-only, no 443 blocks**.
 - **HTTPS:** ✅ verified live 2026-07-26 — both subdomains reachable over HTTPS, API returns a healthy JSON payload (uptime ~12.8 days). The committed nginx config is still HTTP-only, so the live certbot config needs to be pulled back into the repo (doc-drift, not a live outage).
-- **CI/CD:** none exists. Full detail in `deployment-report.md` and target-state process in `RELEASE_PROCESS.md`.
+- **CI/CD:** ✅ implemented 2026-07-26 — `.github/workflows/deploy.yml` (GitHub Actions): push to `main` → build-check (API load check, Admin `tsc`+lint) → SSH deploy (both `deploy.sh` scripts) → health-check verification. Requires a one-time `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY` secret setup in GitHub before it actually deploys (pending as of this write-up) — see `DEPLOYMENT.md`.
 
 ## 11. Git Status
 

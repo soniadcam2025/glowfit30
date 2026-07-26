@@ -28,15 +28,12 @@ Close out the last item of the original integration plan (Task 28 — profile se
 
 ## In Progress
 
-- [ ] **Deploying today's accumulated work to the live server** (App Settings, Premium screen, Glow category linking + detail screen, unified content detail screen) — commit/push in progress; API/Admin server-side deploy requires the user to run `deploy.sh`/rebuild steps over SSH (no access from this environment). Flutter side stays as pushed code only — no APK build yet, per earlier instruction ("that i will tell next not now").
+- [ ] **GitHub secret setup for auto-deploy** — `.github/workflows/deploy.yml` is built and committed, but needs `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY` added as GitHub repo secrets before it actually deploys anything. This is a one-time manual step only the user can do (no access to their GitHub account settings from here).
+- [ ] Once secrets are added: confirm the first automated deploy run succeeds, and confirm the assumed VPS layout (`/var/www/glowfit/backend`, PM2 process `glowfit-backend`) matches reality.
 
 ## ⚠️ Flagged this cycle
 
 - Commit `52e4983` used a non-Conventional-Commit message (`"26072026"`) and bundled unrelated build artifacts (`client-builds/*.zip`, stray `VPS` file) — already pushed, not rewritten. `.gitignore` fix applied; the files remain in git history.
-
-## Blocked
-
-- [ ] **Auto-deploy trigger** — blocked on a decision: GitHub Actions (needs VPS SSH secret) vs. a signed webhook receiver (needs a new API endpoint + secret management). Needs a choice before implementation starts.
 
 ## Pending
 
@@ -68,8 +65,8 @@ Work top row first (High Impact); within that row, do Low Effort items immediate
 
 ## Today's Tasks
 
-1. Commit + push App Settings backend work and the Premium screen (2 separate Conventional-Commit commits, per PROJECT_RULES.md rule 8).
-2. Walk through server-side deployment for the API/Admin changes (SSH required — I'll hand over exact commands).
+1. Add `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY` GitHub secrets so the new auto-deploy pipeline can actually run.
+2. Confirm the first automated deploy succeeds (check the Actions tab + the health-check job).
 3. Fix `GET /admin/chart-data` table-name casing.
 4. Rotate `sprsadmin` and `glowfit_user` passwords; remove plaintext copies from tracked files.
 

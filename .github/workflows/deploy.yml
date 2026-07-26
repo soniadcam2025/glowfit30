@@ -1,0 +1,71 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-check:
+    name: Verify builds
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Verify API loads
+        working-directory: api
+        env:
+          NODE_ENV: production
+          DATABASE_URL: "postgresql://placeholder:placeholder@localhost:5432/placeholder"
+          JWT_SECRET: "ci-placeholder-secret-not-used-in-prod"
+        run: |
+          npm ci --omit=dev
+          node -e "import('./src/app.js').then(m => { m.createApp(); console.log('API_OK'); }).catch(e => { console.error(e); process.exit(1); })"
+
+      - name: Verify Admin build
+        working-directory: backend
+        run: |
+          npm ci
+          npx tsc --noEmit
+          npm run lint
+
+  deploy:
+    name: Deploy to VPS
+    needs: build-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy API (glowfit-api)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: bash /var/www/glowfit/api/deploy.sh
+
+      - name: Deploy Admin (glowfit-backend)
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: bash /var/www/glowfit/backend/deploy.sh
+
+  verify:
+    name: Verify production health
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check API health
+        run: |
+          curl -sf https://api.glowfit30.com/ | tee /dev/stderr | grep -q '"status":"ok"'
+
+      - name: Check Admin health
+        run: curl -sfI https://admin.glowfit30.com/
