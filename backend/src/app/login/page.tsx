@@ -1,8 +1,8 @@
 "use client";
 
 import { DotLottieReact } from "@lottiefiles/dotlottie-react";
-import { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { FullPageLoader } from "@/components/loading/full-page-loader";
@@ -112,18 +112,11 @@ function ForgotPasswordModal({ onClose }: { onClose: () => void }) {
 
 export default function LoginPage() {
   const router = useRouter();
-  const pathname = usePathname();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showForgot, setShowForgot] = useState(false);
-
-  useEffect(() => {
-    if (pathname !== "/login") {
-      setLoading(false);
-    }
-  }, [pathname]);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

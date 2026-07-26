@@ -359,7 +359,7 @@ function WorkoutRow({ workout, onDeleted }: { workout: Workout; onDeleted: () =>
         onConfirm={() => { deleteWorkout.mutate(); setConfirmDelete(false); }}
         confirmLabel="Delete"
       >
-        "{workout.title}" and all its days and exercises will be permanently deleted.
+        &quot;{workout.title}&quot; and all its days and exercises will be permanently deleted.
       </ConfirmModal>
     </>
   );
