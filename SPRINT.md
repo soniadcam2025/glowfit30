@@ -12,6 +12,13 @@ Close out the last item of the original integration plan (Task 28 — profile se
 
 ## Completed
 
+- [x] **App Settings module** (2026-07-26): Language/Appearance synced via `/profile`; Privacy Policy & Terms backed by new `legal` API module + Admin editor + Flutter screen. Ad hoc feature request, not originally part of this sprint's scope, but completed end-to-end (DB migration, API, Admin, Flutter, verified).
+- [x] **Premium/paywall screen** (2026-07-26): built from a supplied Figma design, wired from Glow's "Upgrade Now" banner. Also ad hoc, UI/navigation only.
+- [x] **Glow category linking + category detail screen** (2026-07-26): real FK from posts/shorts to categories, new detail screen, new endpoint, `?categoryId=` filters.
+- [x] **Unified Glow content detail screen** (2026-07-26): one screen for Reads+Shorts, optional tabbed accordion content, premium gating stub, admin forms + list badges extended.
+- [x] **HTTPS confirmed live** (2026-07-26) — was listed as Blocked below; resolved by checking the actual endpoints directly instead of waiting on SSH access. Remaining follow-up (pulling the live nginx config into the repo) demoted to a normal Pending item, not blocking.
+- [x] **Prisma migration drift resolved** (2026-07-26) — confirmed the 3 flagged columns already exist live; downgraded from Critical, and a proper migration was generated for the new App Settings columns going forward, keeping migration history honest.
+- [x] `.gitignore` cleanup (Repository Maintenance Mode) — `client-builds/`, `VPS`, `help`, and generic binary/secret patterns added.
 - [x] **Task 28 — Profile settings sub-screens** (Workout/Diet/Notification/App Settings) + `user_preferences` API/DB support — committed and pushed in `52e4983` (2026-07-26). **Original 28-task integration plan is now 28/28 complete.**
 - [x] Task 27 — Glow screen (Explore by Goals, Glow Reads, Shorts & Quick Tips), full CRUD rebuilt from a non-functional stub.
 - [x] Task 26 — Workout Library category cards made fully admin-managed.
@@ -21,15 +28,14 @@ Close out the last item of the original integration plan (Task 28 — profile se
 
 ## In Progress
 
-*(nothing currently in progress — sprint focus shifts entirely to the v1.0 hardening/security punch list below)*
+- [ ] **Deploying today's accumulated work to the live server** (App Settings, Premium screen, Glow category linking + detail screen, unified content detail screen) — commit/push in progress; API/Admin server-side deploy requires the user to run `deploy.sh`/rebuild steps over SSH (no access from this environment). Flutter side stays as pushed code only — no APK build yet, per earlier instruction ("that i will tell next not now").
 
 ## ⚠️ Flagged this cycle
 
-- Commit `52e4983` used a non-Conventional-Commit message (`"26072026"`) and bundled unrelated build artifacts (`client-builds/*.zip`, stray `VPS` file) — already pushed, not rewritten; `.gitignore` should be updated to prevent recurrence. See `PROJECT_MEMORY.md` Technical Debt.
+- Commit `52e4983` used a non-Conventional-Commit message (`"26072026"`) and bundled unrelated build artifacts (`client-builds/*.zip`, stray `VPS` file) — already pushed, not rewritten. `.gitignore` fix applied; the files remain in git history.
 
 ## Blocked
 
-- [ ] **HTTPS confirmation** — blocked on VPS SSH access to run/verify `certbot --nginx -d admin.glowfit30.com -d api.glowfit30.com` and check live status; cannot be verified from the repo alone.
 - [ ] **Auto-deploy trigger** — blocked on a decision: GitHub Actions (needs VPS SSH secret) vs. a signed webhook receiver (needs a new API endpoint + secret management). Needs a choice before implementation starts.
 
 ## Pending
@@ -37,9 +43,9 @@ Close out the last item of the original integration plan (Task 28 — profile se
 - [ ] Rotate exposed VPS/DB credentials.
 - [ ] Fix hardcoded password-reset flow.
 - [ ] Fix `GET /admin/chart-data` table-casing bug.
-- [ ] Generate missing Prisma migration for schema drift (`fcmToken`, `Exercise.videoUrl`, `DietPlan.imageUrl`).
 - [ ] Add `client_max_body_size` to nginx.
-- [ ] Make Admin Settings functional or remove it.
+- [ ] Pull the live, certbot-modified nginx config into the repo (HTTPS itself works; the committed config doesn't reflect it).
+- [ ] Wire up the Admin Settings "General" fields, or remove them (separate from the now-fixed Legal Content section).
 - [ ] Add smoke tests for auth/profile/progress.
 
 *(Full backlog with priority tags lives in `TODO.md`.)*
@@ -62,17 +68,18 @@ Work top row first (High Impact); within that row, do Low Effort items immediate
 
 ## Today's Tasks
 
-1. Fix `GET /admin/chart-data` table-name casing.
-2. Rotate `sprsadmin` and `glowfit_user` passwords; remove plaintext copies from tracked files.
-3. Add `client-builds/` and `VPS` to `.gitignore` to prevent the git-hygiene issue from recurring.
+1. Commit + push App Settings backend work and the Premium screen (2 separate Conventional-Commit commits, per PROJECT_RULES.md rule 8).
+2. Walk through server-side deployment for the API/Admin changes (SSH required — I'll hand over exact commands).
+3. Fix `GET /admin/chart-data` table-name casing.
+4. Rotate `sprsadmin` and `glowfit_user` passwords; remove plaintext copies from tracked files.
 
 ## Next Tasks
 
 1. Replace hardcoded password-reset default with a token/OTP flow.
-2. Generate + commit the missing Prisma migration for schema drift.
-3. Confirm/complete HTTPS on both subdomains; commit the 443 nginx config.
-4. Add `client_max_body_size` to nginx.
-5. Make Admin Settings functional, or remove it.
+2. Pull the live, certbot-modified nginx config into the repo.
+3. Add `client_max_body_size` to nginx.
+4. Wire up or remove the Admin Settings "General" fields.
+5. Flutter release build/distribution for the Premium screen — scope to be defined by the user next.
 
 ## Future Tasks
 

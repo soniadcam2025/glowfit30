@@ -5,11 +5,12 @@ PostgreSQL via Prisma (`api/prisma/schema.prisma`), generator `prisma-client-js`
 ## Enum
 `UserRole { super_admin, admin, user }`
 
-## Models (14)
+## Models (15)
 
 | Model | Table | Notes |
 |---|---|---|
-| `User` | `users` | email/firebaseUid unique, password nullable (social-only accounts), role, isBlocked, onboarding profile fields (fitnessLevel, goal, dietStyle, targetWeight, focusAreas[], dob, height, weight), waterGoalLiters, pushEnabled, fcmToken |
+| `User` | `users` | email/firebaseUid unique, password nullable (social-only accounts), role, isBlocked, onboarding profile fields (fitnessLevel, goal, dietStyle, targetWeight, focusAreas[], dob, height, weight), waterGoalLiters, pushEnabled, fcmToken, **language** (new), **appearance** (new) |
+| `LegalDocument` | `legal_documents` | title (default "Privacy Policy & Terms"), content (Text), updatedAt — singleton-style, no relations; new 2026-07-26 |
 | `Workout` | `workouts` | title, level, duration, imageUrl, description, goal → `WorkoutDay[]` |
 | `WorkoutDay` | `workout_days` | workoutId→Workout (cascade), dayNumber, title, focus, imageUrl, durationMinutes, kcal → `Exercise[]`, `Progress[]` |
 | `Exercise` | `exercises` | workoutDayId→WorkoutDay (cascade), name, sets, reps, duration, rest, imageUrl, gifUrl, videoUrl, order |
@@ -19,9 +20,9 @@ PostgreSQL via Prisma (`api/prisma/schema.prisma`), generator `prisma-client-js`
 | `WorkoutLibraryCategory` | `workout_library_categories` | name(unique), headingLine1/2, description, heroImageUrl, tags(Json), section, card* styling fields |
 | `WorkoutLibraryItem` | `workout_library_items` | isFeatured, category(free-text), difficulty, titleLine1/Script, description, heroImageUrl, durationMinutes, kcalLabel, focusLabel, tags(Json) → `WorkoutLibraryExercise[]` |
 | `WorkoutLibraryExercise` | `workout_library_exercises` | workoutLibraryItemId→Item (cascade), name, durationSeconds, imageUrl, videoUrl |
-| `BeautyPost` | `beauty_posts` | title, content, imageUrl, tag, tagColor, tagBackground, minutesRead — standalone |
-| `GlowCategory` | `glow_categories` | emoji, title, subtitle, background — standalone |
-| `GlowShort` | `glow_shorts` | imageUrl, duration(String), title, views(String) — standalone |
+| `BeautyPost` | `beauty_posts` | title, content, imageUrl, tag, tagColor, tagBackground, minutesRead, **categoryId→GlowCategory (SetNull)**, **resultBadge, chips(Json), sections(Json), isPremium** (all new 2026-07-26) |
+| `GlowCategory` | `glow_categories` | emoji, title, subtitle, background, **heroImageUrl, topics(Json)** (new) → `posts BeautyPost[]`, `shorts GlowShort[]` |
+| `GlowShort` | `glow_shorts` | imageUrl, duration(String), title, views(String), **categoryId→GlowCategory (SetNull)**, **content, resultBadge, chips(Json), sections(Json), isPremium** (all new 2026-07-26) |
 | `AdminLog` | `admin_logs` | adminId→User (cascade), action, metadata(Json?) |
 
 ## Relationships
@@ -34,6 +35,8 @@ Workout ──< WorkoutDay ──< Exercise
 DietPlan ──< DietPlanDay
 WorkoutLibraryItem ──< WorkoutLibraryExercise
 WorkoutLibraryCategory ⇢ WorkoutLibraryItem   (soft/string-matched, NOT a real FK)
+GlowCategory ──< BeautyPost   (categoryId, onDelete: SetNull — real FK, added 2026-07-26)
+GlowCategory ──< GlowShort    (categoryId, onDelete: SetNull — real FK, added 2026-07-26)
 ```
 
 ## Migration History (chronological)
@@ -48,7 +51,10 @@ WorkoutLibraryCategory ⇢ WorkoutLibraryItem   (soft/string-matched, NOT a real
 8. `20260713000000_add_workout_library_featured`
 9. `20260714000000_add_workout_library_category_cards`
 10. `20260714010000_add_glow_content` — glow_categories, glow_shorts
-11. `20260714020000_add_user_preferences` — water_goal_liters, push_enabled (newest)
+11. `20260714020000_add_user_preferences` — water_goal_liters, push_enabled
+12. `20260726120000_add_app_settings_language_appearance_legal` — language, appearance on users; new legal_documents table
+13. `20260726150000_add_glow_category_links` — categoryId FK on beauty_posts/glow_shorts → glow_categories; heroImageUrl/topics on glow_categories
+14. `20260726170000_add_glow_content_detail_fields` — resultBadge/chips/sections/isPremium on beauty_posts and glow_shorts; content on glow_shorts (newest)
 
 Migrations after `init` use defensive `IF NOT EXISTS`/`DO $$ EXCEPTION` guards — historically mixed `prisma migrate` and `prisma db push` usage across environments.
 

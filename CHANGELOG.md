@@ -6,11 +6,23 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-07-26)
+- **App Settings module completed**: Language and Appearance preferences now sync via `User.language`/`User.appearance` through the existing `/profile` endpoint; Privacy Policy & Terms backed by a new `LegalDocument` model and `/legal` API module, editable from the Admin Settings page, displayed in a new Flutter screen.
+- **Premium/paywall screen**: new Flutter screen (`features/premium/premium_screen.dart`) matching a supplied Figma design — hero section, "Why Go Premium" grid, 3 pricing plans, guarantee row, CTA. Wired from the Glow screen's "Upgrade Now" banner. UI/navigation only, no payment backend (tracked in `ROADMAP.md` v2.0).
+- **Glow category linking + category detail screen**: `BeautyPost`/`GlowShort` now have a real `categoryId` FK to `GlowCategory` (not string-matched — avoids repeating the `WorkoutLibraryCategory` anti-pattern). New `GlowCategoryDetailScreen` (Flutter) shows live Videos/Posts counts, Popular Topics, Top Videos grid, Latest Posts & Videos — wired from tapping a category tile on the Glow screen. New `GET /glow/categories/:id` endpoint; `?categoryId=` filter added to `/beauty` and `/glow/shorts`.
+- **Unified Glow content detail screen**: one `GlowContentDetailScreen` (Flutter) for both Reads and Shorts — media header adapts per type, optional tabbed Problem&Cause/Solution/Tips accordion content (`resultBadge`/`chips`/`sections`/`isPremium`, all new optional fields on `BeautyPost`/`GlowShort`), premium lock badge + Watch Ad/Go Premium stub row. Wired from every Read/Short/mixed-content card in the app. Admin Reads/Shorts forms extended with a category picker, premium checkbox, chips editor, and a nested 3-tab section editor; list cards show 🔒 Premium / 📑 Has Tabs badges.
+
+### Fixed (2026-07-26, incidental)
+- `beauty.service.js#createPost` was validating `tag`/`tagColor`/`tagBackground`/`minutesRead`/`order` but silently dropping them on creation (only `updatePost` persisted them) — found and fixed while adding category linking to the same function.
+
+### Fixed (2026-07-26)
+- Admin Settings page (`/settings`) is now partially functional — the Legal Content section persists real data; the unrelated "General" fields remain a stub (separately tracked).
+
 ### Known issues carried into this cycle
 - `GET /admin/chart-data` raw SQL table-name casing bug (likely broken).
 - Hardcoded default password reset (`Admin12345`).
 - Schema/migration drift on `User.fcmToken`, `Exercise.videoUrl`, `DietPlan.imageUrl`.
-- HTTPS status on `api.glowfit30.com` / `admin.glowfit30.com` unverified since 2026-04-09.
+- ~~HTTPS status unverified~~ — confirmed live and healthy 2026-07-26 (see the Project Health Audit entry below); committed nginx config just needs the live certbot config pulled back in.
 - `client-builds/` and `VPS` committed to git in `52e4983` — need `.gitignore` entries to prevent recurrence.
 
 ---

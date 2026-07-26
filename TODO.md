@@ -25,7 +25,8 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 - [ ] Add a lint script to `api/package.json` (currently has none).
 
 - [ ] Add `client_max_body_size` to nginx API server block (100MB, matching the video-upload limit).
-- [ ] Make the Admin Settings page functional, or remove it.
+- [x] ~~Make the Admin Settings page functional~~ — partially done 2026-07-26: Legal Content section is real and API-backed. Remaining: the "General" fields (App name/Admin name/Support email) are still a non-functional stub.
+- [ ] Wire up the Admin Settings "General" fields (App name/Admin display name/Support email) or remove them — separate from the Legal Content fix above.
 - [ ] Real foreign key between `WorkoutLibraryCategory` and `WorkoutLibraryItem` (currently string-matched).
 - [ ] Add CSRF defense-in-depth given `sameSite: 'none'` cookies in production.
 - [ ] Consistent enumeration protection between `/auth/register` and `/auth/reset-password`.

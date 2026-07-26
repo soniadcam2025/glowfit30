@@ -70,19 +70,21 @@ glowfit/
 
 ## 5. Database
 
-PostgreSQL via Prisma, **14 models**, all relations `onDelete: Cascade`, no many-to-many. Full detail in `DATABASE_SCHEMA.md`.
+PostgreSQL via Prisma, **15 models**, all relations `onDelete: Cascade`, no many-to-many. Full detail in `DATABASE_SCHEMA.md`.
 
-`User` · `Workout`→`WorkoutDay`→`Exercise` · `Progress` (User+WorkoutDay) · `DietPlan`→`DietPlanDay` · `WorkoutLibraryCategory` (soft-linked, no FK) / `WorkoutLibraryItem`→`WorkoutLibraryExercise` · `BeautyPost` · `GlowCategory` · `GlowShort` · `AdminLog`.
+`User` (now includes `language`, `appearance`) · `Workout`→`WorkoutDay`→`Exercise` · `Progress` (User+WorkoutDay) · `DietPlan`→`DietPlanDay` · `WorkoutLibraryCategory` (soft-linked, no FK) / `WorkoutLibraryItem`→`WorkoutLibraryExercise` · `BeautyPost` · `GlowCategory` · `GlowShort` · `AdminLog` · `LegalDocument`.
 
-**11 migrations**, chronological from `20250409120000_init` to `20260714020000_add_user_preferences`.
+**Glow content is now a real linked graph, not three siloed lists** (2026-07-26): `BeautyPost`/`GlowShort` → `categoryId` FK → `GlowCategory` (`onDelete: SetNull`, deleting a category never destroys its content). `GlowCategory` also gained `heroImageUrl`/`topics` (category detail screen); `BeautyPost`/`GlowShort` gained `resultBadge`/`chips`/`sections` (JSON, fixed Problem&Cause/Solution/Tips tabs, all optional)/`isPremium` for the new unified content detail screen.
+
+**14 migrations**, chronological from `20250409120000_init` to `20260726170000_add_glow_content_detail_fields`.
 
 **⚠️ Known drift:** `User.fcmToken`, `Exercise.videoUrl`, `DietPlan.imageUrl` exist in `schema.prisma` with no matching migration — must be reconciled before v1.0 (see `TODO.md` 🔴).
 
 ## 6. API Modules
 
-12 modules, **51 route+method combinations**, each mounted at both `/api/*` and bare `/*` (unresolved double-mount, see Technical Debt). Full detail + auth requirements in `API_REFERENCE.md`.
+13 modules, **56 route+method combinations**, each mounted at both `/api/*` and bare `/*` (unresolved double-mount, see Technical Debt). Full detail + auth requirements in `API_REFERENCE.md`. `beauty` and `glow` (shorts) list endpoints now accept a `?categoryId=` filter; `glow` gained `GET /categories/:id` returning live post/short counts for the category detail screen.
 
-`auth · profile · progress · users · admin · workouts · workout-library · diet · beauty · glow · notifications · uploads`. `analytics` module is an empty stub — metrics live in `admin` module instead.
+`auth · profile · progress · users · admin · workouts · workout-library · diet · beauty · glow · notifications · uploads · legal` (new — `GET/PATCH /legal`, backs the Flutter Privacy Policy & Terms screen and the Admin Settings page's Legal Content editor). `analytics` module is an empty stub — metrics live in `admin` module instead.
 
 **⚠️ Known bug:** `GET /admin/chart-data` uses raw SQL with mismatched table-name casing — likely broken at runtime.
 
@@ -94,10 +96,17 @@ Next.js 16 App Router, React 19, TypeScript, TanStack React Query, Axios, Tailwi
 - **Routing:** edge middleware guards auth + mobile-UA redirect + role (`routeRoleMap`); a client-side `withRoleGuard` HOC additionally guards only `/settings` (inconsistent — should extend to all role-restricted routes).
 - **State:** React Query for server state; no global auth/UI store (re-fetches `/auth/me` as needed).
 - **Known dead code:** `content.service.ts` (fake mocked methods), unused table/skeleton/filter components, empty stub routes (`(auth)/login`, `api/health/db/`).
+- **Settings page (`/settings`) is now partially functional** (2026-07-26): its new "Legal Content" card is fully wired (real API-backed editor for Privacy Policy & Terms). The pre-existing "General" section (App name/Admin display name/Support email) is still a non-functional stub — unrelated, separately tracked.
+- **`(admin)/beauty/page.tsx` extended (2026-07-26):** Reads/Shorts forms now have a category picker, a "Premium content" checkbox, a reusable chips editor (`TopicEditor`, shared with `GlowCategory.topics`), and a nested `SectionsEditor` for the 3-tab detail-screen content. Category form gained a hero-image upload + Popular Topics editor. List cards now show 🔒 Premium / 📑 Has Tabs badges so admins can tell at a glance without opening the edit form.
 
 ## 8. Flutter App
 
 Dart SDK ≥3.0, GetX 4.6 (state management), Dio 5.3 (networking), get_storage + flutter_secure_storage, Firebase Auth/Core/Messaging, Google Sign-In, fl_chart, video_player. Version `1.0.0+1`. Auth flow: Google Sign-In → Firebase ID token → `POST /auth/firebase` → API JWT stored in GetStorage. All core screens (home, workouts, workout-library, diet, Glow, progress, profile) wired to live API data. Current build artifacts are **Android APKs only** (`client-builds/`) — no iOS release yet.
+
+**New (2026-07-26):**
+- Premium/paywall screen (`features/premium/premium_screen.dart`) — pricing plans, "Why Go Premium" grid, hero section; wired from the Glow screen's "Upgrade Now" banner via `Get.toNamed(Routes.premium)`. UI/navigation only — no payment/IAP backend; CTA buttons are stubs, consistent with `ROADMAP.md` v2.0 scoping real subscriptions as a future feature.
+- `glow_category_detail_screen.dart` — category landing page (live Videos/Posts counts, Popular Topics, Top Videos grid, Latest Posts & Videos mixed feed), pushed from tapping a category tile on the Glow screen.
+- `glow_content_detail_screen.dart` — one unified detail screen for both Glow Reads and Shorts (media header adapts per type; tabbed Problem&Cause/Solution/Tips accordion when authored, else plain content; premium lock badge + Watch Ad/Go Premium stub row). Wired from every place a Read/Short/mixed-content card appears (Glow screen rows, category detail screen grids).
 
 ## 9. Infrastructure
 
@@ -146,11 +155,11 @@ Per `App-Admin-Api connection Task.md` (**28/28 — complete as of 2026-07-26**)
 - **Phase 3 — Admin Content Management** (5/5): workout builder, exercise manager, diet plan form, dashboard stats, user detail page.
 - **Phase 4 — Polish** (4/4): push notifications, media uploads (Vultr S3), streak logic, analytics page.
 - **Phase 5 — Content Completion** (3/3 ✅): Workout Library category cards, Glow screen (full CRUD from stub) — fixed a `HomeController` GetX `permanent` bug along the way. Task 28 (profile settings sub-screens: Workout/Diet/Notification/App Settings) completed and pushed 2026-07-26.
-- **Beyond original scope:** standalone browsable Workout Library with category browse + difficulty filter + hero/featured separation; full project documentation suite (this file plus 13 others).
+- **Beyond original scope:** standalone browsable Workout Library with category browse + difficulty filter + hero/featured separation; full project documentation suite (this file plus 13 others); App Settings module (language/appearance/legal content) completed end-to-end (2026-07-26); Premium/paywall screen built and wired from Glow (2026-07-26); Glow category linking + category detail screen (2026-07-26); unified Glow content (Reads/Shorts) detail screen with tabbed accordion content and premium gating (2026-07-26).
 
 ## 15. Pending Features
 
-- Functional Admin Settings page.
+- Admin Settings "General" section (App name/Admin name/Support email) still non-functional — separate from the now-fixed Legal Content section.
 - Real FK between `WorkoutLibraryCategory` and `WorkoutLibraryItem`.
 - Password-reset hardening.
 - v2.0 scope: subscriptions/monetization, gamification, iOS release, AI recommendations, OTP login, wearable integration (see `ROADMAP.md`).

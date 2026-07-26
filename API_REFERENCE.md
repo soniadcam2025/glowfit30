@@ -15,9 +15,15 @@ Base: Express 4 + Prisma 6, `api/src`. Every route below is mounted at **both** 
 ## Profile — `/profile` (all Auth)
 | Method | Path | Notes |
 |---|---|---|
-| GET | `/profile/` | Current user's profile |
-| PATCH | `/profile/` | Update profile fields |
+| GET | `/profile/` | Current user's profile — now includes `language`, `appearance` |
+| PATCH | `/profile/` | Update profile fields — now accepts `language`, `appearance` (2026-07-26) |
 | PATCH | `/profile/fcm-token` | Save device FCM push token |
+
+## Legal — `/legal` (new, 2026-07-26)
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET | `/legal/` | Auth | Returns the current Privacy Policy & Terms document; auto-creates a default on first call |
+| PATCH | `/legal/` | Admin | Updates the document's `title`/`content` |
 
 ## Progress — `/progress` (all Auth)
 | Method | Path | Notes |
@@ -79,17 +85,20 @@ Base: Express 4 + Prisma 6, `api/src`. Every route below is mounted at **both** 
 | PUT/DELETE | `/diet/:id/days/:day` | Admin | Upsert/remove day |
 
 ## Beauty — `/beauty`
-| Method | Path | Auth |
-|---|---|---|
-| GET `/beauty/`, GET `/beauty/:id` | Auth |
-| POST/PATCH/DELETE `/beauty/[:id]` | Admin |
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET `/beauty/` | Auth | Accepts `?categoryId=` filter (new 2026-07-26) |
+| GET `/beauty/:id` | Auth | |
+| POST/PATCH/DELETE `/beauty/[:id]` | Admin | Now accepts `categoryId`, `resultBadge`, `chips`, `sections`, `isPremium` (all optional, new 2026-07-26) |
 
 ## Glow — `/glow`
-| Method | Path | Auth |
-|---|---|---|
-| GET `/glow/categories`, GET `/glow/shorts` | Auth |
-| POST/PATCH/DELETE `/glow/categories[/:id]` | Admin |
-| POST/PATCH/DELETE `/glow/shorts[/:id]` | Admin |
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| GET `/glow/categories` | Auth | |
+| GET `/glow/categories/:id` | Auth | New (2026-07-26) — category detail + live `postsCount`/`shortsCount` |
+| GET `/glow/shorts` | Auth | Accepts `?categoryId=` filter (new 2026-07-26) |
+| POST/PATCH/DELETE `/glow/categories[/:id]` | Admin | Now accepts `heroImageUrl`, `topics` (new 2026-07-26) |
+| POST/PATCH/DELETE `/glow/shorts[/:id]` | Admin | Now accepts `categoryId`, `content`, `resultBadge`, `chips`, `sections`, `isPremium` (all optional, new 2026-07-26) |
 
 ## Notifications — `/notifications` (all Admin)
 | Method | Path | Notes |
@@ -101,6 +110,9 @@ Base: Express 4 + Prisma 6, `api/src`. Every route below is mounted at **both** 
 |---|---|---|
 | POST | `/uploads/` | Image, memory storage, 5MB limit, `image/*` only |
 | POST | `/uploads/video` | Video, 100MB limit, `video/mp4` only — ⚠️ nginx may reject before reaching Express, see deployment docs |
+
+## Rate Limits section note
+`/legal` is not currently in the auth-specific rate limiter — covered only by the global 400/15min limiter, same as other content modules (`beauty`, `glow`, etc.).
 
 ## Response Envelope
 
