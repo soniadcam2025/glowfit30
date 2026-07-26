@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:get_storage/get_storage.dart';
+import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/api_service.dart';
+import 'legal_content_screen.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
 
 const _languages = ['English', 'Hindi', 'Bengali', 'Espanol', 'Brazil'];
-const _languageStorageKey = 'app_settings_language';
+const _appearances = ['Light', 'Dark', 'System'];
 
 class AppSettingsScreen extends StatefulWidget {
   const AppSettingsScreen({super.key});
@@ -16,26 +18,102 @@ class AppSettingsScreen extends StatefulWidget {
 }
 
 class _AppSettingsScreenState extends State<AppSettingsScreen> {
-  final _box = GetStorage();
-  late String _language;
+  bool _loading = true;
+  bool _saving = false;
+
+  String _language = _languages.first;
+  String _appearance = _appearances.last;
 
   @override
   void initState() {
     super.initState();
-    _language = _box.read<String>(_languageStorageKey) ?? 'English';
+    _load();
   }
 
-  void _selectLanguage(String lang) {
-    setState(() => _language = lang);
-    _box.write(_languageStorageKey, lang);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Language set to $lang.')),
-    );
+  Future<void> _load() async {
+    final profile = await Get.find<ApiService>().getProfile();
+    if (!mounted) return;
+    setState(() {
+      final lang = profile?['language'] as String?;
+      if (lang != null && _languages.contains(lang)) _language = lang;
+      final appearance = profile?['appearance'] as String?;
+      if (appearance != null && _appearances.contains(appearance)) {
+        _appearance = appearance;
+      }
+      _loading = false;
+    });
   }
 
-  void _comingSoon(String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$feature is coming soon.')),
+  Future<void> _selectLanguage(String lang) async {
+    final previous = _language;
+    setState(() {
+      _language = lang;
+      _saving = true;
+    });
+    final result =
+        await Get.find<ApiService>().patchProfile({'language': lang});
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Language set to $lang.')),
+      );
+    } else {
+      setState(() => _language = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update. Try again.')),
+      );
+    }
+  }
+
+  Future<void> _selectAppearance(String appearance) async {
+    final previous = _appearance;
+    setState(() {
+      _appearance = appearance;
+      _saving = true;
+    });
+    final result = await Get.find<ApiService>()
+        .patchProfile({'appearance': appearance});
+    if (!mounted) return;
+    setState(() => _saving = false);
+    if (result != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Appearance set to $appearance.')),
+      );
+    } else {
+      setState(() => _appearance = previous);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to update. Try again.')),
+      );
+    }
+  }
+
+  Widget _pillSelector(
+      List<String> options, String selected, ValueChanged<String> onSelect) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: options.map((o) {
+        final isSelected = o == selected;
+        return GestureDetector(
+          onTap: _saving ? null : () => onSelect(o),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+            decoration: BoxDecoration(
+              color: isSelected ? _pink : const Color(0xFFF7F0F5),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              o,
+              style: GoogleFonts.poppins(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? Colors.white : Colors.grey[600],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -44,64 +122,47 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
-        child: Column(
-          children: [
-            _buildAppBar(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _label('Language'),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: _languages.map((l) {
-                        final isSelected = l == _language;
-                        return GestureDetector(
-                          onTap: () => _selectLanguage(l),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 10),
-                            decoration: BoxDecoration(
-                              color:
-                                  isSelected ? _pink : const Color(0xFFF7F0F5),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(
-                              l,
-                              style: GoogleFonts.poppins(
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w600,
-                                color: isSelected
-                                    ? Colors.white
-                                    : Colors.grey[600],
-                              ),
-                            ),
+        child: _loading
+            ? const Center(child: CircularProgressIndicator(color: _pink))
+            : Column(
+                children: [
+                  _buildAppBar(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _label('Language'),
+                          _pillSelector(_languages, _language, _selectLanguage),
+                          const SizedBox(height: 26),
+                          _label('Appearance'),
+                          _pillSelector(
+                              _appearances, _appearance, _selectAppearance),
+                          const SizedBox(height: 6),
+                          Text(
+                            'Saved to your account. Full dark-mode theming across the app is a separate upcoming update.',
+                            style: GoogleFonts.poppins(
+                                fontSize: 11, color: Colors.grey[400]),
                           ),
-                        );
-                      }).toList(),
+                          const SizedBox(height: 26),
+                          _label('More'),
+                          _settingsRow(
+                            icon: Icons.privacy_tip_outlined,
+                            title: 'Privacy Policy & Terms',
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const LegalContentScreen()),
+                            ),
+                            showDivider: false,
+                          ),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 26),
-                    _label('More'),
-                    _settingsRow(
-                      icon: Icons.privacy_tip_outlined,
-                      title: 'Privacy Policy & Terms',
-                      onTap: () => _comingSoon('Privacy Policy & Terms'),
-                    ),
-                    _settingsRow(
-                      icon: Icons.dark_mode_outlined,
-                      title: 'Appearance',
-                      onTap: () => _comingSoon('Appearance'),
-                      showDivider: false,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }

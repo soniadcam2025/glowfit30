@@ -12,4 +12,6 @@ export const patchProfileSchema = z.object({
   weight:       z.number().positive().optional(),
   waterGoalLiters: z.number().positive().optional(),
   pushEnabled:     z.boolean().optional(),
+  language:        z.string().optional(),
+  appearance:      z.string().optional(),
 }).strict();

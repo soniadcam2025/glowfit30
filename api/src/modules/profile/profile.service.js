@@ -19,6 +19,8 @@ export async function getProfile(userId) {
       weight: true,
       waterGoalLiters: true,
       pushEnabled: true,
+      language: true,
+      appearance: true,
       createdAt: true,
     },
   });
@@ -46,6 +48,8 @@ export async function updateProfile(userId, data) {
   if (data.dob          !== undefined) payload.dob          = new Date(data.dob);
   if (data.waterGoalLiters !== undefined) payload.waterGoalLiters = data.waterGoalLiters;
   if (data.pushEnabled     !== undefined) payload.pushEnabled     = data.pushEnabled;
+  if (data.language        !== undefined) payload.language       = data.language;
+  if (data.appearance      !== undefined) payload.appearance     = data.appearance;
 
   return prisma.user.update({
     where: { id: userId },
@@ -66,6 +70,8 @@ export async function updateProfile(userId, data) {
       weight: true,
       waterGoalLiters: true,
       pushEnabled: true,
+      language: true,
+      appearance: true,
       createdAt: true,
     },
   });
