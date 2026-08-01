@@ -4,6 +4,17 @@
 
 set -euo pipefail
 
+# ⚠️ SAFETY GUARD (2026-08-01) — this script installs ../nginx/glowfit30-subdomains.conf,
+# which is DEPRECATED and has the wrong ports (api→4000/admin→3000 vs the real
+# api→3000/admin→3001). Running it against production would break api + admin and
+# strip TLS. See ../nginx/live/README.md for the authoritative configs.
+# Remove this guard only after rewriting the script to deploy server/nginx/live/*.conf.
+if [[ "${I_KNOW_THIS_CONFIG_IS_STALE:-}" != "yes" ]]; then
+  echo "REFUSING TO RUN: this script would apply a stale config and break production."
+  echo "See server/nginx/live/README.md. Override with I_KNOW_THIS_CONFIG_IS_STALE=yes."
+  exit 1
+fi
+
 CONF_NAME="glowfit30-subdomains"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # If you upload only this script, set REPO_ROOT to where glowfit30-subdomains.conf lives:
