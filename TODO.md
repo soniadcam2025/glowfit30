@@ -8,7 +8,8 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 - [ ] Replace hardcoded password-reset default (`Admin12345`) with a signed, time-limited, emailed reset token.
 - [ ] Fix `GET /admin/chart-data` raw-SQL table-name casing bug (`"User"`/`"Progress"` vs actual `users`/`progress`).
 - [x] ~~Confirm/complete HTTPS on `api.glowfit30.com` and `admin.glowfit30.com`~~ — verified live 2026-07-26, both working over HTTPS.
-- [ ] Pull the live, certbot-modified nginx config back into `server/nginx/glowfit30-subdomains.conf` (committed version is still HTTP-only — a fresh deploy from this repo would regress HTTPS).
+- [x] ~~Pull the live, certbot-modified nginx config back into the repo~~ — done 2026-08-01. Live configs mirrored verbatim into `server/nginx/live/` (api/admin/glowfit/glowfit-web). **Also uncovered that the old combined config had the wrong ports** (claimed api→4000/admin→3000; production is api→3000/admin→3001), which would have broken both services on a fresh deploy. Old file marked DEPRECATED and `setup-subdomains.sh` now refuses to run without an explicit override.
+- [ ] Rewrite `server/scripts/setup-subdomains.sh` to deploy `server/nginx/live/*.conf`, then remove its safety guard.
 
 ## 🟠 In Progress
 
@@ -24,7 +25,7 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 - [ ] Clean up 4 admin-panel ESLint warnings: two `<img>` tags in `(admin)/users/page.tsx` (use `next/image`), unused `workoutId` var, unused `ChartPoint` type.
 - [ ] Add a lint script to `api/package.json` (currently has none).
 
-- [ ] Add `client_max_body_size` to nginx API server block (100MB, matching the video-upload limit).
+- [x] ~~Add `client_max_body_size` to nginx API server block~~ — **already live**, verified 2026-08-01: the production `api` vhost has `client_max_body_size 110M`. This item was stale; no change needed.
 - [x] ~~Make the Admin Settings page functional~~ — partially done 2026-07-26: Legal Content section is real and API-backed. Remaining: the "General" fields (App name/Admin name/Support email) are still a non-functional stub.
 - [ ] Wire up the Admin Settings "General" fields (App name/Admin display name/Support email) or remove them — separate from the Legal Content fix above.
 - [ ] Real foreign key between `WorkoutLibraryCategory` and `WorkoutLibraryItem` (currently string-matched).
@@ -38,6 +39,10 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 - [ ] Remove JWT from admin panel `localStorage`; route all calls through the existing Next.js BFF/cookie session.
 
 ## 🟢 Infrastructure / Ops
+
+- [x] ~~Deploy the marketing landing page to `glowfit30.com`~~ — done 2026-08-01. Source repo <https://github.com/mayax2O/glowfit-homepage> (Vite + React 19, pnpm, → `dist/`). Static release-directory deploy with atomic symlink swap at `/var/www/glowfit/web/`, new `glowfit-web` nginx vhost, Let's Encrypt cert for apex + `www`. All four domains verified 200 over HTTPS.
+- [ ] Add the auto-deploy workflow to the `glowfit-homepage` repo (`.github/workflows/deploy.yml` + `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY` secrets) — drafted, not yet installed; landing-page deploys are manual until then.
+- [ ] Reconcile deploy-user assumptions: apps run under `sprsadmin` (PM2 home `/home/sprsadmin/.pm2`), and an undocumented `webhook.service` auto-deploy is also running alongside the new GitHub Actions pipeline — confirm which mechanism owns deploys before both fire.
 
 - [x] ~~Stand up minimal CI (lint + build) for `api/` and `backend/`~~ — done 2026-07-26 as the `build-check` job in `.github/workflows/deploy.yml`.
 - [x] ~~Add a real deploy trigger~~ — done 2026-07-26, GitHub Actions + SSH (`.github/workflows/deploy.yml`). **Needs one-time secret setup** (`VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY`) before it actually deploys — see `DEPLOYMENT.md`.

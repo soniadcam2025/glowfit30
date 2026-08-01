@@ -6,6 +6,18 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-01)
+- **Marketing landing page live at `glowfit30.com`**: the previously-unhosted homepage (separate repo <https://github.com/mayax2O/glowfit-homepage>, Vite + React 19 + framer-motion, pnpm, builds to `dist/`) is now served from the existing VPS. New `glowfit-web` nginx vhost serves static files from `/var/www/glowfit/web/current` with SPA fallback, 1-year immutable caching on `/assets/*`, and no-cache on `index.html`. Deploys use a release-directory + atomic symlink-swap scheme (`releases/<timestamp>/`, last 5 retained) so rollback is a single `ln -sfn` with no nginx reload. Let's Encrypt cert issued for the apex + `www`; all four public domains verified 200 over HTTPS.
+- **`server/nginx/live/`**: verbatim mirrors of the four production vhosts (`api`, `admin`, `glowfit`, `glowfit-web`) plus a README documenting ports, the deploy/rollback scheme, and the backup location. The repo now has an accurate record of production nginx config for the first time.
+
+### Fixed (2026-08-01)
+- **Latent production-breaking port mismatch in the committed nginx config**: `server/nginx/glowfit30-subdomains.conf` mapped `api.glowfit30.com`→`:4000` and `admin.glowfit30.com`→`:3000`, but production actually runs the API on `:3000` and the Next.js admin on `:3001`. Applying that file (via `server/scripts/setup-subdomains.sh`) would have pointed the API subdomain at the admin panel, taken `admin.glowfit30.com` down entirely, and stripped every certbot TLS block. Found while reconciling live config during the landing-page work. The stale file is now marked DEPRECATED and the install script refuses to run without an explicit `I_KNOW_THIS_CONFIG_IS_STALE=yes` override.
+
+### Ops (2026-08-01)
+- Pre-landing-page nginx config backed up on the VPS at `/root/nginx-backup-20260801/`.
+- Verified `client_max_body_size 110M` is **already present** in the live `api` vhost — the long-standing TODO item for it was stale, not outstanding.
+- Noted (not yet resolved) that the apps run under `sprsadmin`'s PM2 (`/home/sprsadmin/.pm2`) and that an undocumented `webhook.service` auto-deploy is running alongside the newer GitHub Actions pipeline.
+
 ### Added (2026-07-26)
 - **App Settings module completed**: Language and Appearance preferences now sync via `User.language`/`User.appearance` through the existing `/profile` endpoint; Privacy Policy & Terms backed by a new `LegalDocument` model and `/legal` API module, editable from the Admin Settings page, displayed in a new Flutter screen.
 - **Premium/paywall screen**: new Flutter screen (`features/premium/premium_screen.dart`) matching a supplied Figma design — hero section, "Why Go Premium" grid, 3 pricing plans, guarantee row, CTA. Wired from the Glow screen's "Upgrade Now" banner. UI/navigation only, no payment backend (tracked in `ROADMAP.md` v2.0).
@@ -36,7 +48,7 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 ## 2026-07-26 — First Project Health Audit
 
 ### Added
-- `PROJECT_HEALTH_REPORT.md` — first run of the new weekly/pre-release health audit (Health Score 65/100).
+- `docs/archive/PROJECT_HEALTH_REPORT.md` — first run of the new weekly/pre-release health audit (Health Score 65/100).
 
 ### Fixed (documentation, not code)
 - Corrected stale "HTTPS unverified" claims across `DEPLOYMENT.md`, `SECURITY.md`, `TODO.md`, `PROJECT_MASTER.md` — live-checked, both subdomains are healthy over HTTPS.
@@ -52,10 +64,10 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 ### Added
 - Profile settings sub-screens: Workout Preferences, Diet Preferences, Notifications, App Settings (Flutter).
 - User preference fields (`waterGoalLiters`, `pushEnabled`) on `User` model + migration `20260714020000_add_user_preferences`.
-- Full project documentation suite: `PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `RELEASE_PROCESS.md`, `DEPLOYMENT.md`, plus the earlier `PROJECT_STATUS.md`/`PROJECT_MEMORY.md`/`ROADMAP.md`/`deployment-report.md`/`API_REFERENCE.md`/`DATABASE_SCHEMA.md`/`SECURITY.md`/`RELEASE_NOTES.md`/`TODO.md`.
+- Full project documentation suite: `PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `RELEASE_PROCESS.md`, `DEPLOYMENT.md`, plus the earlier `docs/archive/PROJECT_STATUS.md`/`PROJECT_MEMORY.md`/`ROADMAP.md`/`docs/archive/deployment-report.md`/`API_REFERENCE.md`/`DATABASE_SCHEMA.md`/`SECURITY.md`/`RELEASE_NOTES.md`/`TODO.md`.
 
 ### Process note
-This closes the original 28-task integration plan (`App-Admin-Api connection Task.md`) at **28/28**. Committed as `52e4983` with a non-Conventional-Commit message (`"26072026"`) that also bundled unrelated build artifacts (`client-builds/*.zip`, stray `VPS` file) — flagged in `PROJECT_MEMORY.md` as a git-hygiene item to prevent going forward, not rewritten since already pushed.
+This closes the original 28-task integration plan (`docs/archive/App-Admin-Api connection Task.md`) at **28/28**. Committed as `52e4983` with a non-Conventional-Commit message (`"26072026"`) that also bundled unrelated build artifacts (`client-builds/*.zip`, stray `VPS` file) — flagged in `PROJECT_MEMORY.md` as a git-hygiene item to prevent going forward, not rewritten since already pushed.
 
 ---
 

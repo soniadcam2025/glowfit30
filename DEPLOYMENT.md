@@ -1,6 +1,6 @@
 # GlowFit — Deployment (Living Document)
 
-Operational reference for how GlowFit is actually deployed today. This is the **living, continuously-updated** deployment doc (updated after any deployment-relevant change, per `PROJECT_RULES.md`). For the original point-in-time forensic audit this was built from, see `deployment-report.md`.
+Operational reference for how GlowFit is actually deployed today. This is the **living, continuously-updated** deployment doc (updated after any deployment-relevant change, per `PROJECT_RULES.md`). For the original point-in-time forensic audit this was built from, see `docs/archive/deployment-report.md`.
 
 ## Environment
 
@@ -77,4 +77,4 @@ pm2 status                                 # both glowfit-api and glowfit-backen
 - Root SSH login + password auth still enabled on the VPS.
 
 ---
-*Last Updated: 2026-07-26. Supersedes the one-time snapshot in `deployment-report.md` as the canonical ongoing reference — `deployment-report.md` is kept as the original audit record and is not itself updated further.*
+*Last Updated: 2026-07-26. Supersedes the one-time snapshot in `docs/archive/deployment-report.md` as the canonical ongoing reference — `docs/archive/deployment-report.md` is kept as the original audit record and is not itself updated further.*

@@ -1,5 +1,5 @@
 # GlowFit — Project Master
-**Single source of truth for the entire GlowFit project.** Merges `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `ROADMAP.md`, `CHANGELOG.md`, `deployment-report.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `RELEASE_NOTES.md`, `SECURITY.md`, and `TODO.md`. Those files remain the detailed/standalone versions of their domain; this document is the merged overview that should be read first.
+**Single source of truth for the entire GlowFit project.** Merges `docs/archive/PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `ROADMAP.md`, `CHANGELOG.md`, `docs/archive/deployment-report.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `RELEASE_NOTES.md`, `SECURITY.md`, and `TODO.md`. Those files remain the detailed/standalone versions of their domain; this document is the merged overview that should be read first.
 
 **Last Updated: 2026-07-26** · Maintained per `PROJECT_RULES.md` — updated after every completed feature, sections revised in place, nothing deleted (see `PROJECT_MEMORY.md`'s Update Log for the full append-only history this document draws from).
 
@@ -7,7 +7,7 @@
 
 ## 1. Executive Summary
 
-GlowFit is a three-tier fitness + beauty platform: a Flutter mobile app, an Express/Prisma API, and a Next.js admin panel, backed by PostgreSQL + Redis on a single Ubuntu VPS behind Cloudflare. The original 28-task integration plan (`App-Admin-Api connection Task.md`) is **28/28 complete**, plus substantial beyond-scope work (Premium/paywall screen, a real Glow category system with a detail screen, and a unified tabbed content-detail screen for Reads/Shorts). HTTPS is confirmed live and CI/CD now exists (GitHub Actions → SSH deploy → health check, pending a one-time secret setup). What remains before a confident v1.0 launch: a hardcoded password-reset vulnerability, plaintext credentials committed to git, a likely-broken analytics endpoint, and zero automated test coverage. Overall weighted completion: **~82%**.
+GlowFit is a three-tier fitness + beauty platform: a Flutter mobile app, an Express/Prisma API, and a Next.js admin panel, backed by PostgreSQL + Redis on a single Ubuntu VPS behind Cloudflare. The original 28-task integration plan (`docs/archive/App-Admin-Api connection Task.md`) is **28/28 complete**, plus substantial beyond-scope work (Premium/paywall screen, a real Glow category system with a detail screen, and a unified tabbed content-detail screen for Reads/Shorts). HTTPS is confirmed live and CI/CD now exists (GitHub Actions → SSH deploy → health check, pending a one-time secret setup). What remains before a confident v1.0 launch: a hardcoded password-reset vulnerability, plaintext credentials committed to git, a likely-broken analytics endpoint, and zero automated test coverage. Overall weighted completion: **~82%**.
 
 ## 2. Project Health
 
@@ -20,7 +20,7 @@ GlowFit is a three-tier fitness + beauty platform: a Flutter mobile app, an Expr
 | Security posture | 4/10 | Hardcoded reset password, JWT in localStorage, plaintext creds in git — unchanged, still the top risk |
 | Deployment maturity | 7/10 | GitHub Actions CI/CD implemented 2026-07-26 (build-check → SSH deploy → health verify), both apps now have PM2 ecosystem files, HTTPS confirmed live. Pending: GitHub secrets setup, nginx-config drift, PostgreSQL backups, root SSH hardening |
 | Test coverage | 1/10 | Zero automated tests anywhere — CI's build-check verifies the app *loads/typechecks*, not that it behaves correctly |
-| Documentation accuracy | 8/10 | This doc suite has been kept rigorously current all session; `docs/ARCHITECTURE.md`/`documentation.md` remain stale/aspirational by design (treated as roadmap, not fact) |
+| Documentation accuracy | 8/10 | This doc suite has been kept rigorously current all session; `docs/ARCHITECTURE.md`/`docs/archive/documentation.md` remain stale/aspirational by design (treated as roadmap, not fact) |
 | Git hygiene | 7/10 | Consistent Conventional Commits maintained since the one `52e4983` incident; no branches ever used |
 
 **Trend: positive.** Feature velocity and deployment maturity both improved significantly this cycle; security posture and test coverage are now the clear, unchanged bottlenecks — next hardening pass should target those specifically.
@@ -64,7 +64,7 @@ glowfit/
 ├── client-builds/        untracked, dated APK zip exports
 ├── docs/                 ARCHITECTURE.md (aspirational), API_CONVENTIONS.md, BACKEND_RULES.md, FLUTTER_RULES.md, ADMIN_RULES.md
 └── (root docs)           PROJECT_MASTER.md (this file), PROJECT_RULES.md, SPRINT.md, RELEASE_PROCESS.md,
-                          PROJECT_STATUS.md, PROJECT_MEMORY.md, ROADMAP.md, CHANGELOG.md, deployment-report.md,
+                          docs/archive/PROJECT_STATUS.md, PROJECT_MEMORY.md, ROADMAP.md, CHANGELOG.md, docs/archive/deployment-report.md,
                           API_REFERENCE.md, DATABASE_SCHEMA.md, RELEASE_NOTES.md, SECURITY.md, TODO.md
 ```
 
@@ -148,7 +148,7 @@ See `SPRINT.md` for full detail. **Sprint goal:** clear the v1.0 Critical/Securi
 
 ## 14. Completed Features
 
-Per `App-Admin-Api connection Task.md` (**28/28 — complete as of 2026-07-26**) plus later work — see `CHANGELOG.md` for the full chronological log:
+Per `docs/archive/App-Admin-Api connection Task.md` (**28/28 — complete as of 2026-07-26**) plus later work — see `CHANGELOG.md` for the full chronological log:
 
 - **Phase 1 — API Foundation** (8/8): profile schema, WorkoutDay/Exercise/Progress models, Firebase auth, profile CRUD, workout day/exercise endpoints, progress+streak, seed script.
 - **Phase 2 — Flutter↔API Integration** (8/8): ApiService, Google Sign-In→Firebase→JWT, live data wiring across home/workout/diet screens, progress logging, 401 auto-logout.
@@ -186,7 +186,7 @@ Per `App-Admin-Api connection Task.md` (**28/28 — complete as of 2026-07-26**)
 - Missing index on `Progress.workoutDayId`.
 - No API versioning (`/v1/` prefix) and no Repository layer — target architecture per the current operating rules, not yet implemented; any move toward it must be documented (Rule 2) before/alongside the change.
 - `client-builds/` and stray `VPS` file now committed to git history (via `52e4983`) — add to `.gitignore` to stop recurrence.
-- **Admin panel: 3 ESLint errors + 4 warnings** discovered via live `npm run lint` run during the 2026-07-26 Project Health Audit — see `PROJECT_HEALTH_REPORT.md` for detail. Not previously tracked since no CI/lint gate exists yet.
+- **Admin panel: 3 ESLint errors + 4 warnings** discovered via live `npm run lint` run during the 2026-07-26 Project Health Audit — see `docs/archive/PROJECT_HEALTH_REPORT.md` for detail. Not previously tracked since no CI/lint gate exists yet.
 - `api/` has no lint script/tooling at all (`backend/` does).
 
 ## 18. Upcoming Milestones

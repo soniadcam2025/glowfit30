@@ -1,5 +1,5 @@
 # GlowFit — Product & Technical Roadmap
-Generated: 2026-07-26 · Based on current codebase state (~75% weighted completion, see `PROJECT_STATUS.md`), the original `App-Admin-Api connection Task.md` plan (27/28 done), the technical/security/deployment audits performed on this repo, and the long-term vision already sketched in `docs/ARCHITECTURE.md` (subscriptions, gamification, AI recommendations, OTP login).
+Generated: 2026-07-26 · Based on current codebase state (~75% weighted completion, see `docs/archive/PROJECT_STATUS.md`), the original `docs/archive/App-Admin-Api connection Task.md` plan (27/28 done), the technical/security/deployment audits performed on this repo, and the long-term vision already sketched in `docs/ARCHITECTURE.md` (subscriptions, gamification, AI recommendations, OTP login).
 
 > Prioritization uses MoSCoW (**Must Have** / **Should Have** / won't-have-yet = **Future Features**), plus two cross-cutting lanes — **Technical Improvements** and **Infrastructure Improvements** — repeated per version since code-quality and ops work should ship alongside features, not be deferred indefinitely.
 
@@ -133,6 +133,6 @@ Long-horizon ideas worth tracking but not yet worth scheduling into a specific v
 
 ## How to Use This Roadmap
 
-- **v1.0 is not optional feature work — it's debt repayment.** Every item in it already exists as a known issue in the current codebase (see `PROJECT_STATUS.md` → Known Issues); shipping v1.0 means the project reaches the production-readiness its feature set already earned.
+- **v1.0 is not optional feature work — it's debt repayment.** Every item in it already exists as a known issue in the current codebase (see `docs/archive/PROJECT_STATUS.md` → Known Issues); shipping v1.0 means the project reaches the production-readiness its feature set already earned.
 - **Must Have** items block moving to the next version; **Should Have** items are strongly recommended but can slip one version if capacity is tight; **Future Features** are explicitly out of scope until a version is scoped around them.
 - Re-derive this roadmap after each version ships — in particular, v2.0's monetization/gamification scope should be validated against actual v1.x user data before locking in, and v3.0 should be treated as directional, not committed.

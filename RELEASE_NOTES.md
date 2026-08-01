@@ -4,7 +4,7 @@ No formal release has been tagged yet (`git tag -l` is empty) — the project ha
 
 ## Unreleased — v1.0 Candidate ("Production Launch")
 
-**Status:** ~75% weighted completion (see `PROJECT_STATUS.md` for the full breakdown). Feature-complete for an MVP; a hardening pass is required before this becomes a real `v1.0.0`.
+**Status:** ~75% weighted completion (see `docs/archive/PROJECT_STATUS.md` for the full breakdown). Feature-complete for an MVP; a hardening pass is required before this becomes a real `v1.0.0`.
 
 **What's in it:**
 - Complete fitness + beauty content platform: workouts (day-plan + standalone library), diet plans, Glow beauty content, progress tracking with streaks, push notifications, media uploads.

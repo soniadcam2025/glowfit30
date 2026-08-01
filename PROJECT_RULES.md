@@ -44,7 +44,7 @@ Any new/changed/removed endpoint must be reflected in `API_REFERENCE.md` in the 
 Any new/changed model, field, relationship, or migration must be reflected in `DATABASE_SCHEMA.md` in the same change — and must have an actual committed Prisma migration (no more schema/migration drift, see `PROJECT_MASTER.md` §16).
 
 ### 14. Maintain deployment documentation
-Any change to how the app builds, runs, or deploys (PM2 config, nginx config, env vars, deploy steps) must be reflected in `deployment-report.md` and/or `RELEASE_PROCESS.md`.
+Any change to how the app builds, runs, or deploys (PM2 config, nginx config, env vars, deploy steps) must be reflected in `docs/archive/deployment-report.md` and/or `RELEASE_PROCESS.md`.
 
 ---
 

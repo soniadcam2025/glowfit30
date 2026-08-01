@@ -24,11 +24,14 @@ Close out the last item of the original integration plan (Task 28 — profile se
 - [x] Task 26 — Workout Library category cards made fully admin-managed.
 - [x] Fixed `HomeController` GetX `permanent` bug (found during Task 27 work).
 - [x] Bottom-nav highlight bug fix.
-- [x] Full project documentation baseline created: `PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `ROADMAP.md`, `deployment-report.md`, `CHANGELOG.md`, `TODO.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `RELEASE_NOTES.md`, `PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `RELEASE_PROCESS.md`, `DEPLOYMENT.md`.
+- [x] Full project documentation baseline created: `docs/archive/PROJECT_STATUS.md`, `PROJECT_MEMORY.md`, `ROADMAP.md`, `docs/archive/deployment-report.md`, `CHANGELOG.md`, `TODO.md`, `API_REFERENCE.md`, `DATABASE_SCHEMA.md`, `SECURITY.md`, `RELEASE_NOTES.md`, `PROJECT_MASTER.md`, `PROJECT_RULES.md`, `SPRINT.md`, `RELEASE_PROCESS.md`, `DEPLOYMENT.md`.
 
 - [x] **GitHub secret setup for auto-deploy** (2026-07-26) — `VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY` added by the user; dedicated deploy keypair generated, authorized on the VPS, local key files deleted after confirmation.
 - [x] **CI build-check lint errors fixed** (2026-07-26, `c993b3f`) — the pipeline's first real run caught the 3 pre-existing ESLint errors (see `TODO.md`); fixed and confirmed `npm run lint` exits 0.
 - [x] **Client APK build** (2026-07-26) — `flutter build apk --release`, packaged as `client-builds/GlowFit30-2026-07-26.zip` (debug-signed, no release keystore exists yet — fine for client testing). Now a standing request for future client-test builds.
+
+- [x] **Landing page live on `glowfit30.com`** (2026-08-01): built from the separate `glowfit-homepage` repo (Vite + React 19 + pnpm), deployed as a static release dir with atomic symlink swap, new `glowfit-web` nginx vhost, certbot cert for apex + `www`. Ad hoc request; api/admin left untouched and verified healthy throughout.
+- [x] **Live nginx config reconciled into the repo** (2026-08-01): `server/nginx/live/*.conf` now mirrors production verbatim. Uncovered a latent production-breaking bug — the committed config had api→4000/admin→3000 when production is **api→3000/admin→3001**; a fresh deploy from the repo would have swapped the API and admin panel. Old config deprecated, `setup-subdomains.sh` guarded.
 
 ## In Progress
 
@@ -43,8 +46,7 @@ Close out the last item of the original integration plan (Task 28 — profile se
 - [ ] Rotate exposed VPS/DB credentials.
 - [ ] Fix hardcoded password-reset flow.
 - [ ] Fix `GET /admin/chart-data` table-casing bug.
-- [ ] Add `client_max_body_size` to nginx.
-- [ ] Pull the live, certbot-modified nginx config into the repo (HTTPS itself works; the committed config doesn't reflect it).
+- [ ] Install the auto-deploy workflow in the `glowfit-homepage` repo (drafted; landing deploys are manual until then).
 - [ ] Wire up the Admin Settings "General" fields, or remove them (separate from the now-fixed Legal Content section).
 - [ ] Add smoke tests for auth/profile/progress.
 
@@ -55,7 +57,7 @@ Close out the last item of the original integration plan (Task 28 — profile se
 | Scope | % |
 |---|---|
 | This sprint (Critical/Security punch list, Task 28 now done) | **~10%** — Task 28 complete; security/HTTPS/bug fixes not yet started |
-| Overall project (weighted, all versions) | **~78%** — Task 28 completion + doc suite bumps this slightly from the ~75% baseline in `PROJECT_STATUS.md`; production-readiness dimension is still the drag |
+| Overall project (weighted, all versions) | **~78%** — Task 28 completion + doc suite bumps this slightly from the ~75% baseline in `docs/archive/PROJECT_STATUS.md`; production-readiness dimension is still the drag |
 
 ## Priority Matrix
 
