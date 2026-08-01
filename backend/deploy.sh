@@ -31,8 +31,11 @@ git pull --ff-only origin "$BRANCH"
 log "installing dependencies"
 npm ci
 
-log "regenerating prisma client"
-npx prisma generate
+# NOTE: no `prisma generate` here. The admin panel never touches the database —
+# it talks to the API over NEXT_PUBLIC_API_URL, and nothing under src/ imports
+# @prisma/client. The prisma.config.ts / prisma/schema.prisma files are leftover
+# scaffolding. Running generate here only broke the deploy (it demands a
+# DATABASE_URL this app has no reason to hold).
 
 log "building production bundle"
 npm run build
