@@ -7,6 +7,7 @@ import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
 import 'glow_category_detail_screen.dart';
 import 'glow_content_detail_screen.dart';
+import 'glow_short_story_screen.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -1006,10 +1007,18 @@ class _GlowScreenState extends State<GlowScreen> {
           );
           return;
         }
+        // The story pager is driven by `sections.tips`. A short with none would
+        // render a single synthetic card, so send those to the tabbed detail
+        // screen instead — it also surfaces Problem & Cause / Solution content.
+        final sections = item['sections'];
+        final hasTips = sections is Map &&
+            (((sections['tips'] as List?) ?? []).isNotEmpty);
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (_) => GlowContentDetailScreen(item: item, isVideo: true),
+            builder: (_) => hasTips
+                ? GlowShortStoryScreen(item: item)
+                : GlowContentDetailScreen(item: item, isVideo: true),
           ),
         );
       },

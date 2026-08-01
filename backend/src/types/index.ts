@@ -206,7 +206,7 @@ export type AnalyticsData = {
 
 export type GlowTopic = { emoji: string; label: string };
 
-export type GlowSectionItem = { imageUrl?: string; title: string; description: string };
+export type GlowSectionItem = { imageUrl?: string; videoUrl?: string; title: string; description: string };
 
 export type GlowSections = {
   problemCause: GlowSectionItem[];

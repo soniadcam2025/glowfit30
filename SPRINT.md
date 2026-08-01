@@ -33,7 +33,11 @@ Close out the last item of the original integration plan (Task 28 — profile se
 - [x] **Landing page live on `glowfit30.com`** (2026-08-01): built from the separate `glowfit-homepage` repo (Vite + React 19 + pnpm), deployed as a static release dir with atomic symlink swap, new `glowfit-web` nginx vhost, certbot cert for apex + `www`. Ad hoc request; api/admin left untouched and verified healthy throughout.
 - [x] **Live nginx config reconciled into the repo** (2026-08-01): `server/nginx/live/*.conf` now mirrors production verbatim. Uncovered a latent production-breaking bug — the committed config had api→4000/admin→3000 when production is **api→3000/admin→3001**; a fresh deploy from the repo would have swapped the API and admin panel. Old config deprecated, `setup-subdomains.sh` guarded.
 
+- [x] **Glow Shorts story player + per-tip video** (2026-08-02): full-screen story viewer built from a supplied design, driven by the existing `sections.tips` JSON (no schema change); optional 30s MP4 per tip with client-side duration enforcement; premium preview gating; admin editor relabelled to explain what drives what. Incidentally fixed a silent data-loss bug in the sections editor and a 500 on `GET /glow/shorts`.
+
 ## In Progress
+
+- [ ] **Awaiting user verification** of the Shorts story player — per-tip video playback (tip 1 of "Morning Detox for Energy Boost") had not been confirmed on device at the time of deploy.
 
 - [ ] Confirm the first fully-green Actions run (build-check → deploy → verify) after the lint-fix push; confirm the assumed VPS layout (`/var/www/glowfit/backend`, PM2 process `glowfit-backend`) matches reality.
 

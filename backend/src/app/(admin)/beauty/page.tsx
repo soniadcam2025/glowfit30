@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmModal } from "@/components/ui/modal";
 import { ImageUploadField } from "@/components/common/image-upload-field";
+import { VideoUploadField } from "@/components/common/video-upload-field";
 import { glowContentService } from "@/services/glow-content.service";
 import type {
   BeautyPost,
@@ -80,7 +81,10 @@ function TopicEditor({ label, addLabel, topics, onChange }: {
   );
 }
 
-const emptySectionItem = (): GlowSectionItem => ({ imageUrl: "", title: "", description: "" });
+const emptySectionItem = (): GlowSectionItem => ({ imageUrl: "", videoUrl: "", title: "", description: "" });
+
+/** Max length for a per-tip clip in the Shorts story player. */
+const TIP_VIDEO_MAX_SECONDS = 30;
 const emptySections = (): GlowSections => ({ problemCause: [], solution: [], tips: [] });
 
 function hasSectionContent(sections?: Partial<GlowSections>): boolean {
@@ -122,11 +126,16 @@ const SECTION_TABS: { key: keyof GlowSections; label: string }[] = [
 
 /** Editor for the fixed 3-tab detail-screen content (Problem & Cause / Solution / Tips),
  * each an ordered list of expandable image+title+description cards. All optional. */
-function SectionsEditor({ sections, onChange }: {
+function SectionsEditor({ sections, onChange, variant = "read" }: {
   sections: Partial<GlowSections>;
   onChange: (sections: GlowSections) => void;
+  /** Shorts render the "Tips" cards as a full-screen story pager, Reads render
+   *  all three groups as tabs. The copy below has to say which, or authors
+   *  can't tell why cards appear where they do. */
+  variant?: "read" | "short";
 }) {
   const full: GlowSections = { ...emptySections(), ...sections };
+  const isShort = variant === "short";
 
   const setTab = (key: keyof GlowSections, items: GlowSectionItem[]) =>
     onChange({ ...full, [key]: items });
@@ -136,12 +145,32 @@ function SectionsEditor({ sections, onChange }: {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs font-semibold text-slate-500">
-        Detail screen tabs (optional — leave empty to just show the plain content/description above)
-      </p>
+      {isShort ? (
+        <p className="text-xs font-semibold text-slate-500">
+          Each <strong>Tips</strong> card below becomes one swipeable step in the full-screen
+          player — 5 cards means 5 progress segments and &quot;Tip 1 of 5&quot;. Add none and the
+          short opens the plain detail screen instead.
+        </p>
+      ) : (
+        <p className="text-xs font-semibold text-slate-500">
+          Detail screen tabs (optional — leave empty to just show the plain content/description above)
+        </p>
+      )}
       {SECTION_TABS.map(({ key, label }) => (
         <div key={key} className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
-          <p className="text-xs font-bold text-slate-600 dark:text-slate-300">{label}</p>
+          <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+            {label}
+            {isShort && key === "tips" && (
+              <span className="ml-2 font-medium text-pink-600 dark:text-pink-400">
+                → drives the full-screen player
+              </span>
+            )}
+            {isShort && key !== "tips" && (
+              <span className="ml-2 font-medium text-slate-400">
+                → only shown via &quot;View full details&quot;
+              </span>
+            )}
+          </p>
           {full[key].map((item, i) => (
             <div key={i} className="space-y-2 rounded-lg bg-slate-100 p-3 dark:bg-slate-900">
               <div className="grid gap-2 sm:grid-cols-2">
@@ -163,6 +192,22 @@ function SectionsEditor({ sections, onChange }: {
                 onChange={(e) => patchItem(key, i, { description: e.target.value })}
                 placeholder="Excess oil, bacteria, dead skin cells..."
               />
+              {isShort && key === "tips" && (
+                <VideoUploadField
+                  label={`Clip for this step (optional, MP4, max ${TIP_VIDEO_MAX_SECONDS}s) — plays instead of the image`}
+                  value={item.videoUrl ?? ""}
+                  onChange={(url) => patchItem(key, i, { videoUrl: url })}
+                  maxSeconds={TIP_VIDEO_MAX_SECONDS}
+                />
+              )}
+              {/* Cards missing either field are dropped by cleanSections() on
+                  save. That used to happen silently, which looked exactly like
+                  an uploaded clip vanishing on its own. */}
+              {(!item.title.trim() || !item.description.trim()) && (
+                <p className="rounded-md bg-amber-100 px-2 py-1.5 text-xs font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">
+                  ⚠ This card needs both a title and a description — otherwise it is discarded when you save, along with any image or clip you uploaded to it.
+                </p>
+              )}
               <Button
                 variant="ghost"
                 className="text-xs px-2 py-1"
@@ -660,7 +705,10 @@ function ShortFormPanel({ initial, categories, onSave, onCancel, loading }: {
         </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <ImageUploadField label="Video thumbnail" value={f.imageUrl} onChange={(url) => set("imageUrl", url)} folder="exercises" />
+        {/* Named "cover image" deliberately: shorts have no video field in the
+            schema, so calling this a video thumbnail implied an upload that
+            does not exist. This image is the full-screen background. */}
+        <ImageUploadField label="Cover image (full-screen background)" value={f.imageUrl} onChange={(url) => set("imageUrl", url)} folder="exercises" />
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-500">Views label (display only)</label>
           <Input value={f.views} onChange={(e) => set("views", e.target.value)} placeholder="10.2k views" />
@@ -688,7 +736,7 @@ function ShortFormPanel({ initial, categories, onSave, onCancel, loading }: {
       </div>
       <label className="flex items-center gap-2 text-xs font-semibold text-slate-500">
         <input type="checkbox" checked={f.isPremium} onChange={(e) => set("isPremium", e.target.checked)} />
-        Premium content (shows a lock badge + Watch Ad / Go Premium on the detail screen)
+        Premium content (first tip plays as a free preview, then locks behind Watch Ad / Go Premium)
       </label>
       <TopicEditor
         label="Detail screen chips (e.g. Natural Remedy, 5 Days Result)"
@@ -696,7 +744,7 @@ function ShortFormPanel({ initial, categories, onSave, onCancel, loading }: {
         topics={f.chips}
         onChange={(chips) => set("chips", chips)}
       />
-      <SectionsEditor sections={f.sections} onChange={(sections) => set("sections", sections)} />
+      <SectionsEditor variant="short" sections={f.sections} onChange={(sections) => set("sections", sections)} />
       <div className="flex items-center justify-end gap-3">
         {shortMissing(f).length > 0 && (
           <p className="text-xs font-medium text-amber-600 dark:text-amber-400">Still required: {shortMissing(f).join(", ")}</p>

@@ -6,9 +6,13 @@ export const chipSchema = z.object({
   label: z.string().min(1).max(40),
 });
 
-/** One expandable accordion card within a detail-screen tab. */
+/** One expandable accordion card within a detail-screen tab.
+ *  For a Short's `tips`, each card is also one step of the full-screen story
+ *  player — `videoUrl` lets that step play a short clip instead of a still.
+ *  Stored inside the existing `sections` JSON column, so no migration needed. */
 export const sectionItemSchema = z.object({
   imageUrl: z.union([z.string().url(), z.literal('')]).optional(),
+  videoUrl: z.union([z.string().url(), z.literal('')]).optional(),
   title: z.string().min(1).max(200),
   description: z.string().min(1),
 });

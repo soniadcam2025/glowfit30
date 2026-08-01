@@ -4,14 +4,36 @@ import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { uploadsService } from "@/services/uploads.service";
 
+/** Reads duration from the file locally, before any upload happens, so an
+ *  over-length clip is rejected without burning bandwidth or storage. */
+function readDuration(file: File): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const v = document.createElement("video");
+    v.preload = "metadata";
+    v.onloadedmetadata = () => {
+      URL.revokeObjectURL(url);
+      resolve(v.duration);
+    };
+    v.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Could not read video metadata"));
+    };
+    v.src = url;
+  });
+}
+
 export function VideoUploadField({
   label,
   value,
   onChange,
+  maxSeconds,
 }: {
   label: string;
   value?: string;
   onChange: (url: string) => void;
+  /** Optional hard cap on clip length, enforced client-side before upload. */
+  maxSeconds?: number;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -24,6 +46,20 @@ export function VideoUploadField({
     if (file.size > 100 * 1024 * 1024) {
       toast.error("Video must be 100MB or smaller");
       return;
+    }
+    if (maxSeconds) {
+      try {
+        const seconds = await readDuration(file);
+        if (seconds > maxSeconds + 0.5) {
+          toast.error(
+            `Clip is ${Math.round(seconds)}s — must be ${maxSeconds}s or shorter`,
+          );
+          return;
+        }
+      } catch {
+        toast.error("Could not read that video's length");
+        return;
+      }
     }
 
     setUploading(true);

@@ -40,6 +40,8 @@ export function listShorts(categoryId) {
   return prisma.glowShort.findMany({
     where: categoryId ? { categoryId } : undefined,
     orderBy: { order: 'asc' },
+    // Included so the Shorts story screen can label the category pill.
+    include: { category: { select: { title: true } } },
   });
 }
 

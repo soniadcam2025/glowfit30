@@ -6,6 +6,21 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-02)
+- **Glow Shorts full-screen story player** (`glow_short_story_screen.dart`): tapping a Short in "Shorts & Quick Tips" now opens a story-style viewer — segmented progress bar, category pill, two-tone serif/script title, hashtag chips, timed scrubber, pink tip card with thumbnails, swipe-up paging, long-press to pause. Driven entirely by the existing `sections.tips` JSON, so **no schema change was required**. Each step shows its own media; a Short with no authored tips routes to the tabbed detail screen instead.
+- **Per-tip video clips**: each Tips card can carry an optional MP4 (`videoUrl` inside the existing `sections` JSON — again no migration). Admin enforces a **30s maximum, checked client-side from file metadata before upload**, so over-length clips are rejected without consuming bandwidth or storage. In the app the clip plays full-screen with audio and its progress segment runs for the clip's real duration; only the visible tip holds a player, and an unreachable clip falls back to the still image.
+- **Premium gating on Shorts**: premium Shorts show a `🔒 PREMIUM` badge, play the first tip as a free preview, then present Watch Ad / Go Premium (stubs, matching the detail screen — no ad SDK or payment backend exists yet).
+- Admin `/beauty` Shorts editor now states that each Tips card becomes one step of the full-screen player, and marks the other two groups as reachable only via "View full details".
+
+### Fixed (2026-08-02)
+- **Silent data loss in the Glow sections editor**: `cleanSections()` drops any card missing a title or description, discarding uploaded images and clips with it. The save appeared to succeed and the content simply vanished. The editor now shows an explicit warning on any incomplete card.
+- **`GET /glow/shorts` 500'd** after an `include` was added using `category.name` — `GlowCategory` has no `name` column, its display field is `title`. The app's blanket `catch` turned the 500 into an empty list, which rendered placeholder tiles and made the failure look like missing content.
+- Shorts story background used the Short's cover image for every step, so per-tip images only ever appeared as small thumbnails of *upcoming* tips (and not at all on the last one). Each step now shows its own image or clip.
+- `sectionItemSchema` stripped unknown keys, silently discarding `videoUrl` on save; it is now part of the schema.
+
+### Ops (2026-08-02)
+- Admin `/beauty` "Video thumbnail" relabelled "Cover image (full-screen background)" — there is no video field on `GlowShort`, so the old label implied an upload that does not exist.
+
 ### Added (2026-08-01)
 - **Marketing landing page live at `glowfit30.com`**: the previously-unhosted homepage (separate repo <https://github.com/mayax2O/glowfit-homepage>, Vite + React 19 + framer-motion, pnpm, builds to `dist/`) is now served from the existing VPS. New `glowfit-web` nginx vhost serves static files from `/var/www/glowfit/web/current` with SPA fallback, 1-year immutable caching on `/assets/*`, and no-cache on `index.html`. Deploys use a release-directory + atomic symlink-swap scheme (`releases/<timestamp>/`, last 5 retained) so rollback is a single `ln -sfn` with no nginx reload. Let's Encrypt cert issued for the apex + `www`; all four public domains verified 200 over HTTPS.
 - **`server/nginx/live/`**: verbatim mirrors of the four production vhosts (`api`, `admin`, `glowfit`, `glowfit-web`) plus a README documenting ports, the deploy/rollback scheme, and the backup location. The repo now has an accurate record of production nginx config for the first time.
