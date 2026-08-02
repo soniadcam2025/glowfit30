@@ -1,7 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { LogOut, PanelLeft } from "lucide-react";
+import { LogOut, Menu, PanelLeft } from "lucide-react";
+import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -17,7 +18,7 @@ export function Topbar({ onToggle }: { onToggle: () => void }) {
   };
 
   return (
-    <header className="glass sticky top-0 z-30 mb-4 flex items-center justify-between gap-3 rounded-2xl px-3 py-2.5">
+    <header className="glass sticky top-0 z-30 my-3 flex items-center gap-2 rounded-2xl px-2.5 py-2 sm:gap-3 sm:px-3">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -26,22 +27,26 @@ export function Topbar({ onToggle }: { onToggle: () => void }) {
             onClick={onToggle}
             aria-label="Toggle navigation"
           >
-            <PanelLeft className="h-4 w-4" />
+            {/* A hamburger reads as "opens a menu" on mobile; the panel icon
+                reads as "collapse the rail" on desktop. */}
+            <Menu className="h-4 w-4 md:hidden" />
+            <PanelLeft className="hidden h-4 w-4 md:block" />
           </Button>
         </TooltipTrigger>
         <TooltipContent>Toggle navigation</TooltipContent>
       </Tooltip>
 
-      <div className="flex items-center gap-2">
+      {/* Hidden on the smallest screens, where the trail would crowd out the controls. */}
+      <div className="hidden min-w-0 flex-1 sm:block">
+        <Breadcrumbs />
+      </div>
+      <div className="flex-1 sm:hidden" />
+
+      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
         <ThemeToggle />
         <Tooltip>
           <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onLogout}
-              aria-label="Log out"
-            >
+            <Button variant="ghost" size="icon" onClick={onLogout} aria-label="Log out">
               <LogOut className="h-4 w-4" />
             </Button>
           </TooltipTrigger>

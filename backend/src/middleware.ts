@@ -16,8 +16,9 @@ const adminRoutes = [
 ];
 
 // NOTE: the previous user-agent sniff that redirected every phone to
-// /desktop-only has been removed — the admin is now responsive down to mobile,
-// so blocking small screens would hide working layouts behind a dead end.
+// /desktop-only was removed in Phase 1, and that page deleted in Phase 3 — the
+// admin is responsive down to mobile, so blocking small screens would hide
+// working layouts behind a dead end.
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
