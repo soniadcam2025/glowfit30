@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { env } from '../../config/env.js';
 import { sendError, sendSuccess, pickUser } from '../../utils/response.js';
 import * as authService from './auth.service.js';
@@ -131,8 +132,23 @@ export async function firebaseAuth(req, res, next) {
   }
 }
 
-const DEFAULT_RESET_PASSWORD = 'Admin12345';
-
+/**
+ * Reset another admin's password to a freshly generated one-time value.
+ *
+ * SECURITY (fixed 2026-08-02): this endpoint was previously **unauthenticated**
+ * and reset any admin account to the hardcoded constant `Admin12345`, which was
+ * committed to the repository and echoed back in the success message. Anyone
+ * who knew an admin's email address could take over that account with a single
+ * unauthenticated request; the rate limiter did not help, because one request
+ * was enough. It is now restricted to super_admins and generates a random
+ * password per call, returned once to the caller.
+ *
+ * This is a stop-gap, not a password-reset flow: it still requires an existing
+ * super_admin to perform it, so a locked-out sole admin cannot self-serve. A
+ * proper signed, time-limited, emailed reset token remains the intended fix and
+ * is tracked in TODO.md — it needs mail infrastructure the project does not
+ * have yet.
+ */
 export async function resetPassword(req, res, next) {
   try {
     const { email } = req.body;
@@ -140,14 +156,20 @@ export async function resetPassword(req, res, next) {
 
     const user = await authService.findByEmail(email);
     if (!user || !['admin', 'super_admin'].includes(user.role)) {
-      // Always return the same message to avoid email enumeration
-      return sendSuccess(res, null, 'If that admin account exists, the password has been reset.');
+      // Same response either way, so this cannot be used to enumerate accounts.
+      return sendSuccess(res, null, 'If that admin account exists, it has been reset.');
     }
 
-    const hashed = await authService.hashPassword(DEFAULT_RESET_PASSWORD);
+    // 18 random bytes -> 24 base64url chars. Never a shared or guessable value.
+    const tempPassword = randomBytes(18).toString('base64url');
+    const hashed = await authService.hashPassword(tempPassword);
     await prisma.user.update({ where: { id: user.id }, data: { password: hashed } });
 
-    return sendSuccess(res, null, 'Password reset to default. Please sign in with "Admin12345".');
+    return sendSuccess(
+      res,
+      { email: user.email, temporaryPassword: tempPassword },
+      'Temporary password generated. Share it securely — it is shown only once.',
+    );
   } catch (e) {
     next(e);
   }

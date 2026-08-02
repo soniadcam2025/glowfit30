@@ -37,6 +37,9 @@ Close out the last item of the original integration plan (Task 28 — profile se
 
 - [x] **Glow module — View All hubs, post redesign, placement flags** (2026-08-02): two new hub screens wired to previously-dead "View All" headers; content detail screen rebuilt to the supplied design; `isFeatured`/`isTrending`/`isQuickTip` added to `GlowShort` with a hand-written migration; shared `glow_common.dart` extracted rather than duplicating the category screen.
 
+- [x] **Deployment pipeline hotfix** (2026-08-02, `d32a740`): admin deploys had been restarting a PM2 process that had never started successfully, leaving the live admin on a five-day-old build while every deploy reported green. Process name/port corrected, dead entry removed, and deployment verification rewritten to prove the running app matches the deployed commit.
+- [x] **Admin UI Foundation — Phase 1** (2026-08-02, `b574f22`): semantic token system, `next-themes` System/Light/Dark, upgraded Button, Tooltip primitive, rebuilt Topbar, mobile block removed. Verified live on `admin.glowfit30.com`.
+
 ## In Progress
 
 - [ ] **Awaiting user verification** of the Shorts story player — per-tip video playback (tip 1 of "Morning Detox for Energy Boost") had not been confirmed on device at the time of deploy.
@@ -83,6 +86,7 @@ Work top row first (High Impact); within that row, do Low Effort items immediate
 
 ## Next Tasks
 
+0. **Admin UI Phase 2 — core primitives** (card, input, dialog, badge, tabs, dropdown, sheet, skeleton, alert, empty/loading/error states). Awaiting explicit approval; Phases 3–7 follow one commit + deploy each.
 1. Replace hardcoded password-reset default with a token/OTP flow.
 2. Pull the live, certbot-modified nginx config into the repo.
 3. Add `client_max_body_size` to nginx.

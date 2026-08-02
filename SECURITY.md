@@ -1,5 +1,21 @@
 # GlowFit Security Posture
 
+## Resolved — Critical
+
+### 2026-08-02 · Unauthenticated admin account takeover via `POST /auth/reset-password`
+
+**Severity:** 🔴 Critical. **Status:** fixed in code, deployed 2026-08-02.
+
+The endpoint was reachable **without any authentication** and reset any account with an `admin` or `super_admin` role to the constant `Admin12345` — a value hardcoded in `auth.controller.js`, committed to the repository, and echoed back in the success message. Knowing an admin's email address was sufficient to take over that account with a single request. The `authLimiter` rate limit (30 req/15min/IP) was no mitigation, since one request achieves the takeover.
+
+Confirmed live against production during the readiness audit by probing with a non-existent address (no mutation performed).
+
+**Fix:** the route now requires `verifyToken` + `requireRole('super_admin')`, and generates a 24-character cryptographically random password per call (`randomBytes(18).base64url`), returned once to the caller. The shared constant is deleted. The generic no-such-account response is retained so the endpoint cannot be used to enumerate admin emails.
+
+**Known limitation:** this is a stop-gap, not a reset *flow*. A sole locked-out admin cannot self-serve, because a super_admin must perform the reset. A signed, time-limited OTP delivered by email is the intended replacement — blocked only on mail credentials (see `TODO.md`). Redis is already available to hold OTPs with a TTL.
+
+**Exposure window:** the endpoint existed for the project's lifetime, so every admin password must be assumed compromised and rotated.
+
 ## Authentication
 
 - **JWT** (`jsonwebtoken`), HS-family symmetric secret `JWT_SECRET` (Zod-enforced ≥16 chars, boot fails otherwise), payload `{ sub: user.id, role }`, expiry `JWT_EXPIRES_IN` (default 7d). No refresh-token rotation/blacklist — revocation only via `isBlocked` checked per-request.

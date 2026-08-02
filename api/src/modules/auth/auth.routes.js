@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import rateLimit from 'express-rate-limit';
 import { env } from '../../config/env.js';
-import { verifyToken } from '../../middleware/auth.js';
+import { verifyToken, requireRole } from '../../middleware/auth.js';
 import { validateBody } from '../../middleware/validate.js';
 import { sendError } from '../../utils/response.js';
 import * as ctrl from './auth.controller.js';
@@ -29,6 +29,14 @@ router.post('/firebase', authLimiter, ctrl.firebaseAuth);
 router.post('/login', authLimiter, validateBody(loginSchema), ctrl.login);
 router.post('/logout', ctrl.logout);
 router.get('/me', verifyToken, ctrl.me);
-router.post('/reset-password', authLimiter, ctrl.resetPassword);
+// Was public until 2026-08-02, which allowed unauthenticated takeover of any
+// admin account whose email was known. Super-admin only from here on.
+router.post(
+  '/reset-password',
+  authLimiter,
+  verifyToken,
+  requireRole('super_admin'),
+  ctrl.resetPassword,
+);
 
 export default router;

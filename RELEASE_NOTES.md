@@ -2,6 +2,16 @@
 
 No formal release has been tagged yet (`git tag -l` is empty) — the project has been in continuous, untagged development since 2026-04-09. These notes summarize progress at a milestone level; see `CHANGELOG.md` for the granular technical log.
 
+## 2026-08-02 — Glow module, deployment integrity, and the admin UI foundation
+
+Three milestones landed in one day, each deployed and verified independently.
+
+**Glow module** (`f7e7028`) — the "View All" headers on the Glow screen finally do something: a Glow Reads hub and a Shorts & Quick Tips hub, both filterable. Shorts gained editorial placement flags (Featured / Trending / Quick Tip) so the hub's layout is an admin decision rather than an accident of sort order. The article detail screen was rebuilt to a new design.
+
+**Deployment integrity** (`d32a740`) — the most consequential fix. Admin deploys had been reporting success for five days without ever updating the live site: the pipeline restarted a PM2 process that had never started successfully, while the process actually serving production was never touched. The health check passed throughout because it only asked "is something answering?", not "is it the thing we just built?". Deployment verification now proves the running application matches the deployed commit, and a stale deploy fails instead of passing.
+
+**Admin UI Foundation, Phase 1** (`b574f22`) — a semantic design-token system and System/Light/Dark theming, laying the groundwork for a staged admin redesign. No pages migrated yet; this is the layer the rest builds on. The admin is also no longer blocked on mobile.
+
 ## Unreleased — v1.0 Candidate ("Production Launch")
 
 **Status:** ~75% weighted completion (see `docs/archive/PROJECT_STATUS.md` for the full breakdown). Feature-complete for an MVP; a hardening pass is required before this becomes a real `v1.0.0`.

@@ -5,7 +5,11 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 ## 🔴 Critical / Security (block v1.0)
 
 - [ ] Rotate exposed VPS (`sprsadmin`) and PostgreSQL (`glowfit_user`) passwords — currently plaintext in git-tracked `server/SERVER_SETUP_SUMMARY.md` and `help`.
-- [ ] Replace hardcoded password-reset default (`Admin12345`) with a signed, time-limited, emailed reset token.
+- [x] ~~Replace hardcoded password-reset default (`Admin12345`)~~ — **the real issue was worse than recorded**: the endpoint was *unauthenticated*, so anyone knowing an admin email could take over that account (fixed 2026-08-02, see `SECURITY.md`). Now super_admin-only with a random per-call password.
+- [ ] **Rotate every admin password** — the takeover endpoint was public for the project's lifetime, so all admin credentials must be assumed compromised.
+- [ ] Build the Gmail OTP password-reset flow to replace the super_admin stop-gap: `nodemailer` + Gmail App Password, 6-digit OTP in Redis with a 10-min TTL (Redis is live and `ioredis` already a dependency), single-use with attempt limits, plus a "Forgot password?" flow on the admin login page. **Blocked on SMTP credentials** — needs a Gmail App Password, which requires 2FA on that account.
+- [ ] Set up PostgreSQL backups — **none exist**; a disk failure currently loses all data (confirmed 2026-08-02).
+- [ ] Fix `GET /admin/chart-data` — confirmed broken 2026-08-02: queries `"User"`/`"Progress"`, actual tables are `users`/`progress`.
 - [ ] Fix `GET /admin/chart-data` raw-SQL table-name casing bug (`"User"`/`"Progress"` vs actual `users`/`progress`).
 - [x] ~~Confirm/complete HTTPS on `api.glowfit30.com` and `admin.glowfit30.com`~~ — verified live 2026-07-26, both working over HTTPS.
 - [x] ~~Pull the live, certbot-modified nginx config back into the repo~~ — done 2026-08-01. Live configs mirrored verbatim into `server/nginx/live/` (api/admin/glowfit/glowfit-web). **Also uncovered that the old combined config had the wrong ports** (claimed api→4000/admin→3000; production is api→3000/admin→3001), which would have broken both services on a fresh deploy. Old file marked DEPRECATED and `setup-subdomains.sh` now refuses to run without an explicit override.

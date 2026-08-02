@@ -6,6 +6,24 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-02, Admin UI Foundation — Phase 1)
+- **Semantic design token system** (`globals.css`): `background / surface / surface-2 / foreground / muted / muted-foreground / border / input / ring / primary / secondary / success / warning / danger / info` as HSL variables for light and dark, registered as Tailwind utilities via `@theme inline`. Components now style against `bg-surface` / `text-muted-foreground` rather than `bg-slate-900`, so re-theming is a one-file change. Primary is the app's brand pink `#FF136B`.
+- **Theme system**: System / Light / Dark via `next-themes`, with a segmented toggle in the topbar. Required `@custom-variant dark` (without it Tailwind v4 keeps following `prefers-color-scheme` and the in-app toggle does nothing) and `suppressHydrationWarning` on `<html>`.
+- **Tooltip primitive** (Radix) and an accessible **ThemeToggle** with `role="radiogroup"`, ARIA labels and mounted-guard to avoid a pre-hydration flash.
+- Libraries added, none removed: `next-themes`, `@tanstack/react-table`, `react-hook-form`, `zod`, `@hookform/resolvers`, and Radix primitives (dialog, dropdown-menu, tabs, tooltip, slot, checkbox, select, label). Only three are imported so far; the rest are staged for the table and form phases.
+
+### Changed (2026-08-02, Admin UI Foundation — Phase 1)
+- **Button** keeps all four existing variant names (no call site changed), moves onto tokens, and gains `size` (sm/md/lg/icon), `outline`/`link` variants, `asChild` and a forwarded ref.
+- **Topbar** rebuilt with icon buttons, tooltips, ARIA labels and a sticky frosted header.
+- **Mobile block removed**: the middleware user-agent sniff that redirected every phone to `/desktop-only` is gone, so later responsive work can reach real devices. `/desktop-only` is now unreachable and will be deleted in Phase 3.
+
+### Fixed (2026-08-02, deployment)
+- **Admin deploys had never updated the live site.** `ecosystem.config.cjs` declared the app as `glowfit-backend` with no PORT, so Next defaulted to 3000 — held by the API — and the process crash-looped on `EADDRINUSE`, never starting once (45 restarts). Production was actually served by a separate `glowfit-admin` entry on 3001 that deploys never touched, so the live admin served a build from 2026-07-28 for five days while every deploy reported success. The health check only asserted HTTP 200, which a stale process answers identically.
+- `.glass` was referenced by the secondary Button variant but had never been defined anywhere — secondary buttons rendered with no background.
+
+### Added (2026-08-02, deployment)
+- **`server/scripts/verify-deployment.sh`**: proves the running apps match the deployed commit — git SHA, PM2 status, stray PM2 entries, `BUILD_ID` and build timestamp against process start, ports, local HTTP and the three public endpoints. The decisive assertion is that the process started *after* the build was written. Wired into the CI `verify` job with `github.sha`, and mirrored as a post-restart gate inside `backend/deploy.sh`.
+
 ### Added (2026-08-02, Glow module)
 - **Glow Reads hub** (`glow_reads_hub_screen.dart`): the "View All" destination for Glow Reads — hero, live stats card, Popular Topics chips that actually filter, Top Videos grid and a Latest Posts & Videos feed. Reached from the Glow screen's Reads header, which was previously decorative text with no tap handler at all.
 - **Shorts & Quick Tips hub** (`glow_shorts_hub_screen.dart`): the "View All" destination for Shorts — title block, live title search, category filter pills, a Featured hero card, 2-column grid, and Trending Now / Quick Tips rows. Sections hide themselves when empty.
