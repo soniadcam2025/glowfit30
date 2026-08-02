@@ -1,26 +1,146 @@
 @import "tailwindcss";
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Semantic design tokens.
+
+   Components style against these names (bg-surface, text-muted-foreground,
+   border-border …) rather than raw palette classes like `bg-slate-900`. That is
+   what makes one theme switch work everywhere without editing each component,
+   and what lets the brand colour change in a single place.
+
+   Tailwind v4 is CSS-first — there is no tailwind.config.js. The @theme block
+   below is what turns these variables into utility classes.
+   ──────────────────────────────────────────────────────────────────────────── */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: 240 20% 99%;
+  --surface: 0 0% 100%;
+  --surface-2: 240 20% 97%;
+  --foreground: 240 10% 10%;
+  --muted: 240 5% 96%;
+  --muted-foreground: 240 4% 46%;
+  --border: 240 6% 90%;
+  --input: 240 6% 90%;
+  --ring: 336 90% 54%;
+
+  /* GlowFit brand pink — matches the Flutter app's #FF136B */
+  --primary: 336 100% 54%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 240 5% 96%;
+  --secondary-foreground: 240 10% 10%;
+
+  --success: 142 71% 45%;
+  --warning: 38 92% 50%;
+  --danger: 351 83% 51%;
+  --info: 217 91% 60%;
+
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 240 10% 4%;
+  --surface: 240 8% 7%;
+  --surface-2: 240 7% 10%;
+  --foreground: 0 0% 96%;
+  --muted: 240 6% 14%;
+  --muted-foreground: 240 5% 62%;
+  --border: 240 6% 18%;
+  --input: 240 6% 18%;
+  --ring: 336 90% 60%;
+
+  --primary: 336 95% 58%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 240 6% 14%;
+  --secondary-foreground: 0 0% 96%;
+
+  --success: 142 65% 48%;
+  --warning: 38 92% 55%;
+  --danger: 351 80% 58%;
+  --info: 217 91% 65%;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-background: hsl(var(--background));
+  --color-surface: hsl(var(--surface));
+  --color-surface-2: hsl(var(--surface-2));
+  --color-foreground: hsl(var(--foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-success: hsl(var(--success));
+  --color-warning: hsl(var(--warning));
+  --color-danger: hsl(var(--danger));
+  --color-info: hsl(var(--info));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* next-themes toggles class="dark" on <html>. Tell Tailwind v4 to key the dark
+   variant off that class instead of the OS preference, so the in-app
+   System/Light/Dark switch actually wins. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  /* Visible, consistent keyboard focus everywhere. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
+  /* Respect users who ask for less motion. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Frosted panel used by the shell, cards and dropdowns.
+     NOTE: `glass` was already referenced by the old Button/secondary variant
+     but was never actually defined — secondary buttons had no background. */
+  .glass {
+    background-color: hsl(var(--surface) / 0.72);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border) / 0.7);
+  }
+
+  .scrollbar-slim::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-slim::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--border));
+    border-radius: 9999px;
+  }
+  .scrollbar-slim::-webkit-scrollbar-track {
+    background: transparent;
+  }
 }
