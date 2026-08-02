@@ -35,6 +35,8 @@ Close out the last item of the original integration plan (Task 28 — profile se
 
 - [x] **Glow Shorts story player + per-tip video** (2026-08-02): full-screen story viewer built from a supplied design, driven by the existing `sections.tips` JSON (no schema change); optional 30s MP4 per tip with client-side duration enforcement; premium preview gating; admin editor relabelled to explain what drives what. Incidentally fixed a silent data-loss bug in the sections editor and a 500 on `GET /glow/shorts`.
 
+- [x] **Glow module — View All hubs, post redesign, placement flags** (2026-08-02): two new hub screens wired to previously-dead "View All" headers; content detail screen rebuilt to the supplied design; `isFeatured`/`isTrending`/`isQuickTip` added to `GlowShort` with a hand-written migration; shared `glow_common.dart` extracted rather than duplicating the category screen.
+
 ## In Progress
 
 - [ ] **Awaiting user verification** of the Shorts story player — per-tip video playback (tip 1 of "Morning Detox for Energy Boost") had not been confirmed on device at the time of deploy.

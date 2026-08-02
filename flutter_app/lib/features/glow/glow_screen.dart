@@ -6,8 +6,11 @@ import '../../controllers/home_controller.dart';
 import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
 import 'glow_category_detail_screen.dart';
+import 'glow_common.dart';
 import 'glow_content_detail_screen.dart';
+import 'glow_reads_hub_screen.dart';
 import 'glow_short_story_screen.dart';
+import 'glow_shorts_hub_screen.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -195,11 +198,23 @@ class _GlowScreenState extends State<GlowScreen> {
               const SizedBox(height: 14),
               _buildGoalsRow(),
               const SizedBox(height: 26),
-              _buildSectionHeader('Glow Reads'),
+              _buildSectionHeader(
+                'Glow Reads',
+                onViewAll: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GlowReadsHubScreen()),
+                ),
+              ),
               const SizedBox(height: 12),
               _buildReadsRow(),
               const SizedBox(height: 26),
-              _buildSectionHeader('Shorts & Quick Tips'),
+              _buildSectionHeader(
+                'Shorts & Quick Tips',
+                onViewAll: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const GlowShortsHubScreen()),
+                ),
+              ),
               const SizedBox(height: 12),
               _buildShortsRow(),
               const SizedBox(height: 22),
@@ -484,11 +499,9 @@ class _GlowScreenState extends State<GlowScreen> {
                       ),
                       const SizedBox(height: 14),
                       GestureDetector(
-                        onTap: () => ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content:
-                                  Text('Glass Skin guide is coming soon.')),
-                        ),
+                        // Same destination as the "Upgrade Now" banner below —
+                        // the Today's Pick card is a premium teaser.
+                        onTap: () => Get.toNamed(Routes.premium),
                         child: Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 20, vertical: 12),
@@ -550,36 +563,10 @@ class _GlowScreenState extends State<GlowScreen> {
 
   // ─── SECTION HEADER ───────────────────────────────────────────────────────
 
-  Widget _buildSectionHeader(String title) {
-    return Row(
-      children: [
-        Expanded(
-          child: Text(
-            title,
-            style: GoogleFonts.poppins(
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              color: _darkText,
-            ),
-          ),
-        ),
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'View All',
-              style: GoogleFonts.poppins(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: _pink,
-              ),
-            ),
-            const SizedBox(width: 2),
-            const Icon(Icons.chevron_right_rounded, size: 16, color: _pink),
-          ],
-        ),
-      ],
-    );
+  /// `onViewAll` is optional: sections without a destination render the header
+  /// alone rather than a "View All" that does nothing when tapped.
+  Widget _buildSectionHeader(String title, {VoidCallback? onViewAll}) {
+    return GlowSectionHeader(title: title, onViewAll: onViewAll);
   }
 
   // ─── EXPLORE BY GOALS ─────────────────────────────────────────────────────

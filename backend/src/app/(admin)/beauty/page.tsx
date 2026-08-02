@@ -626,6 +626,9 @@ type ShortForm = {
   chips: GlowTopic[];
   sections: GlowSections;
   isPremium: boolean;
+  isFeatured: boolean;
+  isTrending: boolean;
+  isQuickTip: boolean;
   order: string;
 };
 
@@ -640,6 +643,9 @@ const emptyShort = (): ShortForm => ({
   chips: [],
   sections: emptySections(),
   isPremium: false,
+  isFeatured: false,
+  isTrending: false,
+  isQuickTip: false,
   order: "0",
 });
 
@@ -655,6 +661,9 @@ function shortToForm(s: GlowShort): ShortForm {
     chips: s.chips ?? [],
     sections: { ...emptySections(), ...s.sections },
     isPremium: s.isPremium ?? false,
+    isFeatured: s.isFeatured ?? false,
+    isTrending: s.isTrending ?? false,
+    isQuickTip: s.isQuickTip ?? false,
     order: String(s.order),
   };
 }
@@ -671,6 +680,9 @@ function shortFormToPayload(f: ShortForm) {
     chips: f.chips.filter((c) => c.label.trim()),
     sections: cleanSections(f.sections),
     isPremium: f.isPremium,
+    isFeatured: f.isFeatured,
+    isTrending: f.isTrending,
+    isQuickTip: f.isQuickTip,
     order: parseInt(f.order) || 0,
   };
 }
@@ -738,6 +750,28 @@ function ShortFormPanel({ initial, categories, onSave, onCancel, loading }: {
         <input type="checkbox" checked={f.isPremium} onChange={(e) => set("isPremium", e.target.checked)} />
         Premium content (first tip plays as a free preview, then locks behind Watch Ad / Go Premium)
       </label>
+
+      {/* Placement on the app's "Shorts & Quick Tips" hub. Deliberately explicit
+          flags rather than deriving from order/views/duration, so featuring is an
+          editorial choice. */}
+      <div className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-slate-700">
+        <p className="text-xs font-bold text-slate-600 dark:text-slate-300">
+          Placement on &quot;Shorts &amp; Quick Tips&quot;
+        </p>
+        <label className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <input type="checkbox" checked={f.isFeatured} onChange={(e) => set("isFeatured", e.target.checked)} />
+          Featured — shows as the large hero card at the top of the screen
+        </label>
+        <label className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <input type="checkbox" checked={f.isTrending} onChange={(e) => set("isTrending", e.target.checked)} />
+          Trending Now — appears in the 🔥 Trending row
+        </label>
+        <label className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+          <input type="checkbox" checked={f.isQuickTip} onChange={(e) => set("isQuickTip", e.target.checked)} />
+          Quick Tip — appears in the ⚡ Quick Tips row (best for very short clips)
+        </label>
+      </div>
+
       <TopicEditor
         label="Detail screen chips (e.g. Natural Remedy, 5 Days Result)"
         addLabel="Add Chip"
@@ -797,6 +831,22 @@ function ShortCard({ short, categories, onDeleted }: { short: GlowShort; categor
               <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{short.title}</span>
               <span className="text-xs text-slate-400">{short.views}</span>
               <ContentBadges isPremium={short.isPremium} sections={short.sections} />
+              {/* Placement is otherwise invisible without opening each short. */}
+              {short.isFeatured && (
+                <span className="rounded-full bg-pink-100 px-2 py-0.5 text-xs font-semibold text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">
+                  ★ Featured
+                </span>
+              )}
+              {short.isTrending && (
+                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
+                  🔥 Trending
+                </span>
+              )}
+              {short.isQuickTip && (
+                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                  ⚡ Quick Tip
+                </span>
+              )}
             </div>
           </div>
           <div className="flex shrink-0 gap-2">
@@ -921,8 +971,16 @@ export default function GlowContentPage() {
         <div>
           <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">3 · Shorts & Quick Tips</h2>
           <p className="text-xs text-slate-400">
-            Short video tiles. The first one (lowest sort order) is featured as the big tile.
+            Short video tiles on the Glow screen, and everything on the &quot;View All&quot; hub.
+            Use each short&apos;s <strong>Placement</strong> checkboxes to control the hub&apos;s
+            Featured card, Trending row and Quick Tips row.
           </p>
+          {shorts.filter((s) => s.isFeatured).length > 1 && (
+            <p className="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              ⚠ {shorts.filter((s) => s.isFeatured).length} shorts are marked Featured — the app
+              shows only the first, so the others will not appear as the hero card.
+            </p>
+          )}
         </div>
         {!creatingShort && <Button onClick={() => setCreatingShort(true)}>+ New Short</Button>}
       </div>

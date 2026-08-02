@@ -30,6 +30,10 @@ export const createShortSchema = z.object({
   chips: z.array(chipSchema).default([]),
   sections: sectionsSchema.default({}),
   isPremium: z.coerce.boolean().default(false),
+  // Editorial placement on the Shorts & Quick Tips hub.
+  isFeatured: z.coerce.boolean().default(false),
+  isTrending: z.coerce.boolean().default(false),
+  isQuickTip: z.coerce.boolean().default(false),
   order: z.coerce.number().int().min(0).default(0),
 });
 

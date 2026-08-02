@@ -264,6 +264,13 @@ model GlowShort {
   sections    Json     @default("{}") @map("sections")
   isPremium   Boolean  @default(false) @map("is_premium")
 
+  // Editorial placement on the "Shorts & Quick Tips" hub. Admin-controlled
+  // rather than derived, so featuring is a deliberate choice and not a
+  // side-effect of sort order or view counts.
+  isFeatured Boolean @default(false) @map("is_featured")
+  isTrending Boolean @default(false) @map("is_trending")
+  isQuickTip Boolean @default(false) @map("is_quick_tip")
+
   @@index([categoryId])
   @@map("glow_shorts")
 }

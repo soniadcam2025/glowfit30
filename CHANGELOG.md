@@ -6,6 +6,20 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-02, Glow module)
+- **Glow Reads hub** (`glow_reads_hub_screen.dart`): the "View All" destination for Glow Reads — hero, live stats card, Popular Topics chips that actually filter, Top Videos grid and a Latest Posts & Videos feed. Reached from the Glow screen's Reads header, which was previously decorative text with no tap handler at all.
+- **Shorts & Quick Tips hub** (`glow_shorts_hub_screen.dart`): the "View All" destination for Shorts — title block, live title search, category filter pills, a Featured hero card, 2-column grid, and Trending Now / Quick Tips rows. Sections hide themselves when empty.
+- **Editorial placement flags** on `GlowShort` — `isFeatured` / `isTrending` / `isQuickTip` (migration `20260802090000_add_glow_short_placement_flags`), surfaced as a "Placement" checkbox group in the admin. Chosen over deriving placement from sort order, view counts or duration so that featuring a clip is a deliberate editorial act rather than a side effect of how the list happens to sort.
+- **`glow_common.dart`**: shared Glow constants, helpers and cards (`GlowVideoCard`, `GlowMixedCard`, `GlowFilterChips`, `GlowSectionHeader`) plus a single `openGlowItem()` router, so every Glow surface renders identical cards and routes taps the same way instead of each screen keeping its own copy.
+- Admin short list now shows ★ Featured / 🔥 Trending / ⚡ Quick Tip badges, and warns when more than one short is marked Featured (the app shows only the first).
+
+### Changed (2026-08-02, Glow module)
+- **Glow content detail screen redesigned** to the supplied spec: bordered segmented tab bar with per-tab icons and a pink active underline, section heading plus intro line, and cards rebuilt as white bordered panels with a 96px image beside the title and description. Descriptions written as `-`/`*`/`•` lines now render as real bullet lists.
+- Glow screen's "Explore Now" opened a "coming soon" snackbar; it now routes to the Premium screen via the same named route the Upgrade Now banner uses.
+
+### Fixed (2026-08-02, Glow module)
+- Section 3 of the admin Glow page still claimed "the first one (lowest sort order) is featured as the big tile", which stopped being true once placement flags existed.
+
 ### Added (2026-08-02)
 - **Glow Shorts full-screen story player** (`glow_short_story_screen.dart`): tapping a Short in "Shorts & Quick Tips" now opens a story-style viewer — segmented progress bar, category pill, two-tone serif/script title, hashtag chips, timed scrubber, pink tip card with thumbnails, swipe-up paging, long-press to pause. Driven entirely by the existing `sections.tips` JSON, so **no schema change was required**. Each step shows its own media; a Short with no authored tips routes to the tabbed detail screen instead.
 - **Per-tip video clips**: each Tips card can carry an optional MP4 (`videoUrl` inside the existing `sections` JSON — again no migration). Admin enforces a **30s maximum, checked client-side from file metadata before upload**, so over-length clips are rejected without consuming bandwidth or storage. In the app the clip plays full-screen with audio and its progress segment runs for the clip's real duration; only the visible tip holds a player, and an unreachable clip falls back to the still image.

@@ -331,42 +331,92 @@ class _GlowContentDetailScreenState extends State<GlowContentDetailScreen> {
 
   // ─── TABS + ACCORDION ───────────────────────────────────────────────────────
 
+  static const _tabIcons = <String, IconData>{
+    'problemCause': Icons.error_outline_rounded,
+    'solution': Icons.emoji_food_beverage_outlined,
+    'tips': Icons.lightbulb_outline_rounded,
+  };
+
+  static const _tabHeadings = <String, String>{
+    'problemCause': 'Understand Your Problem',
+    'solution': 'Your Solution',
+    'tips': 'Quick Tips',
+  };
+
+  // Intro copy is not an authorable field on BeautyPost/GlowShort, so these are
+  // generic per tab rather than per post — worded to stay true for any topic.
+  static const _tabIntros = <String, String>{
+    'problemCause':
+        'Learn the main causes and how to identify your condition.',
+    'solution': 'Follow these steps to treat and prevent the problem.',
+    'tips': 'Small daily habits that make a visible difference.',
+  };
+
   Widget _buildTabsAndContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            for (var i = 0; i < _tabs.length; i++)
-              Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: GestureDetector(
-                  onTap: () => setState(() => _activeTab = i),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-                    decoration: BoxDecoration(
-                      color: i == _activeTab ? const Color(0xFFFFF0F6) : Colors.transparent,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border(
-                        bottom: BorderSide(color: i == _activeTab ? _pink : Colors.transparent, width: 2),
-                      ),
-                    ),
-                    child: Text(
-                      _tabs[i].label,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12.5,
-                        fontWeight: FontWeight.w700,
-                        color: i == _activeTab ? _pink : Colors.grey[500],
+        _buildTabBar(),
+        const SizedBox(height: 18),
+        _buildAccordion(_tabs[_activeTab]),
+      ],
+    );
+  }
+
+  Widget _buildTabBar() {
+    return Container(
+      // clipped so the active tab's underline follows the rounded corners
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFE6E8EC)),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < _tabs.length; i++)
+            Expanded(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => setState(() => _activeTab = i),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 13),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: i == _activeTab ? _pink : Colors.transparent,
+                        width: 2.5,
                       ),
                     ),
                   ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _tabIcons[_tabs[i].key] ?? Icons.circle_outlined,
+                        size: 15,
+                        color: i == _activeTab ? _pink : Colors.grey[400],
+                      ),
+                      const SizedBox(width: 5),
+                      Flexible(
+                        child: Text(
+                          _tabs[i].label,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: i == _activeTab ? _pink : Colors.grey[500],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-          ],
-        ),
-        Divider(color: Colors.grey[200], height: 24),
-        _buildAccordion(_tabs[_activeTab]),
-      ],
+            ),
+        ],
+      ),
     );
   }
 
@@ -375,10 +425,23 @@ class _GlowContentDetailScreenState extends State<GlowContentDetailScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Understand Your ${tab.label == 'Problem & Cause' ? 'Problem' : tab.label}',
-          style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w800, color: _darkText),
+          _tabHeadings[tab.key] ?? tab.label,
+          style: GoogleFonts.poppins(
+            fontSize: 17,
+            fontWeight: FontWeight.w700,
+            color: _darkText,
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
+        Text(
+          _tabIntros[tab.key] ?? '',
+          style: GoogleFonts.poppins(
+            fontSize: 12.5,
+            color: Colors.grey[600],
+            height: 1.5,
+          ),
+        ),
+        const SizedBox(height: 14),
         for (final item in tab.items) _buildAccordionCard(tab.key, item),
       ],
     );
@@ -387,57 +450,130 @@ class _GlowContentDetailScreenState extends State<GlowContentDetailScreen> {
   Widget _buildAccordionCard(String tabKey, _SectionItem item) {
     final id = '$tabKey::${item.title}';
     final expanded = !_collapsed.contains(id);
+    final hasImage = item.imageUrl != null && item.imageUrl!.isNotEmpty;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF9F9FB),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFECEEF2)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          GestureDetector(
-            onTap: () => setState(() {
-              if (expanded) {
-                _collapsed.add(id);
-              } else {
-                _collapsed.remove(id);
-              }
-            }),
-            behavior: HitTestBehavior.opaque,
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: item.imageUrl != null && item.imageUrl!.isNotEmpty
-                      ? Image.network(item.imageUrl!, width: 48, height: 48, fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(width: 48, height: 48, color: const Color(0xFFFFD6E7)))
-                      : Container(width: 48, height: 48, color: const Color(0xFFFFD6E7)),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    item.title,
-                    style: GoogleFonts.poppins(fontSize: 13, fontWeight: FontWeight.w700, color: _darkText),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => setState(() {
+          if (expanded) {
+            _collapsed.add(id);
+          } else {
+            _collapsed.remove(id);
+          }
+        }),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (hasImage) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  item.imageUrl!,
+                  width: 96,
+                  height: 96,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 96,
+                    height: 96,
+                    color: const Color(0xFFFFD6E7),
                   ),
                 ),
-                Icon(
-                  expanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
-                  color: Colors.grey[500],
+              ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          style: GoogleFonts.poppins(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: _darkText,
+                            height: 1.35,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      Icon(
+                        expanded
+                            ? Icons.keyboard_arrow_up_rounded
+                            : Icons.keyboard_arrow_down_rounded,
+                        size: 22,
+                        color: Colors.grey[500],
+                      ),
+                    ],
+                  ),
+                  if (expanded) ...[
+                    const SizedBox(height: 6),
+                    _buildDescription(item.description),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Renders the description as a bulleted list when the author wrote one
+  /// (lines starting with "-", "*" or "•"), otherwise as a plain paragraph.
+  Widget _buildDescription(String text) {
+    final style = GoogleFonts.poppins(
+      fontSize: 12.5,
+      color: Colors.grey[600],
+      height: 1.55,
+    );
+
+    final lines = text
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
+    final bulletRe = RegExp(r'^[-*•]\s*');
+    final isList = lines.length > 1 && lines.every((l) => bulletRe.hasMatch(l));
+
+    if (!isList) return Text(text, style: style);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        for (final line in lines)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  margin: const EdgeInsets.only(top: 7, right: 8),
+                  width: 4,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                Expanded(
+                  child: Text(line.replaceFirst(bulletRe, ''), style: style),
                 ),
               ],
             ),
           ),
-          if (expanded) ...[
-            const SizedBox(height: 10),
-            Text(
-              item.description,
-              style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey[600], height: 1.5),
-            ),
-          ],
-        ],
-      ),
+      ],
     );
   }
 }

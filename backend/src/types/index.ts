@@ -261,6 +261,10 @@ export type GlowShort = {
   chips: GlowTopic[];
   sections: Partial<GlowSections>;
   isPremium: boolean;
+  /** Editorial placement on the app's "Shorts & Quick Tips" hub. */
+  isFeatured: boolean;
+  isTrending: boolean;
+  isQuickTip: boolean;
   order: number;
   createdAt: string;
 };
