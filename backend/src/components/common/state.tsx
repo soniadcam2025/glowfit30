@@ -1,53 +1,100 @@
-import { AlertTriangle, Loader2 } from "lucide-react";
+import { AlertTriangle, Inbox, Loader2 } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Skeleton, SkeletonRows } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 
-export function AppLoader() {
+/**
+ * Shared loading / empty / error states. Every export keeps its original name
+ * and call signature so existing pages are untouched; the new props are
+ * optional. Previously these leaned on the `glass` utility, which was
+ * undefined until Phase 1 — the skeletons were effectively invisible.
+ */
+
+export function AppLoader({ label = "Loading…" }: { label?: string }) {
   return (
-    <div className="flex min-h-[220px] items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex min-h-[220px] flex-col items-center justify-center gap-3"
+    >
+      <Loader2 className="h-7 w-7 animate-spin text-primary" />
+      <span className="text-sm text-muted-foreground">{label}</span>
     </div>
   );
 }
 
-export function StatCardsSkeleton() {
+export function StatCardsSkeleton({ count = 3 }: { count?: number }) {
   return (
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 3 }).map((_, idx) => (
-        <div key={idx} className="glass h-[122px] animate-pulse rounded-2xl" />
+      {Array.from({ length: count }).map((_, idx) => (
+        <Skeleton key={idx} className="h-[122px] rounded-2xl" />
       ))}
     </div>
   );
 }
 
 export function ChartSkeleton() {
-  return <div className="glass h-[320px] animate-pulse rounded-2xl" />;
+  return <Skeleton className="h-[320px] rounded-2xl" />;
 }
 
-export function TableSkeleton() {
+export function TableSkeleton({ rows = 8 }: { rows?: number }) {
   return (
-    <div className="glass rounded-2xl p-4">
-      {Array.from({ length: 8 }).map((_, idx) => (
-        <div key={idx} className="mb-3 h-8 animate-pulse rounded-lg bg-slate-300/30 last:mb-0" />
-      ))}
-    </div>
+    <Card>
+      <SkeletonRows rows={rows} />
+    </Card>
   );
 }
 
-export function ErrorState({ message }: { message: string }) {
+export function ErrorState({
+  message,
+  title = "Failed to load data",
+  onRetry,
+}: {
+  message: string;
+  title?: string;
+  onRetry?: () => void;
+}) {
   return (
-    <div className="glass rounded-2xl p-5 text-rose-600 dark:text-rose-300">
-      <div className="flex items-center gap-2 font-medium">
-        <AlertTriangle className="h-4 w-4" />
-        Failed to load data
+    <Card className="border-danger/30 bg-danger/5">
+      <div className="flex items-start gap-3">
+        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-danger" />
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-foreground">{title}</p>
+          <p className="mt-1 text-sm text-muted-foreground">{message}</p>
+          {onRetry && (
+            <button
+              type="button"
+              onClick={onRetry}
+              className="mt-2 text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              Try again
+            </button>
+          )}
+        </div>
       </div>
-      <p className="mt-2 text-sm">{message}</p>
-    </div>
+    </Card>
   );
 }
 
-export function EmptyState({ title }: { title: string }) {
+export function EmptyState({
+  title,
+  description,
+  action,
+  className,
+}: {
+  title: string;
+  description?: string;
+  action?: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className="glass rounded-2xl p-8 text-center text-sm text-slate-500 dark:text-slate-300">
-      {title}
-    </div>
+    <Card className={cn("flex flex-col items-center gap-2 py-10 text-center", className)}>
+      <div className="grid h-10 w-10 place-items-center rounded-full bg-muted">
+        <Inbox className="h-5 w-5 text-muted-foreground" />
+      </div>
+      <p className="text-sm font-semibold text-foreground">{title}</p>
+      {description && <p className="max-w-sm text-sm text-muted-foreground">{description}</p>}
+      {action && <div className="mt-2">{action}</div>}
+    </Card>
   );
 }

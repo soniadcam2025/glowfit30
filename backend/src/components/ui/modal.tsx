@@ -1,8 +1,15 @@
 "use client";
 
 import type { PropsWithChildren } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type Props = PropsWithChildren<{
   open: boolean;
@@ -10,42 +17,49 @@ type Props = PropsWithChildren<{
   onClose: () => void;
   onConfirm?: () => void;
   confirmLabel?: string;
+  /** Destructive actions get a red confirm button. Defaults true because every
+   *  current call site is a delete confirmation. */
+  destructive?: boolean;
 }>;
 
+/**
+ * Same props as before, so no call site changed — but now built on the Radix
+ * Dialog, which brings focus trapping, focus restore, Escape-to-close and
+ * background inerting. The previous hand-rolled overlay had none of those, and
+ * styled its panel with a `glass-strong` class that was never defined anywhere,
+ * so the modal rendered without a background.
+ */
 export function ConfirmModal({
   open,
   title,
   onClose,
   onConfirm,
   confirmLabel = "Confirm",
+  destructive = true,
   children,
 }: Props) {
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/35 p-4"
-        >
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            className="glass-strong w-full max-w-md rounded-2xl p-5"
-          >
-            <h3 className="text-lg font-semibold">{title}</h3>
-            <div className="mt-2 text-sm text-slate-600 dark:text-slate-300">{children}</div>
-            <div className="mt-4 flex justify-end gap-2">
-              <Button variant="ghost" onClick={onClose}>
-                Cancel
-              </Button>
-              {onConfirm && <Button onClick={onConfirm}>{confirmLabel}</Button>}
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          {children && (
+            <DialogDescription asChild>
+              <div>{children}</div>
+            </DialogDescription>
+          )}
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          {onConfirm && (
+            <Button variant={destructive ? "danger" : "default"} onClick={onConfirm}>
+              {confirmLabel}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
