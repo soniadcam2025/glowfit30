@@ -70,7 +70,7 @@ function LegalContentCard() {
           <div className="space-y-1">
             <label className="text-sm font-medium text-foreground">Content</label>
             <textarea
-              className="focus-ring min-h-[220px] w-full rounded-xl border border-border-soft bg-white/60 p-3 text-sm dark:bg-slate-900/45"
+              className="focus-ring min-h-[220px] w-full rounded-xl border border-border bg-surface p-3 text-sm"
               value={content}
               onChange={(e) => setContent(e.target.value)}
             />

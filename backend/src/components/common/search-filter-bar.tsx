@@ -19,7 +19,7 @@ export function SearchFilterBar({
         onChange={(e) => onSearchChange(e.target.value)}
       />
       <select
-        className="focus-ring rounded-xl border border-border-soft bg-white/60 px-3 py-2 text-sm dark:bg-slate-900/45"
+        className="focus-ring rounded-xl border border-border bg-surface px-3 py-2 text-sm"
         value={status}
         onChange={(e) => onStatusChange(e.target.value)}
       >

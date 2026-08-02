@@ -132,6 +132,16 @@
     border: 1px solid hsl(var(--border) / 0.7);
   }
 
+  /* Referenced by several form controls but never defined until now, so those
+     inputs had no focus affordance beyond the browser default. */
+  .focus-ring {
+    outline: none;
+  }
+  .focus-ring:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+
   .scrollbar-slim::-webkit-scrollbar {
     width: 6px;
     height: 6px;

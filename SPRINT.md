@@ -86,7 +86,7 @@ Work top row first (High Impact); within that row, do Low Effort items immediate
 
 ## Next Tasks
 
-0. **Admin UI Phase 2 — core primitives** (card, input, dialog, badge, tabs, dropdown, sheet, skeleton, alert, empty/loading/error states). Awaiting explicit approval; Phases 3–7 follow one commit + deploy each.
+0. ~~Admin UI Phases 2–7~~ — **complete and deployed 2026-08-02** as five sequential commits, each verified in production before the next. Follow-ups: migrate the users page onto the new `DataTable`, and add an API endpoint so System Status can report database/deployment health instead of "not reported".
 1. Replace hardcoded password-reset default with a token/OTP flow.
 2. Pull the live, certbot-modified nginx config into the repo.
 3. Add `client_max_body_size` to nginx.

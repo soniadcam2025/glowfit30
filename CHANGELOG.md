@@ -6,6 +6,24 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-02, Admin UI Phases 2–7)
+- **Phase 2 — core primitives** (`ccbde4d`): badge, skeleton, alert, tabs, dialog, sheet, dropdown-menu (Radix-backed), plus card/input/state upgraded in place with signatures preserved.
+- **Phase 3 — responsive shell** (`3da6712`): desktop collapsible rail, tablet auto-collapse to icons, mobile Sheet drawer, breadcrumbs derived from the nav table. `/desktop-only` deleted.
+- **Phase 4 — dashboard** (`20a833c`): spring-based animated counters honouring `prefers-reduced-motion`, tone-coded stat cards, Quick Actions, and a System Status panel.
+- **Phase 5 — DataTable** (`443e7d3`): generic TanStack table with sortable headers (`aria-sort`), column visibility, sticky header, row selection and horizontal scroll. Sorting is manual when controlled, since these pages paginate server-side.
+- **Phase 6 — form layer**: React Hook Form + Zod bindings that auto-wire `id`/`aria-invalid`/`aria-describedby` and announce errors via `role="alert"`; login page migrated.
+
+### Fixed (2026-08-02, Admin UI — five undefined CSS classes)
+The upgrade surfaced a recurring class of defect: utility classes referenced throughout the codebase but **defined nowhere**, so the elements using them silently rendered unstyled.
+- `glass` — secondary buttons had no background (Phase 1)
+- `glass-strong` — `ConfirmModal` had no panel background (Phase 2)
+- `border-border-soft` — sidebar and three form controls had no border (Phases 3, 7)
+- `focus-ring` — five form controls had no focus affordance (Phase 7)
+- `ConfirmModal` was also inaccessible: no focus trap, focus restore, Escape handling, or background inerting. Now Radix-backed.
+
+### Security (2026-08-02)
+- The admin login page's "Forgot password?" dialog **displayed the shared default password `Admin12345` on screen** after resetting the account — a second surface of the unauthenticated-takeover vulnerability. It now explains that a super admin issues one-time passwords, rather than posting to an endpoint that would return 401.
+
 ### Added (2026-08-02, Admin UI Foundation — Phase 1)
 - **Semantic design token system** (`globals.css`): `background / surface / surface-2 / foreground / muted / muted-foreground / border / input / ring / primary / secondary / success / warning / danger / info` as HSL variables for light and dark, registered as Tailwind utilities via `@theme inline`. Components now style against `bg-surface` / `text-muted-foreground` rather than `bg-slate-900`, so re-theming is a one-file change. Primary is the app's brand pink `#FF136B`.
 - **Theme system**: System / Light / Dark via `next-themes`, with a segmented toggle in the topbar. Required `@custom-variant dark` (without it Tailwind v4 keeps following `prefers-color-scheme` and the in-app toggle does nothing) and `suppressHydrationWarning` on `<html>`.
