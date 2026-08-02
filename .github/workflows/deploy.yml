@@ -63,6 +63,17 @@ jobs:
     needs: deploy
     runs-on: ubuntu-latest
     steps:
+      # Proves the running processes serve THIS commit's build. A plain 200 is
+      # not enough: a process serving a five-day-old bundle answers 200 too,
+      # which is exactly how a stale admin went unnoticed for five days.
+      - name: Verify deployed commit is actually live
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: bash /var/www/glowfit/server/scripts/verify-deployment.sh ${{ github.sha }}
+
       - name: Check API health
         run: |
           curl -sf https://api.glowfit30.com/ | tee /dev/stderr | grep -q '"status":"ok"'
