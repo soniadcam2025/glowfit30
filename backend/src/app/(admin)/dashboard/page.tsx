@@ -1,26 +1,34 @@
 "use client";
 
+import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Activity,
+  Bell,
+  Dumbbell,
+  ShieldBan,
+  Sparkles,
+  UserCheck,
+  Users,
+  UtensilsCrossed,
+} from "lucide-react";
 import { adminService } from "@/services/admin.service";
-import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/common/page-header";
+import { StatCard } from "@/components/dashboard/stat-card";
+import { SystemStatus } from "@/components/dashboard/system-status";
+import { StatCardsSkeleton, ErrorState } from "@/components/common/state";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
-type StatCardProps = { label: string; value: number | string; sub?: string; accent?: boolean };
-
-function StatCard({ label, value, sub, accent }: StatCardProps) {
-  return (
-    <Card className="flex flex-col gap-1">
-      <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{label}</p>
-      <p className={`text-3xl font-bold ${accent ? "text-pink-600" : "text-slate-800 dark:text-slate-100"}`}>
-        {value}
-      </p>
-      {sub && <p className="text-xs text-slate-400">{sub}</p>}
-    </Card>
-  );
-}
+const QUICK_ACTIONS = [
+  { href: "/beauty", label: "Glow content", icon: Sparkles },
+  { href: "/workouts", label: "Workouts", icon: Dumbbell },
+  { href: "/diet", label: "Diet plans", icon: UtensilsCrossed },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+];
 
 export default function DashboardPage() {
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["admin-stats"],
     queryFn: () => adminService.getStats(),
     refetchInterval: 60_000,
@@ -28,45 +36,88 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Dashboard" description="Live admin overview from production API." />
+      <PageHeader title="Dashboard" description="Live admin overview from the production API." />
 
-      {isLoading ? (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i} className="h-24 animate-pulse bg-slate-100 dark:bg-slate-800" />
-          ))}
-        </div>
+      {isError ? (
+        <ErrorState
+          message={error instanceof Error ? error.message : "Could not reach the API."}
+          onRetry={() => void refetch()}
+        />
+      ) : isLoading ? (
+        <StatCardsSkeleton count={5} />
       ) : (
         <>
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Users</p>
-            <div className="grid gap-4 sm:grid-cols-3">
-              <StatCard label="Total users" value={data?.totalUsers ?? 0} />
-              <StatCard label="Active users" value={data?.activeUsers ?? 0} sub="not blocked" />
-              <StatCard label="Blocked users" value={data?.blockedUsers ?? 0} />
-            </div>
-          </div>
-
-          <div>
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Content & Activity</p>
-            <div className="grid gap-4 sm:grid-cols-2">
+          <section>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Users
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <StatCard index={0} label="Total users" value={data?.totalUsers ?? 0} icon={Users} />
               <StatCard
+                index={1}
+                label="Active users"
+                value={data?.activeUsers ?? 0}
+                sub="not blocked"
+                icon={UserCheck}
+                tone="success"
+              />
+              <StatCard
+                index={2}
+                label="Blocked users"
+                value={data?.blockedUsers ?? 0}
+                icon={ShieldBan}
+                tone={(data?.blockedUsers ?? 0) > 0 ? "danger" : "default"}
+              />
+            </div>
+          </section>
+
+          <section>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Content &amp; activity
+            </h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <StatCard
+                index={3}
                 label="Completions today"
                 value={data?.todayCompletions ?? 0}
                 sub="workouts finished today"
-                accent
+                icon={Activity}
+                tone="primary"
               />
               <StatCard
+                index={4}
                 label="Total workouts"
                 value={data?.totalWorkouts ?? 0}
                 sub="published plans"
+                icon={Dumbbell}
               />
             </div>
+          </section>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick actions</CardTitle>
+                <CardDescription>Jump straight to the content you edit most</CardDescription>
+              </CardHeader>
+              <div className="grid grid-cols-2 gap-2">
+                {QUICK_ACTIONS.map(({ href, label, icon: Icon }) => (
+                  <Button key={href} asChild variant="secondary" className="justify-start">
+                    <Link href={href}>
+                      <Icon className="h-4 w-4" />
+                      <span className="truncate">{label}</span>
+                    </Link>
+                  </Button>
+                ))}
+              </div>
+            </Card>
+
+            <SystemStatus />
           </div>
 
           {data?.generatedAt && (
-            <p className="text-xs text-slate-400">
-              Last updated: {new Date(data.generatedAt).toLocaleTimeString()} (refreshes every 60s)
+            <p className="text-xs text-muted-foreground">
+              Last updated {new Date(data.generatedAt).toLocaleTimeString()} · refreshes every 60s
             </p>
           )}
         </>
