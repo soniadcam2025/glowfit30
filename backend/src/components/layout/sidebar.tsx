@@ -2,14 +2,19 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { PanelLeft } from "lucide-react";
 import { adminNavItems } from "@/lib/constants";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { UserMenu } from "@/components/layout/user-menu";
 import { cn } from "@/lib/utils";
 
 /**
  * Navigation list, shared by the fixed desktop rail and the mobile drawer, so
  * there is one source of nav markup rather than two that drift apart.
+ *
+ * Expanded rows use a dot marker per the reference design; the collapsed rail
+ * falls back to each item's icon, since a column of identical dots would be
+ * unusable without labels.
  */
 export function SidebarNav({
   collapsed = false,
@@ -21,7 +26,7 @@ export function SidebarNav({
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-col gap-1 p-3" aria-label="Main">
+    <nav className="flex flex-col gap-0.5 px-3 py-2" aria-label="Main">
       {adminNavItems.map((item) => {
         // startsWith so nested routes keep the parent item highlighted.
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -32,19 +37,32 @@ export function SidebarNav({
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              collapsed && "justify-center px-0",
+              "group relative flex items-center gap-3 rounded-lg py-2 text-sm transition-colors",
+              collapsed ? "justify-center px-0" : "px-3",
               active
-                ? "bg-primary text-primary-foreground"
+                ? "bg-primary/10 font-semibold text-foreground"
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
-            <item.icon className="h-4 w-4 shrink-0" />
+            {/* Left accent bar on the active row. */}
+            {active && !collapsed && (
+              <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r bg-primary" />
+            )}
+
+            {collapsed ? (
+              <item.icon className="h-4 w-4 shrink-0" />
+            ) : (
+              <span
+                className={cn(
+                  "h-1.5 w-1.5 shrink-0 rounded-full transition-colors",
+                  active ? "bg-primary" : "bg-muted-foreground/40 group-hover:bg-muted-foreground",
+                )}
+              />
+            )}
             {!collapsed && <span className="truncate">{item.label}</span>}
           </Link>
         );
 
-        // The collapsed rail shows icons only, so the label moves to a tooltip.
         return collapsed ? (
           <Tooltip key={item.href}>
             <TooltipTrigger asChild>{link}</TooltipTrigger>
@@ -58,28 +76,79 @@ export function SidebarNav({
   );
 }
 
-export function SidebarBrand({ collapsed = false }: { collapsed?: boolean }) {
+export function SidebarBrand({
+  collapsed = false,
+  onToggleCollapse,
+}: {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}) {
   return (
     <div
       className={cn(
-        "flex h-16 items-center gap-2 border-b border-border px-4",
+        "group/brand flex h-16 items-center gap-3 px-5",
         collapsed && "justify-center px-0",
       )}
     >
-      <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary">
-        <Sparkles className="h-4 w-4 text-primary-foreground" />
-      </div>
+      <div className="h-7 w-7 shrink-0 rounded-lg bg-gradient-to-br from-primary to-primary/60" />
       {!collapsed && (
-        <span className="truncate text-sm font-bold tracking-tight text-foreground">
+        <span className="flex-1 truncate text-base font-bold tracking-tight text-foreground">
           GlowFit Admin
         </span>
+      )}
+      {/* The reference topbar has no collapse control, so it lives here —
+          revealed on hover to keep the header clean. */}
+      {onToggleCollapse && (
+        <button
+          type="button"
+          onClick={onToggleCollapse}
+          aria-label={collapsed ? "Expand navigation" : "Collapse navigation"}
+          className={cn(
+            "rounded-md p-1 text-muted-foreground transition-all hover:bg-muted hover:text-foreground",
+            !collapsed && "opacity-0 focus-visible:opacity-100 group-hover/brand:opacity-100",
+          )}
+        >
+          <PanelLeft className="h-4 w-4" />
+        </button>
       )}
     </div>
   );
 }
 
+/**
+ * Full sidebar contents — brand, nav, and the account block pinned to the foot.
+ * Shared by the desktop rail and the mobile drawer.
+ */
+export function SidebarBody({
+  collapsed = false,
+  onNavigate,
+  onToggleCollapse,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+  onToggleCollapse?: () => void;
+}) {
+  return (
+    <div className="flex h-full flex-col">
+      <SidebarBrand collapsed={collapsed} onToggleCollapse={onToggleCollapse} />
+      <div className="scrollbar-slim flex-1 overflow-y-auto">
+        <SidebarNav collapsed={collapsed} onNavigate={onNavigate} />
+      </div>
+      <div className={cn("border-t border-border p-3", collapsed && "px-2")}>
+        <UserMenu collapsed={collapsed} />
+      </div>
+    </div>
+  );
+}
+
 /** Fixed rail for tablet and desktop. Hidden below md, where the drawer takes over. */
-export function Sidebar({ collapsed }: { collapsed: boolean }) {
+export function Sidebar({
+  collapsed,
+  onToggleCollapse,
+}: {
+  collapsed: boolean;
+  onToggleCollapse?: () => void;
+}) {
   return (
     <aside
       className={cn(
@@ -88,8 +157,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
         collapsed ? "w-[76px]" : "w-[248px]",
       )}
     >
-      <SidebarBrand collapsed={collapsed} />
-      <SidebarNav collapsed={collapsed} />
+      <SidebarBody collapsed={collapsed} onToggleCollapse={onToggleCollapse} />
     </aside>
   );
 }

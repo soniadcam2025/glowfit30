@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Sidebar, SidebarBrand, SidebarNav } from "@/components/layout/sidebar";
+import { Sidebar, SidebarBody } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useIsMobile, useIsTablet } from "@/hooks/use-media-query";
@@ -46,14 +46,13 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar collapsed={collapsed} />
+      <Sidebar collapsed={collapsed} onToggleCollapse={() => setUserCollapsed(!collapsed)} />
 
       <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
         <SheetContent side="left" className="p-0">
           {/* Radix requires a title for the dialog's accessible name. */}
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarBrand />
-          <SidebarNav onNavigate={() => setDrawerOpen(false)} />
+          <SidebarBody onNavigate={() => setDrawerOpen(false)} />
         </SheetContent>
       </Sheet>
 

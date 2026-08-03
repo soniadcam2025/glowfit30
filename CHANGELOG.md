@@ -6,6 +6,16 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-03)
+- **`PATCH /workouts/days/:dayId`** — days were create/delete only, so editing one meant deleting and re-adding it, destroying its exercises in the process.
+- **Workouts admin rebuilt as drill-down CRUD tables** (Workouts → Days → Exercises) with every create/edit in a modal and Zod range validation on all numeric fields. Previously three always-visible inline forms with no validation beyond a disabled button, and `sets`/`reps`/`kcal` were `parseInt`'d unbounded.
+- **Sidebar/topbar redesigned** to a supplied reference: dot-marker nav with a pink active pill and accent bar, an account block pinned to the sidebar foot (name + role from `/auth/me`), and a minimal topbar carrying only a sectioned breadcrumb ("Content / Workouts") and a live sync indicator.
+- **`SyncStatus`** — reads the newest successful fetch from the React Query cache; green when fresh, amber past 5 minutes, blue while fetching, red on error. Real state, not a decorative timestamp.
+
+### Changed (2026-08-03)
+- **Users page migrated onto the shared `DataTable`**, gaining column visibility, a sticky header, skeleton rows, a filter-aware empty state and name sorting (which the API already supported but the UI never exposed). Sorting remains server-side.
+- Logout and the theme switch moved from the topbar into the sidebar account menu, and the desktop collapse control into the sidebar brand row — the reference design has no topbar controls, but removing the functions outright would have traded working features for a visual match.
+
 ### Added (2026-08-02, Admin UI Phases 2–7)
 - **Phase 2 — core primitives** (`ccbde4d`): badge, skeleton, alert, tabs, dialog, sheet, dropdown-menu (Radix-backed), plus card/input/state upgraded in place with signatures preserved.
 - **Phase 3 — responsive shell** (`3da6712`): desktop collapsible rail, tablet auto-collapse to icons, mobile Sheet drawer, breadcrumbs derived from the nav table. `/desktop-only` deleted.
