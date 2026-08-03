@@ -1,11 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { useUsers, useBlockUser, useUnblockUser, useUserDetails, useUserProgress } from "@/hooks/useUsers";
+import { useMemo, useState } from "react";
+import type { ColumnDef, SortingState } from "@tanstack/react-table";
+import {
+  useUsers,
+  useBlockUser,
+  useUnblockUser,
+  useUserDetails,
+  useUserProgress,
+} from "@/hooks/useUsers";
 import type { UsersQuery } from "@/hooks/useUsers";
 import { PageHeader } from "@/components/common/page-header";
-import { Card } from "@/components/ui/card";
+import { DataTable } from "@/components/common/data-table";
+import { EmptyState, TableSkeleton } from "@/components/common/state";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Pagination } from "@/components/common/pagination";
 import type { UserItem } from "@/types";
@@ -15,59 +25,48 @@ import type { UserItem } from "@/types";
 const GOALS = ["Loss weight", "Lift & tone", "Lose belly fat", "Build muscles"];
 const FITNESS_LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
+const SELECT_CLS =
+  "focus-ring h-9 rounded-lg border border-input bg-surface px-3 text-sm text-foreground";
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function Avatar({ user }: { user: UserItem }) {
   if (user.photoUrl) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={user.photoUrl}
-        alt={user.name}
-        className="h-8 w-8 rounded-full object-cover"
+        alt=""
+        className="h-8 w-8 shrink-0 rounded-full object-cover"
       />
     );
   }
   return (
-    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-pink-100 text-sm font-bold text-pink-600 dark:bg-pink-900/30 dark:text-pink-400">
+    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">
       {user.name?.[0]?.toUpperCase() ?? "?"}
     </div>
   );
 }
 
-function Badge({
-  children,
-  color = "slate",
-}: {
-  children: React.ReactNode;
-  color?: "green" | "rose" | "blue" | "violet" | "amber" | "slate";
-}) {
-  const map = {
-    green: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
-    blue: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    violet: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400",
-    amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
-  };
-  return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${map[color]}`}>
-      {children}
-    </span>
-  );
+type BadgeTone = "default" | "primary" | "success" | "warning" | "danger" | "info";
+
+function goalTone(goal?: string | null): BadgeTone {
+  if (!goal) return "default";
+  const g = goal.toLowerCase();
+  if (g.includes("loss") || g.includes("lose")) return "danger";
+  if (g.includes("tone")) return "primary";
+  if (g.includes("build")) return "info";
+  return "warning";
 }
 
-function goalColor(goal?: string | null): "blue" | "violet" | "amber" | "green" | "slate" {
-  if (!goal) return "slate";
-  if (goal.toLowerCase().includes("loss") || goal.toLowerCase().includes("lose")) return "rose" as "slate";
-  if (goal.toLowerCase().includes("tone")) return "violet";
-  if (goal.toLowerCase().includes("build")) return "blue";
-  return "amber";
+function levelTone(level?: string | null): BadgeTone {
+  if (level === "Beginner") return "success";
+  if (level === "Intermediate") return "warning";
+  if (level === "Advanced") return "primary";
+  return "default";
 }
 
-function SortIcon({ active, dir }: { active: boolean; dir: "asc" | "desc" }) {
-  if (!active) return <span className="ml-1 text-slate-300">↕</span>;
-  return <span className="ml-1 text-blue-500">{dir === "asc" ? "↑" : "↓"}</span>;
-}
+const Dash = () => <span className="text-xs text-muted-foreground">—</span>;
 
 // ─── User Detail Drawer ──────────────────────────────────────────────────────
 
@@ -75,8 +74,8 @@ function LabelValue({ label, value }: { label: string; value?: string | number |
   if (value == null || value === "") return null;
   return (
     <div>
-      <p className="text-xs text-slate-400">{label}</p>
-      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{String(value)}</p>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="text-sm font-medium text-foreground">{String(value)}</p>
     </div>
   );
 }
@@ -87,266 +86,141 @@ function UserDetailDrawer({ userId, onClose }: { userId: string; onClose: () => 
 
   return (
     <div className="fixed inset-0 z-40 flex">
-      <div className="flex-1 bg-black/30" onClick={onClose} />
-      <div className="relative flex h-full w-full max-w-md flex-col overflow-y-auto bg-white shadow-2xl dark:bg-slate-900 sm:border-l sm:border-slate-200 sm:dark:border-slate-700">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-5 py-4 dark:border-slate-700 dark:bg-slate-900">
-          <h2 className="font-semibold text-slate-800 dark:text-slate-100">User Detail</h2>
-          <button onClick={onClose} className="text-lg text-slate-400 hover:text-slate-600">✕</button>
+      <div className="flex-1 bg-black/40" onClick={onClose} />
+      <div className="relative flex h-full w-full max-w-md flex-col overflow-y-auto border-l border-border bg-surface shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-surface px-5 py-4">
+          <h2 className="font-semibold text-foreground">User detail</h2>
+          <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+            ✕
+          </Button>
         </div>
 
         {loadingUser ? (
-          <div className="flex flex-1 items-center justify-center text-sm text-slate-400">Loading…</div>
+          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+            Loading…
+          </div>
         ) : user ? (
           <div className="space-y-6 p-5">
-            {/* Avatar + basic */}
             <div className="flex items-center gap-4">
               {user.photoUrl ? (
-                <img src={user.photoUrl} alt={user.name} className="h-14 w-14 rounded-full object-cover" />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.photoUrl}
+                  alt=""
+                  className="h-14 w-14 rounded-full object-cover"
+                />
               ) : (
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-pink-100 text-xl font-bold text-pink-600 dark:bg-pink-900/30">
+                <div className="grid h-14 w-14 place-items-center rounded-full bg-primary/10 text-xl font-bold text-primary">
                   {user.name?.[0]?.toUpperCase() ?? "?"}
                 </div>
               )}
               <div>
-                <p className="font-semibold text-slate-800 dark:text-slate-100">{user.name}</p>
-                <p className="text-xs text-slate-500">{user.email}</p>
-                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${user.isBlocked ? "bg-rose-100 text-rose-700" : "bg-green-100 text-green-700"}`}>
+                <p className="font-semibold text-foreground">{user.name}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+                <Badge variant={user.isBlocked ? "danger" : "success"} className="mt-1">
                   {user.isBlocked ? "Blocked" : "Active"}
-                </span>
+                </Badge>
               </div>
             </div>
 
-            {/* Account */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Account</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Account
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <LabelValue label="Joined" value={user.joinedAt} />
-                <LabelValue label="Firebase UID" value={user.firebaseUid ? "Connected" : "Not set"} />
+                <LabelValue
+                  label="Firebase UID"
+                  value={user.firebaseUid ? "Connected" : "Not set"}
+                />
               </div>
             </div>
 
-            {/* Onboarding profile */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Onboarding Profile</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Onboarding profile
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <LabelValue label="Fitness level" value={user.fitnessLevel} />
                 <LabelValue label="Goal" value={user.goal} />
                 <LabelValue label="Diet style" value={user.dietStyle} />
-                <LabelValue label="Target weight" value={user.targetWeight ? `${user.targetWeight} kg` : null} />
+                <LabelValue
+                  label="Target weight"
+                  value={user.targetWeight ? `${user.targetWeight} kg` : null}
+                />
                 <LabelValue label="Height" value={user.height ? `${user.height} cm` : null} />
                 <LabelValue label="Weight" value={user.weight ? `${user.weight} kg` : null} />
-                <LabelValue label="Date of birth" value={user.dob ? new Date(user.dob).toLocaleDateString() : null} />
+                <LabelValue
+                  label="Date of birth"
+                  value={user.dob ? new Date(user.dob).toLocaleDateString() : null}
+                />
                 <LabelValue label="Focus areas" value={user.focusAreas?.join(", ")} />
               </div>
             </div>
 
-            {/* Progress */}
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-slate-400">Workout Progress</p>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Workout progress
+              </p>
               {loadingProgress ? (
-                <p className="text-xs text-slate-400">Loading progress…</p>
+                <p className="text-xs text-muted-foreground">Loading progress…</p>
               ) : progress ? (
                 <>
                   <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                    <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-800">
-                      <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{progress.stats.totalSessions}</p>
-                      <p className="text-xs text-slate-400">Sessions</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-800">
-                      <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{progress.stats.totalCalories}</p>
-                      <p className="text-xs text-slate-400">kcal</p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 p-3 text-center dark:bg-slate-800">
-                      <p className="text-xl font-bold text-slate-800 dark:text-slate-100">{progress.stats.totalMinutes}</p>
-                      <p className="text-xs text-slate-400">min</p>
-                    </div>
-                    <div className="rounded-xl bg-pink-50 p-3 text-center dark:bg-pink-900/20">
-                      <p className="text-xl font-bold text-pink-600 dark:text-pink-400">{progress.stats.streak ?? 0} 🔥</p>
-                      <p className="text-xs text-slate-400">Day streak</p>
+                    {[
+                      { v: progress.stats.totalSessions, l: "Sessions" },
+                      { v: progress.stats.totalCalories, l: "kcal" },
+                      { v: progress.stats.totalMinutes, l: "min" },
+                    ].map(({ v, l }) => (
+                      <div key={l} className="rounded-xl bg-muted p-3 text-center">
+                        <p className="text-xl font-bold text-foreground">{v}</p>
+                        <p className="text-xs text-muted-foreground">{l}</p>
+                      </div>
+                    ))}
+                    <div className="rounded-xl bg-primary/10 p-3 text-center">
+                      <p className="text-xl font-bold text-primary">
+                        {progress.stats.streak ?? 0} 🔥
+                      </p>
+                      <p className="text-xs text-muted-foreground">Day streak</p>
                     </div>
                   </div>
                   {progress.completions.length > 0 && (
                     <div className="space-y-1.5">
-                      <p className="text-xs text-slate-400">Recent completions</p>
+                      <p className="text-xs text-muted-foreground">Recent completions</p>
                       {progress.completions.slice(0, 8).map((c) => (
-                        <div key={c.id} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-800">
-                          <span className="font-medium text-slate-700 dark:text-slate-200">
+                        <div
+                          key={c.id}
+                          className="flex items-center justify-between rounded-lg bg-muted px-3 py-2 text-xs"
+                        >
+                          <span className="font-medium text-foreground">
                             Day {c.workoutDay.dayNumber} — {c.workoutDay.title}
                           </span>
-                          <span className="text-slate-400">{new Date(c.completedAt).toLocaleDateString()}</span>
+                          <span className="text-muted-foreground">
+                            {new Date(c.completedAt).toLocaleDateString()}
+                          </span>
                         </div>
                       ))}
                     </div>
                   )}
                 </>
               ) : (
-                <p className="text-xs text-slate-400">No progress recorded.</p>
+                <p className="text-xs text-muted-foreground">No progress recorded.</p>
               )}
             </div>
           </div>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-sm text-slate-400">User not found.</div>
+          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+            User not found.
+          </div>
         )}
       </div>
     </div>
   );
 }
 
-// ─── Table ────────────────────────────────────────────────────────────────────
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 type SortField = "name" | "email" | "createdAt" | "goal" | "fitnessLevel";
-
-function SortableTh({
-  field,
-  label,
-  sortBy,
-  sortDir,
-  onSort,
-}: {
-  field: SortField;
-  label: string;
-  sortBy: SortField;
-  sortDir: "asc" | "desc";
-  onSort: (f: SortField) => void;
-}) {
-  const active = sortBy === field;
-  return (
-    <th
-      className="cursor-pointer select-none whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-      onClick={() => onSort(field)}
-    >
-      {label}
-      <SortIcon active={active} dir={sortDir} />
-    </th>
-  );
-}
-
-function UsersDataTable({
-  rows,
-  sortBy,
-  sortDir,
-  onSort,
-  onView,
-  onBlock,
-  onUnblock,
-}: {
-  rows: UserItem[];
-  sortBy: SortField;
-  sortDir: "asc" | "desc";
-  onSort: (f: SortField) => void;
-  onView: (u: UserItem) => void;
-  onBlock: (u: UserItem) => void;
-  onUnblock: (u: UserItem) => void;
-}) {
-  if (rows.length === 0) {
-    return (
-      <Card className="py-16 text-center text-sm text-slate-400">
-        No app users found.
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="overflow-auto p-0">
-      <table className="w-full min-w-[900px] text-left text-sm">
-        <thead className="border-b border-slate-100 dark:border-slate-800">
-          <tr>
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              User
-            </th>
-            <SortableTh field="email" label="Email" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <SortableTh field="goal" label="Goal" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <SortableTh field="fitnessLevel" label="Level" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Status
-            </th>
-            <SortableTh field="createdAt" label="Joined" sortBy={sortBy} sortDir={sortDir} onSort={onSort} />
-            <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              Actions
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-          {rows.map((user) => (
-            <tr
-              key={user.id}
-              className="transition-colors hover:bg-slate-50/60 dark:hover:bg-slate-800/40"
-            >
-              {/* User */}
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <Avatar user={user} />
-                  <span className="font-medium text-slate-800 dark:text-slate-100">
-                    {user.name}
-                  </span>
-                </div>
-              </td>
-
-              {/* Email */}
-              <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                {user.email}
-              </td>
-
-              {/* Goal */}
-              <td className="px-4 py-3">
-                {user.goal ? (
-                  <Badge color={goalColor(user.goal) as "blue" | "violet" | "amber" | "green" | "slate"}>
-                    {user.goal}
-                  </Badge>
-                ) : (
-                  <span className="text-xs text-slate-300">—</span>
-                )}
-              </td>
-
-              {/* Fitness level */}
-              <td className="px-4 py-3">
-                {user.fitnessLevel ? (
-                  <Badge color={user.fitnessLevel === "Beginner" ? "green" : user.fitnessLevel === "Intermediate" ? "amber" : "violet"}>
-                    {user.fitnessLevel}
-                  </Badge>
-                ) : (
-                  <span className="text-xs text-slate-300">—</span>
-                )}
-              </td>
-
-              {/* Status */}
-              <td className="px-4 py-3">
-                <Badge color={user.isBlocked ? "rose" : "green"}>
-                  {user.isBlocked ? "Blocked" : "Active"}
-                </Badge>
-              </td>
-
-              {/* Joined */}
-              <td className="px-4 py-3 text-slate-500 dark:text-slate-400">
-                {user.joinedAt}
-              </td>
-
-              {/* Actions */}
-              <td className="px-4 py-3">
-                <div className="flex items-center gap-1.5">
-                  <Button variant="ghost" onClick={() => onView(user)}>
-                    View
-                  </Button>
-                  {user.isBlocked ? (
-                    <Button variant="secondary" onClick={() => onUnblock(user)}>
-                      Unblock
-                    </Button>
-                  ) : (
-                    <Button variant="danger" onClick={() => onBlock(user)}>
-                      Block
-                    </Button>
-                  )}
-                </div>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </Card>
-  );
-}
-
-// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function UsersPage() {
   const [page, setPage] = useState(1);
@@ -374,17 +248,119 @@ export default function UsersPage() {
   const blockUser = useBlockUser(query);
   const unblockUser = useUnblockUser(query);
 
-  const rows = data?.items ?? [];
+  const rows = useMemo(() => data?.items ?? [], [data]);
 
-  function handleSort(field: SortField) {
-    if (sortBy === field) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortBy(field);
-      setSortDir("asc");
-    }
+  // TanStack's sorting shape adapted to the API's sortBy/sortDir pair. Sorting
+  // is server-side, so this only ever tells the query what to ask for.
+  const sorting: SortingState = [{ id: sortBy, desc: sortDir === "desc" }];
+
+  const onSortingChange = (updater: React.SetStateAction<SortingState>) => {
+    const next = typeof updater === "function" ? updater(sorting) : updater;
+    if (next.length === 0) return;
+    setSortBy(next[0].id as SortField);
+    setSortDir(next[0].desc ? "desc" : "asc");
     setPage(1);
-  }
+  };
+
+  const columns = useMemo<ColumnDef<UserItem>[]>(
+    () => [
+      {
+        id: "name",
+        accessorKey: "name",
+        header: "User",
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <Avatar user={row.original} />
+            <span className="font-medium text-foreground">{row.original.name}</span>
+          </div>
+        ),
+      },
+      {
+        id: "email",
+        accessorKey: "email",
+        header: "Email",
+        cell: ({ row }) => (
+          <span className="text-muted-foreground">{row.original.email}</span>
+        ),
+      },
+      {
+        id: "goal",
+        accessorKey: "goal",
+        header: "Goal",
+        cell: ({ row }) =>
+          row.original.goal ? (
+            <Badge variant={goalTone(row.original.goal)}>{row.original.goal}</Badge>
+          ) : (
+            <Dash />
+          ),
+      },
+      {
+        id: "fitnessLevel",
+        accessorKey: "fitnessLevel",
+        header: "Level",
+        cell: ({ row }) =>
+          row.original.fitnessLevel ? (
+            <Badge variant={levelTone(row.original.fitnessLevel)}>
+              {row.original.fitnessLevel}
+            </Badge>
+          ) : (
+            <Dash />
+          ),
+      },
+      {
+        id: "status",
+        header: "Status",
+        // Server has no `status` sort key — offering one would silently do nothing.
+        enableSorting: false,
+        cell: ({ row }) => (
+          <Badge variant={row.original.isBlocked ? "danger" : "success"}>
+            {row.original.isBlocked ? "Blocked" : "Active"}
+          </Badge>
+        ),
+      },
+      {
+        id: "createdAt",
+        accessorKey: "joinedAt",
+        header: "Joined",
+        cell: ({ row }) => (
+          <span className="whitespace-nowrap text-muted-foreground">
+            {row.original.joinedAt}
+          </span>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => {
+          const user = row.original;
+          return (
+            <div className="flex items-center gap-1.5">
+              <Button variant="ghost" size="sm" onClick={() => setSelectedId(user.id)}>
+                View
+              </Button>
+              {user.isBlocked ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => unblockUser.mutate(user.id)}
+                >
+                  Unblock
+                </Button>
+              ) : (
+                <Button variant="danger" size="sm" onClick={() => blockUser.mutate(user.id)}>
+                  Block
+                </Button>
+              )}
+            </div>
+          );
+        },
+      },
+    ],
+    [blockUser, unblockUser],
+  );
 
   function handleSearchSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -412,79 +388,106 @@ export default function UsersPage() {
         description={`${data?.total ?? 0} users registered via the mobile app`}
       />
 
-      {/* Filter bar */}
       <Card className="flex flex-wrap items-center gap-3">
-        {/* Search */}
-        <form onSubmit={handleSearchSubmit} className="flex min-w-[220px] flex-1 items-center gap-2">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="flex min-w-[220px] flex-1 items-center gap-2"
+        >
           <Input
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="Search name or email…"
             className="flex-1"
+            aria-label="Search users"
           />
           <Button type="submit" variant="secondary">
             Search
           </Button>
         </form>
 
-        {/* Status filter */}
         <select
           value={status}
-          onChange={(e) => { setStatus(e.target.value as "all" | "active" | "blocked"); setPage(1); }}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          aria-label="Filter by status"
+          onChange={(e) => {
+            setStatus(e.target.value as "all" | "active" | "blocked");
+            setPage(1);
+          }}
+          className={SELECT_CLS}
         >
           <option value="all">All statuses</option>
           <option value="active">Active</option>
           <option value="blocked">Blocked</option>
         </select>
 
-        {/* Goal filter */}
         <select
           value={goal}
-          onChange={(e) => { setGoal(e.target.value); setPage(1); }}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          aria-label="Filter by goal"
+          onChange={(e) => {
+            setGoal(e.target.value);
+            setPage(1);
+          }}
+          className={SELECT_CLS}
         >
           <option value="">All goals</option>
           {GOALS.map((g) => (
-            <option key={g} value={g}>{g}</option>
+            <option key={g} value={g}>
+              {g}
+            </option>
           ))}
         </select>
 
-        {/* Fitness level filter */}
         <select
           value={fitnessLevel}
-          onChange={(e) => { setFitnessLevel(e.target.value); setPage(1); }}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          aria-label="Filter by fitness level"
+          onChange={(e) => {
+            setFitnessLevel(e.target.value);
+            setPage(1);
+          }}
+          className={SELECT_CLS}
         >
           <option value="">All levels</option>
           {FITNESS_LEVELS.map((l) => (
-            <option key={l} value={l}>{l}</option>
+            <option key={l} value={l}>
+              {l}
+            </option>
           ))}
         </select>
 
         {hasFilters && (
-          <button
-            onClick={clearFilters}
-            className="text-xs text-slate-400 hover:text-rose-500"
-          >
+          <Button variant="ghost" size="sm" onClick={clearFilters}>
             Clear filters
-          </button>
+          </Button>
         )}
       </Card>
 
-      {/* Table */}
       {isLoading ? (
-        <Card className="py-12 text-center text-sm text-slate-400">Loading users…</Card>
+        <TableSkeleton rows={8} />
       ) : (
         <>
-          <UsersDataTable
-            rows={rows}
-            sortBy={sortBy}
-            sortDir={sortDir}
-            onSort={handleSort}
-            onView={(u) => setSelectedId(u.id)}
-            onBlock={(u) => blockUser.mutate(u.id)}
-            onUnblock={(u) => unblockUser.mutate(u.id)}
+          <DataTable
+            columns={columns}
+            data={rows}
+            sorting={sorting}
+            onSortingChange={onSortingChange}
+            getRowId={(row) => row.id}
+            minWidth={900}
+            emptyState={
+              <EmptyState
+                title="No users found"
+                description={
+                  hasFilters
+                    ? "No users match the current filters."
+                    : "Users appear here once people sign up in the mobile app."
+                }
+                action={
+                  hasFilters ? (
+                    <Button variant="secondary" size="sm" onClick={clearFilters}>
+                      Clear filters
+                    </Button>
+                  ) : undefined
+                }
+              />
+            }
           />
           <Pagination
             page={data?.page ?? 1}
