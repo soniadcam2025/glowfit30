@@ -1,13 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
 import { toast } from "sonner";
+import { ChevronRight, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
-import { Card } from "@/components/ui/card";
+import { DataTable } from "@/components/common/data-table";
+import { EmptyState, TableSkeleton } from "@/components/common/state";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ConfirmModal } from "@/components/ui/modal";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ImageUploadField } from "@/components/common/image-upload-field";
 import { VideoUploadField } from "@/components/common/video-upload-field";
 import { glowContentService } from "@/services/glow-content.service";
@@ -108,6 +114,68 @@ function ContentBadges({ isPremium, sections }: { isPremium?: boolean; sections?
           📑 Has Tabs
         </span>
       )}
+    </>
+  );
+}
+
+/**
+ * Edit/delete buttons for a table row.
+ *
+ * One component for all three content types — Reads, Categories and Shorts
+ * previously each had their own near-identical copy. Editing is lifted to the
+ * page, which swaps the table for the form; only deletion is owned here.
+ */
+function RowActions({
+  label,
+  name,
+  onEdit,
+  onDelete,
+  onDeleted,
+}: {
+  label: string;
+  name: string;
+  onEdit: () => void;
+  onDelete: () => Promise<unknown>;
+  onDeleted: () => void;
+}) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const del = useMutation({
+    mutationFn: onDelete,
+    onSuccess: () => {
+      onDeleted();
+      toast.success(`${label} deleted`);
+    },
+    onError: (err) => toast.error(apiMessage(err, `Failed to delete ${label.toLowerCase()}`)),
+  });
+
+  return (
+    <>
+      <div className="flex gap-1.5">
+        <Button variant="ghost" size="sm" aria-label={`Edit ${label.toLowerCase()}`} onClick={onEdit}>
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          aria-label={`Delete ${label.toLowerCase()}`}
+          className="text-danger"
+          onClick={() => setConfirmDelete(true)}
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+      <ConfirmModal
+        open={confirmDelete}
+        title={`Delete ${label.toLowerCase()}?`}
+        onClose={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          del.mutate();
+          setConfirmDelete(false);
+        }}
+        confirmLabel="Delete"
+      >
+        &quot;{name}&quot; will be permanently deleted.
+      </ConfirmModal>
     </>
   );
 }
@@ -318,7 +386,7 @@ function ReadFormPanel({ initial, categories, onSave, onCancel, loading }: {
   const set = <K extends keyof ReadForm>(k: K, v: ReadForm[K]) => setF((p) => ({ ...p, [k]: v }));
 
   return (
-    <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+    <div className="space-y-4">
       <div className="space-y-1">
         <label className="text-xs font-semibold text-slate-500">Title *</label>
         <Input value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="How to Choose Right Serum" />
@@ -386,67 +454,6 @@ function ReadFormPanel({ initial, categories, onSave, onCancel, loading }: {
   );
 }
 
-function ReadCard({ read, categories, onDeleted }: { read: BeautyPost; categories: GlowCategory[]; onDeleted: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const qc = useQueryClient();
-
-  const update = useMutation({
-    mutationFn: (f: ReadForm) => glowContentService.updateRead(read.id, readFormToPayload(f)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["glow-reads"] });
-      setEditing(false);
-      toast.success("Read updated");
-    },
-    onError: (err) => toast.error(apiMessage(err, "Failed to update read")),
-  });
-
-  const del = useMutation({
-    mutationFn: () => glowContentService.deleteRead(read.id),
-    onSuccess: () => { onDeleted(); toast.success("Read deleted"); },
-    onError: (err) => toast.error(apiMessage(err, "Failed to delete read")),
-  });
-
-  if (editing) {
-    return (
-      <ReadFormPanel initial={readToForm(read)} categories={categories} onSave={(f) => update.mutate(f)} onCancel={() => setEditing(false)} loading={update.isPending} />
-    );
-  }
-
-  return (
-    <>
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-4">
-          {read.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={read.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
-          )}
-          <div className="min-w-0 flex-1 space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className="rounded-full px-3 py-0.5 text-xs font-semibold"
-                style={{ backgroundColor: read.tagBackground, color: read.tagColor }}
-              >
-                {read.tag}
-              </span>
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{read.title}</span>
-              <span className="text-xs text-slate-400">{read.minutesRead} min read</span>
-              <ContentBadges isPremium={read.isPremium} sections={read.sections} />
-            </div>
-            <p className="line-clamp-1 text-xs text-slate-500 dark:text-slate-400">{read.content}</p>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="secondary" className="text-xs px-3 py-1.5" onClick={() => setEditing(true)}>Edit</Button>
-            <Button variant="danger" className="text-xs px-3 py-1.5" onClick={() => setConfirmDelete(true)}>Delete</Button>
-          </div>
-        </div>
-      </Card>
-      <ConfirmModal open={confirmDelete} title="Delete Read?" onClose={() => setConfirmDelete(false)} onConfirm={() => { del.mutate(); setConfirmDelete(false); }} confirmLabel="Delete">
-        &quot;{read.title}&quot; will be permanently deleted.
-      </ConfirmModal>
-    </>
-  );
-}
 
 // ─── Explore by Goals (GlowCategory) ────────────────────────────────────────────
 
@@ -511,7 +518,7 @@ function GlowCategoryFormPanel({ initial, onSave, onCancel, loading }: {
   const set = <K extends keyof CategoryForm>(k: K, v: CategoryForm[K]) => setF((p) => ({ ...p, [k]: v }));
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+    <div className="space-y-3">
       <div className="grid grid-cols-[70px_1fr_1fr_90px_80px] items-end gap-3">
         <div className="space-y-1">
           <label className="text-xs font-semibold text-slate-500">Emoji</label>
@@ -559,59 +566,6 @@ function GlowCategoryFormPanel({ initial, onSave, onCancel, loading }: {
   );
 }
 
-function GlowCategoryCard({ category, onDeleted }: { category: GlowCategory; onDeleted: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const qc = useQueryClient();
-
-  const update = useMutation({
-    mutationFn: (f: CategoryForm) => glowContentService.updateCategory(category.id, glowCategoryFormToPayload(f)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["glow-categories"] });
-      setEditing(false);
-      toast.success("Category updated");
-    },
-    onError: (err) => toast.error(apiMessage(err, "Failed to update category")),
-  });
-
-  const del = useMutation({
-    mutationFn: () => glowContentService.deleteCategory(category.id),
-    onSuccess: () => { onDeleted(); toast.success("Category deleted"); },
-    onError: (err) => toast.error(apiMessage(err, "Failed to delete category")),
-  });
-
-  if (editing) {
-    return <GlowCategoryFormPanel initial={glowCategoryToForm(category)} onSave={(f) => update.mutate(f)} onCancel={() => setEditing(false)} loading={update.isPending} />;
-  }
-
-  return (
-    <>
-      <Card className="p-3">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-1 items-center gap-3">
-            <div
-              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-lg"
-              style={{ backgroundColor: category.background }}
-            >
-              {category.emoji}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-700 dark:text-slate-200">{category.title}</p>
-              <p className="truncate text-xs text-slate-400">{category.subtitle}</p>
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="secondary" className="text-xs px-3 py-1.5" onClick={() => setEditing(true)}>Edit</Button>
-            <Button variant="danger" className="text-xs px-3 py-1.5" onClick={() => setConfirmDelete(true)}>Delete</Button>
-          </div>
-        </div>
-      </Card>
-      <ConfirmModal open={confirmDelete} title="Delete Category?" onClose={() => setConfirmDelete(false)} onConfirm={() => { del.mutate(); setConfirmDelete(false); }} confirmLabel="Delete">
-        &quot;{category.title}&quot; will be permanently deleted.
-      </ConfirmModal>
-    </>
-  );
-}
 
 // ─── Shorts & Quick Tips (GlowShort) ────────────────────────────────────────────
 
@@ -705,7 +659,7 @@ function ShortFormPanel({ initial, categories, onSave, onCancel, loading }: {
   const set = <K extends keyof ShortForm>(k: K, v: ShortForm[K]) => setF((p) => ({ ...p, [k]: v }));
 
   return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+    <div className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="space-y-1 sm:col-span-2">
           <label className="text-xs font-semibold text-slate-500">Title *</label>
@@ -792,82 +746,24 @@ function ShortFormPanel({ initial, categories, onSave, onCancel, loading }: {
   );
 }
 
-function ShortCard({ short, categories, onDeleted }: { short: GlowShort; categories: GlowCategory[]; onDeleted: () => void }) {
-  const [editing, setEditing] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const qc = useQueryClient();
-
-  const update = useMutation({
-    mutationFn: (f: ShortForm) => glowContentService.updateShort(short.id, shortFormToPayload(f)),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: ["glow-shorts"] });
-      setEditing(false);
-      toast.success("Short updated");
-    },
-    onError: (err) => toast.error(apiMessage(err, "Failed to update short")),
-  });
-
-  const del = useMutation({
-    mutationFn: () => glowContentService.deleteShort(short.id),
-    onSuccess: () => { onDeleted(); toast.success("Short deleted"); },
-    onError: (err) => toast.error(apiMessage(err, "Failed to delete short")),
-  });
-
-  if (editing) {
-    return <ShortFormPanel initial={shortToForm(short)} categories={categories} onSave={(f) => update.mutate(f)} onCancel={() => setEditing(false)} loading={update.isPending} />;
-  }
-
-  return (
-    <>
-      <Card className="p-4">
-        <div className="flex items-center justify-between gap-4">
-          {short.imageUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={short.imageUrl} alt="" className="h-14 w-14 shrink-0 rounded-lg object-cover" />
-          )}
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="rounded-full bg-slate-800 px-2 py-0.5 text-xs font-semibold text-white">{short.duration}</span>
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">{short.title}</span>
-              <span className="text-xs text-slate-400">{short.views}</span>
-              <ContentBadges isPremium={short.isPremium} sections={short.sections} />
-              {/* Placement is otherwise invisible without opening each short. */}
-              {short.isFeatured && (
-                <span className="rounded-full bg-pink-100 px-2 py-0.5 text-xs font-semibold text-pink-700 dark:bg-pink-900/40 dark:text-pink-300">
-                  ★ Featured
-                </span>
-              )}
-              {short.isTrending && (
-                <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">
-                  🔥 Trending
-                </span>
-              )}
-              {short.isQuickTip && (
-                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                  ⚡ Quick Tip
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-2">
-            <Button variant="secondary" className="text-xs px-3 py-1.5" onClick={() => setEditing(true)}>Edit</Button>
-            <Button variant="danger" className="text-xs px-3 py-1.5" onClick={() => setConfirmDelete(true)}>Delete</Button>
-          </div>
-        </div>
-      </Card>
-      <ConfirmModal open={confirmDelete} title="Delete Short?" onClose={() => setConfirmDelete(false)} onConfirm={() => { del.mutate(); setConfirmDelete(false); }} confirmLabel="Delete">
-        &quot;{short.title}&quot; will be permanently deleted.
-      </ConfirmModal>
-    </>
-  );
-}
 
 // ─── Page ──────────────────────────────────────────────────────────────────────
 
+/**
+ * Which form, if any, is open. `item: null` means create.
+ *
+ * Declared outside the component so the create mutations below can close the
+ * form without depending on declaration order inside it.
+ */
+type Editing =
+  | { kind: "category"; item: GlowCategory | null }
+  | { kind: "read"; item: BeautyPost | null }
+  | { kind: "short"; item: GlowShort | null }
+  | null;
+
 export default function GlowContentPage() {
-  const [creatingRead, setCreatingRead] = useState(false);
-  const [creatingCategory, setCreatingCategory] = useState(false);
-  const [creatingShort, setCreatingShort] = useState(false);
+  const [editing, setEditing] = useState<Editing>(null);
+  const close = () => setEditing(null);
   const qc = useQueryClient();
 
   const { data: reads = [], isLoading: readsLoading } = useQuery({
@@ -887,7 +783,7 @@ export default function GlowContentPage() {
     mutationFn: (f: ReadForm) => glowContentService.createRead(readFormToPayload(f)),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["glow-reads"] });
-      setCreatingRead(false);
+      setEditing(null);
       toast.success("Read created");
     },
     onError: (err) => toast.error(apiMessage(err, "Failed to create read")),
@@ -897,7 +793,7 @@ export default function GlowContentPage() {
     mutationFn: (f: CategoryForm) => glowContentService.createCategory(glowCategoryFormToPayload(f)),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["glow-categories"] });
-      setCreatingCategory(false);
+      setEditing(null);
       toast.success("Category created");
     },
     onError: (err) => toast.error(apiMessage(err, "Failed to create category")),
@@ -907,97 +803,426 @@ export default function GlowContentPage() {
     mutationFn: (f: ShortForm) => glowContentService.createShort(shortFormToPayload(f)),
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["glow-shorts"] });
-      setCreatingShort(false);
+      setEditing(null);
       toast.success("Short created");
     },
     onError: (err) => toast.error(apiMessage(err, "Failed to create short")),
   });
 
+  const updateCategory = useMutation({
+    mutationFn: (f: CategoryForm) =>
+      glowContentService.updateCategory(
+        (editing?.item as GlowCategory).id,
+        glowCategoryFormToPayload(f),
+      ),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["glow-categories"] });
+      close();
+      toast.success("Category updated");
+    },
+    onError: (err) => toast.error(apiMessage(err, "Failed to update category")),
+  });
+
+  const updateRead = useMutation({
+    mutationFn: (f: ReadForm) =>
+      glowContentService.updateRead((editing?.item as BeautyPost).id, readFormToPayload(f)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["glow-reads"] });
+      close();
+      toast.success("Read updated");
+    },
+    onError: (err) => toast.error(apiMessage(err, "Failed to update read")),
+  });
+
+  const updateShort = useMutation({
+    mutationFn: (f: ShortForm) =>
+      glowContentService.updateShort((editing?.item as GlowShort).id, shortFormToPayload(f)),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["glow-shorts"] });
+      close();
+      toast.success("Short updated");
+    },
+    onError: (err) => toast.error(apiMessage(err, "Failed to update short")),
+  });
+
+  const categoryCols = useMemo<ColumnDef<GlowCategory>[]>(
+    () => [
+      {
+        id: "title",
+        accessorKey: "title",
+        header: "Category",
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-3">
+            <div
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-lg"
+              style={{ backgroundColor: row.original.background }}
+            >
+              {row.original.emoji}
+            </div>
+            <span className="truncate font-medium text-foreground">{row.original.title}</span>
+          </div>
+        ),
+      },
+      {
+        id: "subtitle",
+        accessorKey: "subtitle",
+        header: "Subtitle",
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.subtitle}</span>,
+      },
+      {
+        id: "topics",
+        header: "Topics",
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.topics?.length ? (
+            <Badge variant="outline">{row.original.topics.length} topics</Badge>
+          ) : (
+            <span className="text-xs text-muted-foreground">&mdash;</span>
+          ),
+      },
+      { id: "order", accessorKey: "order", header: "Order" },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <RowActions
+            label="Category"
+            name={row.original.title}
+            onEdit={() => setEditing({ kind: "category", item: row.original })}
+            onDelete={() => glowContentService.deleteCategory(row.original.id)}
+            onDeleted={() => void qc.invalidateQueries({ queryKey: ["glow-categories"] })}
+          />
+        ),
+      },
+    ],
+    [qc],
+  );
+
+  const readCols = useMemo<ColumnDef<BeautyPost>[]>(
+    () => [
+      {
+        id: "title",
+        accessorKey: "title",
+        header: "Read",
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-3">
+            {row.original.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={row.original.imageUrl}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="h-9 w-9 shrink-0 rounded-lg bg-muted" />
+            )}
+            <span className="truncate font-medium text-foreground">{row.original.title}</span>
+          </div>
+        ),
+      },
+      {
+        id: "tag",
+        accessorKey: "tag",
+        header: "Tag",
+        cell: ({ row }) => (
+          <span
+            className="rounded-full px-2.5 py-0.5 text-xs font-semibold"
+            style={{
+              backgroundColor: row.original.tagBackground,
+              color: row.original.tagColor,
+            }}
+          >
+            {row.original.tag}
+          </span>
+        ),
+      },
+      {
+        id: "minutesRead",
+        accessorKey: "minutesRead",
+        header: "Read time",
+        cell: ({ row }) => `${row.original.minutesRead} min`,
+      },
+      {
+        id: "flags",
+        header: "Flags",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            <ContentBadges isPremium={row.original.isPremium} sections={row.original.sections} />
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <RowActions
+            label="Read"
+            name={row.original.title}
+            onEdit={() => setEditing({ kind: "read", item: row.original })}
+            onDelete={() => glowContentService.deleteRead(row.original.id)}
+            onDeleted={() => void qc.invalidateQueries({ queryKey: ["glow-reads"] })}
+          />
+        ),
+      },
+    ],
+    [qc],
+  );
+
+  const shortCols = useMemo<ColumnDef<GlowShort>[]>(
+    () => [
+      {
+        id: "title",
+        accessorKey: "title",
+        header: "Short",
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex min-w-0 items-center gap-3">
+            {row.original.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={row.original.imageUrl}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="h-9 w-9 shrink-0 rounded-lg bg-muted" />
+            )}
+            <span className="truncate font-medium text-foreground">{row.original.title}</span>
+          </div>
+        ),
+      },
+      {
+        id: "duration",
+        accessorKey: "duration",
+        header: "Duration",
+        cell: ({ row }) => <Badge>{row.original.duration}</Badge>,
+      },
+      {
+        id: "views",
+        accessorKey: "views",
+        header: "Views",
+        cell: ({ row }) => <span className="text-muted-foreground">{row.original.views}</span>,
+      },
+      {
+        id: "placement",
+        header: "Placement",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex flex-wrap gap-1">
+            {row.original.isFeatured && <Badge variant="primary">Featured</Badge>}
+            {row.original.isTrending && <Badge variant="warning">Trending</Badge>}
+            {row.original.isQuickTip && <Badge variant="info">Quick Tip</Badge>}
+            <ContentBadges isPremium={row.original.isPremium} sections={row.original.sections} />
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <RowActions
+            label="Short"
+            name={row.original.title}
+            onEdit={() => setEditing({ kind: "short", item: row.original })}
+            onDelete={() => glowContentService.deleteShort(row.original.id)}
+            onDeleted={() => void qc.invalidateQueries({ queryKey: ["glow-shorts"] })}
+          />
+        ),
+      },
+    ],
+    [qc],
+  );
+
+  const featuredCount = shorts.filter((s) => s.isFeatured).length;
+
+  const SECTION_LABEL: Record<string, string> = {
+    category: "category",
+    read: "read",
+    short: "short",
+  };
+
+  // ── Form view: replaces the table in place, with a trail back to the list ──
+  if (editing) {
+    const isNew = editing.item === null;
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          title={`${isNew ? "New" : "Edit"} ${SECTION_LABEL[editing.kind]}`}
+          description="Changes are saved to the live app."
+        />
+
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm">
+          <button onClick={close} className="text-muted-foreground hover:text-foreground">
+            Glow Content
+          </button>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          <span className="font-semibold text-foreground">
+            {isNew ? "New" : "Edit"} {SECTION_LABEL[editing.kind]}
+          </span>
+        </nav>
+
+        <Card>
+          {editing.kind === "category" && (
+            <GlowCategoryFormPanel
+              initial={editing.item ? glowCategoryToForm(editing.item) : emptyGlowCategory()}
+              onSave={(f) => (editing.item ? updateCategory.mutate(f) : createCategory.mutate(f))}
+              onCancel={close}
+              loading={updateCategory.isPending || createCategory.isPending}
+            />
+          )}
+          {editing.kind === "read" && (
+            <ReadFormPanel
+              initial={editing.item ? readToForm(editing.item) : emptyRead()}
+              categories={categories}
+              onSave={(f) => (editing.item ? updateRead.mutate(f) : createRead.mutate(f))}
+              onCancel={close}
+              loading={updateRead.isPending || createRead.isPending}
+            />
+          )}
+          {editing.kind === "short" && (
+            <ShortFormPanel
+              initial={editing.item ? shortToForm(editing.item) : emptyShort()}
+              categories={categories}
+              onSave={(f) => (editing.item ? updateShort.mutate(f) : createShort.mutate(f))}
+              onCancel={close}
+              loading={updateShort.isPending || createShort.isPending}
+            />
+          )}
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <PageHeader
         title="Glow Content"
         description="Everything shown on the app's Glow screen: category tiles, articles, and short videos."
       />
 
-      {/* ── 1. Explore by Goals ── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">1 · Explore by Goals</h2>
-          <p className="text-xs text-slate-400">The row of round category tiles near the top of the Glow screen.</p>
-        </div>
-        {!creatingCategory && <Button onClick={() => setCreatingCategory(true)}>+ New Category</Button>}
-      </div>
-      {creatingCategory && (
-        <GlowCategoryFormPanel initial={emptyGlowCategory()} onSave={(f) => createCategory.mutate(f)} onCancel={() => setCreatingCategory(false)} loading={createCategory.isPending} />
-      )}
-      {categoriesLoading ? (
-        <Card><p className="text-sm text-slate-400">Loading categories…</p></Card>
-      ) : categories.length === 0 ? (
-        <Card><p className="text-sm text-slate-400">No categories yet — the app shows its built-in defaults until you add some.</p></Card>
-      ) : (
-        <div className="space-y-2">
-          {categories.map((c) => (
-            <GlowCategoryCard key={c.id} category={c} onDeleted={() => void qc.invalidateQueries({ queryKey: ["glow-categories"] })} />
-          ))}
-        </div>
-      )}
+      {/* Tabs rather than three stacked tables: these are sibling content types,
+          not a hierarchy, and stacking three full tables buries the last one. */}
+      <Tabs defaultValue="categories">
+        <TabsList>
+          <TabsTrigger value="categories">Explore by Goals</TabsTrigger>
+          <TabsTrigger value="reads">Glow Reads</TabsTrigger>
+          <TabsTrigger value="shorts">Shorts &amp; Quick Tips</TabsTrigger>
+        </TabsList>
 
-      {/* ── 2. Glow Reads ── */}
-      <div className="flex items-center justify-between pt-2">
-        <div>
-          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">2 · Glow Reads</h2>
-          <p className="text-xs text-slate-400">Article cards in the horizontally-scrolling Glow Reads row.</p>
-        </div>
-        {!creatingRead && <Button onClick={() => setCreatingRead(true)}>+ New Read</Button>}
-      </div>
-      {creatingRead && (
-        <ReadFormPanel initial={emptyRead()} categories={categories} onSave={(f) => createRead.mutate(f)} onCancel={() => setCreatingRead(false)} loading={createRead.isPending} />
-      )}
-      {readsLoading ? (
-        <Card><p className="text-sm text-slate-400">Loading reads…</p></Card>
-      ) : reads.length === 0 ? (
-        <Card><p className="text-sm text-slate-400">No reads yet — the app shows placeholder cards until you add some.</p></Card>
-      ) : (
-        <div className="space-y-3">
-          {reads.map((r) => (
-            <ReadCard key={r.id} read={r} categories={categories} onDeleted={() => void qc.invalidateQueries({ queryKey: ["glow-reads"] })} />
-          ))}
-        </div>
-      )}
-
-      {/* ── 3. Shorts & Quick Tips ── */}
-      <div className="flex items-center justify-between pt-2">
-        <div>
-          <h2 className="text-base font-bold text-slate-700 dark:text-slate-200">3 · Shorts & Quick Tips</h2>
-          <p className="text-xs text-slate-400">
-            Short video tiles on the Glow screen, and everything on the &quot;View All&quot; hub.
-            Use each short&apos;s <strong>Placement</strong> checkboxes to control the hub&apos;s
-            Featured card, Trending row and Quick Tips row.
-          </p>
-          {shorts.filter((s) => s.isFeatured).length > 1 && (
-            <p className="mt-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
-              ⚠ {shorts.filter((s) => s.isFeatured).length} shorts are marked Featured — the app
-              shows only the first, so the others will not appear as the hero card.
+        <TabsContent value="categories" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              The row of round category tiles near the top of the Glow screen.
             </p>
+            <Button onClick={() => setEditing({ kind: "category", item: null })}>
+              + New category
+            </Button>
+          </div>
+          {categoriesLoading ? (
+            <TableSkeleton rows={5} />
+          ) : (
+            <DataTable
+              columns={categoryCols}
+              data={categories}
+              manualSorting={false}
+              getRowId={(r) => r.id}
+              minWidth={720}
+              emptyState={
+                <EmptyState
+                  title="No categories yet"
+                  description="The app shows its built-in defaults until you add some."
+                  action={
+                    <Button size="sm" onClick={() => setEditing({ kind: "category", item: null })}>
+                      + New category
+                    </Button>
+                  }
+                />
+              }
+            />
           )}
-        </div>
-        {!creatingShort && <Button onClick={() => setCreatingShort(true)}>+ New Short</Button>}
-      </div>
-      {creatingShort && (
-        <ShortFormPanel initial={emptyShort()} categories={categories} onSave={(f) => createShort.mutate(f)} onCancel={() => setCreatingShort(false)} loading={createShort.isPending} />
-      )}
-      {shortsLoading ? (
-        <Card><p className="text-sm text-slate-400">Loading shorts…</p></Card>
-      ) : shorts.length === 0 ? (
-        <Card><p className="text-sm text-slate-400">No shorts yet — the app shows placeholder tiles until you add some.</p></Card>
-      ) : (
-        <div className="space-y-3">
-          {shorts.map((s) => (
-            <ShortCard key={s.id} short={s} categories={categories} onDeleted={() => void qc.invalidateQueries({ queryKey: ["glow-shorts"] })} />
-          ))}
-        </div>
-      )}
+        </TabsContent>
+
+        <TabsContent value="reads" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs text-muted-foreground">
+              Article cards in the Glow Reads row, and everything on its View All hub.
+            </p>
+            <Button onClick={() => setEditing({ kind: "read", item: null })}>+ New read</Button>
+          </div>
+          {readsLoading ? (
+            <TableSkeleton rows={5} />
+          ) : (
+            <DataTable
+              columns={readCols}
+              data={reads}
+              manualSorting={false}
+              getRowId={(r) => r.id}
+              minWidth={820}
+              emptyState={
+                <EmptyState
+                  title="No reads yet"
+                  description="The app shows placeholder cards until you add some."
+                  action={
+                    <Button size="sm" onClick={() => setEditing({ kind: "read", item: null })}>
+                      + New read
+                    </Button>
+                  }
+                />
+              }
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="shorts" className="space-y-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground">
+                Short video tiles on the Glow screen, and everything on the View All hub. Use each
+                short&apos;s <strong>Placement</strong> checkboxes to control the hub&apos;s
+                Featured card, Trending row and Quick Tips row.
+              </p>
+              {featuredCount > 1 && (
+                <p className="mt-1 text-xs font-semibold text-warning">
+                  {featuredCount} shorts are marked Featured &mdash; the app shows only the first,
+                  so the others will not appear as the hero card.
+                </p>
+              )}
+            </div>
+            <Button onClick={() => setEditing({ kind: "short", item: null })}>+ New short</Button>
+          </div>
+          {shortsLoading ? (
+            <TableSkeleton rows={5} />
+          ) : (
+            <DataTable
+              columns={shortCols}
+              data={shorts}
+              manualSorting={false}
+              getRowId={(r) => r.id}
+              minWidth={860}
+              emptyState={
+                <EmptyState
+                  title="No shorts yet"
+                  description="The app shows placeholder tiles until you add some."
+                  action={
+                    <Button size="sm" onClick={() => setEditing({ kind: "short", item: null })}>
+                      + New short
+                    </Button>
+                  }
+                />
+              }
+            />
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
