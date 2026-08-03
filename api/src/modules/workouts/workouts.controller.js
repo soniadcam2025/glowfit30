@@ -80,6 +80,17 @@ export async function createDay(req, res, next) {
   }
 }
 
+export async function updateDay(req, res, next) {
+  try {
+    const day = await svc.updateDay(req.params.dayId, req.body);
+    await logAdminAction(req.user.id, 'workout.day.update', { dayId: req.params.dayId });
+    return sendSuccess(res, day, 'Updated');
+  } catch (e) {
+    if (e.code === 'P2025') return sendError(res, 'Not found', 404);
+    next(e);
+  }
+}
+
 export async function removeDay(req, res, next) {
   try {
     await svc.deleteDay(req.params.dayId);

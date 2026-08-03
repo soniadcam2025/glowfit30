@@ -33,6 +33,21 @@ export const workoutService = {
     return data.data;
   },
 
+  async updateDay(
+    dayId: string,
+    payload: Partial<{
+      title: string;
+      focus?: string;
+      imageUrl: string;
+      durationMinutes: number;
+      kcal: number;
+      dayNumber: number;
+    }>,
+  ): Promise<WorkoutDay> {
+    const { data } = await api.patch<ApiResponse<WorkoutDay>>(`/workouts/days/${dayId}`, payload);
+    return data.data;
+  },
+
   async deleteDay(dayId: string): Promise<void> {
     await api.delete(`/workouts/days/${dayId}`);
   },

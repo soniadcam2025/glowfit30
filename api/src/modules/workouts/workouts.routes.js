@@ -27,6 +27,9 @@ router.delete('/:id', ...adminOnly, validateParams(idParamSchema), ctrl.remove);
 // DELETE /workouts/days/:dayId         → remove a day (admin)
 router.get('/:id/days',        verifyToken, validateParams(idParamSchema), ctrl.listDays);
 router.post('/:id/days',       ...adminOnly, validateParams(idParamSchema), validateBody(createDaySchema), ctrl.createDay);
+// Days were create/delete only until 2026-08-03; editing one meant deleting and
+// re-adding it, which also destroyed its exercises.
+router.patch('/days/:dayId',   ...adminOnly, validateParams(dayIdParamSchema), validateBody(createDaySchema.partial()), ctrl.updateDay);
 router.delete('/days/:dayId',  ...adminOnly, validateParams(dayIdParamSchema), ctrl.removeDay);
 
 // ── Exercises ─────────────────────────────────────────────────────────────────

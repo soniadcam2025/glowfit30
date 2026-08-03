@@ -63,6 +63,10 @@ export function createDay(workoutId, data) {
   return prisma.workoutDay.create({ data: { ...data, workoutId } });
 }
 
+export function updateDay(dayId, data) {
+  return prisma.workoutDay.update({ where: { id: dayId }, data });
+}
+
 export async function deleteDay(dayId) {
   const day = await prisma.workoutDay.findUnique({
     where: { id: dayId },

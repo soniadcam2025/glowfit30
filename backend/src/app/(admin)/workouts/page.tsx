@@ -1,434 +1,984 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { ColumnDef } from "@tanstack/react-table";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { toast } from "sonner";
+import { ChevronRight, Dumbbell, Pencil, Trash2 } from "lucide-react";
+import { workoutService } from "@/services/workout.service";
+import type { Exercise, Workout, WorkoutDay } from "@/types";
 import { PageHeader } from "@/components/common/page-header";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { ConfirmModal } from "@/components/ui/modal";
+import { DataTable } from "@/components/common/data-table";
+import { EmptyState, TableSkeleton } from "@/components/common/state";
 import { ImageUploadField } from "@/components/common/image-upload-field";
 import { VideoUploadField } from "@/components/common/video-upload-field";
-import { workoutService } from "@/services/workout.service";
-import type { Workout, WorkoutDay, Exercise } from "@/types";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { ConfirmModal } from "@/components/ui/modal";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+
+/**
+ * Workout management as three drill-down CRUD tables:
+ *
+ *   Workouts  ->  Days (of one workout)  ->  Exercises (of one day)
+ *
+ * Every create and edit happens in a modal with Zod validation, replacing the
+ * previous design where each level was an always-visible inline form nested in
+ * expanding rows. Numeric fields are now range-checked — sets, reps and kcal
+ * were parseInt'd with no bounds, so a typo like 999999 saved silently.
+ */
 
 const GOALS = ["Loss weight", "Lift & tone", "Lose belly fat", "Build muscles"];
 const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
-// ─── Workout Form ─────────────────────────────────────────────────────────────
+const SELECT_CLS =
+  "focus-ring h-9 w-full rounded-lg border border-input bg-surface px-3 text-sm text-foreground";
 
-type WorkoutForm = { title: string; level: string; duration: string; goal: string; description: string };
+function levelTone(level?: string | null) {
+  if (level === "Beginner") return "success" as const;
+  if (level === "Intermediate") return "warning" as const;
+  if (level === "Advanced") return "primary" as const;
+  return "default" as const;
+}
 
-const emptyWorkout = (): WorkoutForm => ({ title: "", level: "Beginner", duration: "30", goal: GOALS[0], description: "" });
+// ─── Schemas ──────────────────────────────────────────────────────────────────
 
-function WorkoutFormPanel({ initial, onSave, onCancel, loading }: {
-  initial: WorkoutForm;
-  onSave: (f: WorkoutForm) => void;
-  onCancel: () => void;
-  loading?: boolean;
+const workoutSchema = z.object({
+  title: z.string().min(1, "Title is required").max(300),
+  level: z.string().min(1),
+  goal: z.string().min(1),
+  duration: z.coerce
+    .number({ message: "Enter a number" })
+    .int()
+    .min(1, "At least 1 day")
+    .max(365, "365 days maximum"),
+  description: z.string().max(1000).optional().or(z.literal("")),
+});
+type WorkoutValues = z.input<typeof workoutSchema>;
+
+const daySchema = z.object({
+  title: z.string().min(1, "Title is required").max(300),
+  focus: z.string().max(200).optional().or(z.literal("")),
+  imageUrl: z.string().url("A day image is required"),
+  durationMinutes: z.coerce
+    .number({ message: "Enter a number" })
+    .int()
+    .min(1, "At least 1 minute")
+    .max(600, "600 minutes maximum"),
+  kcal: z.coerce
+    .number({ message: "Enter a number" })
+    .int()
+    .min(1, "At least 1 kcal")
+    .max(10000, "10000 kcal maximum"),
+});
+type DayValues = z.input<typeof daySchema>;
+
+const exerciseSchema = z.object({
+  name: z.string().min(1, "Name is required").max(300),
+  sets: z.coerce.number().int().min(1).max(50).optional(),
+  reps: z.coerce.number().int().min(1).max(500).optional(),
+  duration: z.coerce.number().int().min(1).max(3600).optional(),
+  rest: z.coerce.number().int().min(0).max(600).optional(),
+  imageUrl: z.string().url("An exercise image is required"),
+  videoUrl: z.string().url("An MP4 video is required"),
+});
+type ExerciseValues = z.input<typeof exerciseSchema>;
+
+// ─── Workout dialog ───────────────────────────────────────────────────────────
+
+function WorkoutDialog({
+  open,
+  onClose,
+  editing,
+}: {
+  open: boolean;
+  onClose: () => void;
+  editing: Workout | null;
 }) {
-  const [f, setF] = useState(initial);
-  const set = (k: keyof WorkoutForm, v: string) => setF((p) => ({ ...p, [k]: v }));
-
-  return (
-    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-500">Title *</label>
-          <Input value={f.title} onChange={(e) => set("title", e.target.value)} placeholder="Full Body Fat Burn" />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-500">Level</label>
-          <select
-            value={f.level}
-            onChange={(e) => set("level", e.target.value)}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            {LEVELS.map((l) => <option key={l}>{l}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-500">Goal</label>
-          <select
-            value={f.goal}
-            onChange={(e) => set("goal", e.target.value)}
-            className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-950"
-          >
-            {GOALS.map((g) => <option key={g}>{g}</option>)}
-          </select>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs font-semibold text-slate-500">Duration (days)</label>
-          <Input type="number" value={f.duration} onChange={(e) => set("duration", e.target.value)} placeholder="30" />
-        </div>
-        <div className="space-y-1 sm:col-span-2">
-          <label className="text-xs font-semibold text-slate-500">Description</label>
-          <Input value={f.description} onChange={(e) => set("description", e.target.value)} placeholder="Short description..." />
-        </div>
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button variant="ghost" onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onSave(f)} disabled={!f.title.trim() || loading}>
-          {loading ? "Saving…" : "Save Workout"}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ─── Exercise Row ──────────────────────────────────────────────────────────────
-
-function ExerciseRow({ ex, onDelete }: { ex: Exercise; onDelete: () => void }) {
-  const thumb = ex.imageUrl || ex.gifUrl;
-  return (
-    <div className="flex items-center gap-3 rounded-lg border border-slate-100 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900">
-      <span className="w-5 text-center text-xs text-slate-400">{ex.order + 1}</span>
-      {thumb && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={thumb} alt="" className="h-8 w-8 shrink-0 rounded-md object-cover" />
-      )}
-      <span className="flex-1 font-medium text-slate-800 dark:text-slate-100">{ex.name}</span>
-      {ex.videoUrl && (
-        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-          🎬 Video
-        </span>
-      )}
-      {ex.sets && <span className="text-xs text-slate-500">{ex.sets}×{ex.reps ?? "—"} reps</span>}
-      {ex.duration && <span className="text-xs text-slate-500">{ex.duration}s</span>}
-      {ex.rest && <span className="text-xs text-slate-400">rest {ex.rest}s</span>}
-      <button onClick={onDelete} className="text-rose-400 hover:text-rose-600 text-xs">✕</button>
-    </div>
-  );
-}
-
-// ─── Add Exercise Form ─────────────────────────────────────────────────────────
-
-type ExForm = { name: string; sets: string; reps: string; duration: string; rest: string; imageUrl: string; videoUrl: string };
-const emptyEx = (): ExForm => ({ name: "", sets: "3", reps: "12", duration: "", rest: "30", imageUrl: "", videoUrl: "" });
-
-function AddExerciseForm({ dayId, order, onAdded }: { dayId: string; order: number; onAdded: () => void }) {
-  const [f, setF] = useState<ExForm>(emptyEx());
-  const [loading, setLoading] = useState(false);
-  const set = (k: keyof ExForm, v: string) => setF((p) => ({ ...p, [k]: v }));
-
-  const canSave = f.name.trim() && f.imageUrl.trim() && f.videoUrl.trim();
-
-  const save = async () => {
-    if (!canSave) return;
-    setLoading(true);
-    try {
-      await workoutService.createExercise(dayId, {
-        name: f.name.trim(),
-        sets: f.sets ? parseInt(f.sets) : undefined,
-        reps: f.reps ? parseInt(f.reps) : undefined,
-        duration: f.duration ? parseInt(f.duration) : undefined,
-        rest: f.rest ? parseInt(f.rest) : undefined,
-        imageUrl: f.imageUrl.trim(),
-        videoUrl: f.videoUrl.trim(),
-        order,
-      });
-      setF(emptyEx());
-      onAdded();
-      toast.success("Exercise added");
-    } catch {
-      toast.error("Failed to add exercise");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-2 rounded-lg border border-dashed border-blue-300 bg-blue-50/50 p-3 dark:border-blue-700 dark:bg-blue-950/20">
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <Input className="sm:col-span-2" value={f.name} onChange={(e) => set("name", e.target.value)} placeholder="Exercise name *" />
-        <Input type="number" value={f.sets} onChange={(e) => set("sets", e.target.value)} placeholder="Sets" />
-        <Input type="number" value={f.reps} onChange={(e) => set("reps", e.target.value)} placeholder="Reps" />
-        <Input type="number" value={f.duration} onChange={(e) => set("duration", e.target.value)} placeholder="Sec (alt)" />
-        <Input type="number" value={f.rest} onChange={(e) => set("rest", e.target.value)} placeholder="Rest sec" />
-      </div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        <ImageUploadField label="Exercise image *" value={f.imageUrl} onChange={(url) => set("imageUrl", url)} folder="exercises" />
-        <VideoUploadField label="Exercise video (MP4) *" value={f.videoUrl} onChange={(url) => set("videoUrl", url)} />
-      </div>
-      <Button className="w-full" onClick={save} disabled={!canSave || loading}>
-        {loading ? "Adding…" : "+ Add Exercise"}
-      </Button>
-    </div>
-  );
-}
-
-// ─── Day Panel ─────────────────────────────────────────────────────────────────
-
-function DayPanel({ day, workoutId, onDeleted }: { day: WorkoutDay; workoutId: string; onDeleted: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-
   const qc = useQueryClient();
-  const exKey = ["exercises", day.id];
-
-  const { data: exercises = [], refetch } = useQuery({
-    queryKey: exKey,
-    queryFn: () => workoutService.getExercises(day.id),
-    enabled: expanded,
+  const form = useForm<WorkoutValues>({
+    resolver: zodResolver(workoutSchema),
+    mode: "onTouched",
+    values: {
+      title: editing?.title ?? "",
+      level: editing?.level ?? LEVELS[0],
+      goal: editing?.goal ?? GOALS[0],
+      duration: editing?.duration ?? 30,
+      description: editing?.description ?? "",
+    },
   });
 
-  const deleteEx = useMutation({
-    mutationFn: (id: string) => workoutService.deleteExercise(id),
-    onSuccess: () => { void qc.invalidateQueries({ queryKey: exKey }); toast.success("Exercise deleted"); },
-    onError: () => toast.error("Failed to delete"),
-  });
-
-  const deleteDay = useMutation({
-    mutationFn: () => workoutService.deleteDay(day.id),
-    onSuccess: () => { onDeleted(); toast.success("Day deleted"); },
-    onError: () => toast.error("Failed to delete day"),
-  });
-
-  return (
-    <>
-      <div className="rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-        <button
-          className="flex w-full items-center gap-3 px-4 py-3 text-left"
-          onClick={() => setExpanded((v) => !v)}
-        >
-          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-pink-100 text-xs font-bold text-pink-600 dark:bg-pink-900/40">
-            {day.dayNumber}
-          </span>
-          {day.imageUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={day.imageUrl} alt="" className="h-8 w-8 rounded-md object-cover" />
-          ) : null}
-          <span className="flex-1 font-medium text-slate-800 dark:text-slate-100">{day.title}</span>
-          {day.focus && <span className="text-xs text-slate-400">{day.focus}</span>}
-          <button
-            className="ml-2 text-rose-400 hover:text-rose-600 text-xs"
-            onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-          >
-            Delete
-          </button>
-          <span className="text-slate-400">{expanded ? "▲" : "▼"}</span>
-        </button>
-
-        {expanded && (
-          <div className="border-t border-slate-100 px-4 py-3 space-y-2 dark:border-slate-700">
-            {exercises.map((ex) => (
-              <ExerciseRow
-                key={ex.id}
-                ex={ex}
-                onDelete={() => deleteEx.mutate(ex.id)}
-              />
-            ))}
-            <AddExerciseForm
-              dayId={day.id}
-              order={exercises.length}
-              onAdded={() => void refetch()}
-            />
-          </div>
-        )}
-      </div>
-
-      <ConfirmModal
-        open={confirmDelete}
-        title="Delete Day?"
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={() => { deleteDay.mutate(); setConfirmDelete(false); }}
-        confirmLabel="Delete"
-      >
-        This will also delete all exercises in Day {day.dayNumber}. This cannot be undone.
-      </ConfirmModal>
-    </>
-  );
-}
-
-// ─── Add Day Form ──────────────────────────────────────────────────────────────
-
-function AddDayForm({ workoutId, nextDay, onAdded }: { workoutId: string; nextDay: number; onAdded: () => void }) {
-  const [title, setTitle] = useState("");
-  const [focus, setFocus] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
-  const [durationMinutes, setDurationMinutes] = useState("30");
-  const [kcal, setKcal] = useState("200");
-  const [loading, setLoading] = useState(false);
-
-  const canSave = title.trim() && imageUrl.trim() && durationMinutes.trim() && kcal.trim();
-
-  const save = async () => {
-    if (!canSave) return;
-    setLoading(true);
-    try {
-      await workoutService.createDay(workoutId, {
-        title: title.trim(),
-        focus: focus.trim() || undefined,
-        imageUrl: imageUrl.trim(),
-        durationMinutes: parseInt(durationMinutes),
-        kcal: parseInt(kcal),
-        dayNumber: nextDay,
-      });
-      setTitle(""); setFocus(""); setImageUrl(""); setDurationMinutes("30"); setKcal("200");
-      onAdded();
-      toast.success(`Day ${nextDay} added`);
-    } catch {
-      toast.error("Failed to add day");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="space-y-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 dark:border-slate-600 dark:bg-slate-800/50">
-      <div className="flex gap-2">
-        <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={`Day ${nextDay} title (e.g. Upper Body)`} />
-        <Input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Focus (optional)" className="max-w-[180px]" />
-        <Button onClick={save} disabled={!canSave || loading}>{loading ? "…" : `+ Day ${nextDay}`}</Button>
-      </div>
-      <div className="flex gap-2">
-        <Input type="number" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} placeholder="Duration (min) *" className="max-w-[160px]" />
-        <Input type="number" value={kcal} onChange={(e) => setKcal(e.target.value)} placeholder="Calories (kcal) *" className="max-w-[160px]" />
-      </div>
-      <ImageUploadField label="Day image *" value={imageUrl} onChange={setImageUrl} folder="exercises" />
-    </div>
-  );
-}
-
-// ─── Workout Row ───────────────────────────────────────────────────────────────
-
-function WorkoutRow({ workout, onDeleted }: { workout: Workout; onDeleted: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState(false);
-  const qc = useQueryClient();
-  const daysKey = ["days", workout.id];
-
-  const { data: days = [], refetch } = useQuery({
-    queryKey: daysKey,
-    queryFn: () => workoutService.getDays(workout.id),
-    enabled: expanded,
-  });
-
-  const deleteWorkout = useMutation({
-    mutationFn: () => workoutService.delete(workout.id),
-    onSuccess: () => { onDeleted(); toast.success("Workout deleted"); },
-    onError: () => toast.error("Failed to delete"),
-  });
-
-  return (
-    <>
-      <Card className="p-0 overflow-hidden">
-        <button
-          className="flex w-full items-center gap-4 px-5 py-4 text-left hover:bg-slate-50 dark:hover:bg-slate-800/50"
-          onClick={() => setExpanded((v) => !v)}
-        >
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-slate-800 dark:text-slate-100">{workout.title}</p>
-            <p className="text-xs text-slate-500 mt-0.5">
-              {workout.level} · {workout.duration} days · {workout.goal ?? "—"}
-            </p>
-          </div>
-          {workout.description && (
-            <p className="hidden text-xs text-slate-400 max-w-xs truncate sm:block">{workout.description}</p>
-          )}
-          <button
-            className="text-xs text-rose-400 hover:text-rose-600 shrink-0"
-            onClick={(e) => { e.stopPropagation(); setConfirmDelete(true); }}
-          >
-            Delete
-          </button>
-          <span className="text-slate-400 text-sm">{expanded ? "▲" : "▼"}</span>
-        </button>
-
-        {expanded && (
-          <div className="border-t border-slate-100 px-5 py-4 space-y-3 dark:border-slate-700">
-            {days.map((d) => (
-              <DayPanel
-                key={d.id}
-                day={d}
-                workoutId={workout.id}
-                onDeleted={() => { void qc.invalidateQueries({ queryKey: daysKey }); }}
-              />
-            ))}
-            <AddDayForm workoutId={workout.id} nextDay={days.length + 1} onAdded={() => void refetch()} />
-          </div>
-        )}
-      </Card>
-
-      <ConfirmModal
-        open={confirmDelete}
-        title="Delete Workout?"
-        onClose={() => setConfirmDelete(false)}
-        onConfirm={() => { deleteWorkout.mutate(); setConfirmDelete(false); }}
-        confirmLabel="Delete"
-      >
-        &quot;{workout.title}&quot; and all its days and exercises will be permanently deleted.
-      </ConfirmModal>
-    </>
-  );
-}
-
-// ─── Page ──────────────────────────────────────────────────────────────────────
-
-export default function WorkoutsPage() {
-  const [creating, setCreating] = useState(false);
-  const qc = useQueryClient();
-
-  const { data: workouts = [], isLoading } = useQuery({
-    queryKey: ["workouts"],
-    queryFn: () => workoutService.list(),
-  });
-
-  const createWorkout = useMutation({
-    mutationFn: (f: WorkoutForm) =>
-      workoutService.create({
-        title: f.title.trim(),
-        level: f.level,
-        duration: parseInt(f.duration) || 30,
-        goal: f.goal,
-        description: f.description.trim() || undefined,
-      }),
+  const save = useMutation({
+    mutationFn: (v: WorkoutValues) => {
+      const payload = workoutSchema.parse(v);
+      return editing
+        ? workoutService.update(editing.id, payload)
+        : workoutService.create(payload as never);
+    },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ["workouts"] });
-      setCreating(false);
-      toast.success("Workout created");
+      toast.success(editing ? "Workout updated" : "Workout created");
+      onClose();
     },
-    onError: () => toast.error("Failed to create workout"),
+    onError: () => toast.error("Could not save the workout"),
   });
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between">
+    <Dialog open={open} onOpenChange={(n) => !n && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit workout" : "New workout"}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-3"
+            onSubmit={form.handleSubmit((v) => save.mutate(v))}
+            noValidate
+          >
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Full Body Fat Burn" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="level"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Level</FormLabel>
+                    <FormControl>
+                      <select {...field} className={SELECT_CLS}>
+                        {LEVELS.map((l) => (
+                          <option key={l}>{l}</option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="goal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Goal</FormLabel>
+                    <FormControl>
+                      <select {...field} className={SELECT_CLS}>
+                        {GOALS.map((g) => (
+                          <option key={g}>{g}</option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="duration"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Duration (days)</FormLabel>
+                  <FormControl>
+                    {/* z.coerce.number() widens the input type to unknown, so the
+                        value is stringified for the DOM. */}
+                    <Input
+                      {...field}
+                      value={String(field.value ?? "")}
+                      type="number"
+                      placeholder="30"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Description</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Short description…" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={save.isPending}>
+                {save.isPending ? "Saving…" : "Save workout"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Day dialog ───────────────────────────────────────────────────────────────
+
+function DayDialog({
+  open,
+  onClose,
+  workoutId,
+  nextDayNumber,
+  editing,
+}: {
+  open: boolean;
+  onClose: () => void;
+  workoutId: string;
+  nextDayNumber: number;
+  editing: WorkoutDay | null;
+}) {
+  const qc = useQueryClient();
+  const form = useForm<DayValues>({
+    resolver: zodResolver(daySchema),
+    mode: "onTouched",
+    values: {
+      title: editing?.title ?? "",
+      focus: editing?.focus ?? "",
+      imageUrl: editing?.imageUrl ?? "",
+      durationMinutes: editing?.durationMinutes ?? 30,
+      kcal: editing?.kcal ?? 200,
+    },
+  });
+
+  const save = useMutation({
+    mutationFn: (v: DayValues) => {
+      const p = daySchema.parse(v);
+      return editing
+        ? workoutService.updateDay(editing.id, { ...p, focus: p.focus || undefined })
+        : workoutService.createDay(workoutId, {
+            ...p,
+            focus: p.focus || undefined,
+            dayNumber: nextDayNumber,
+          });
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["workout-days", workoutId] });
+      toast.success(editing ? "Day updated" : `Day ${nextDayNumber} added`);
+      onClose();
+    },
+    onError: () => toast.error("Could not save the day"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(n) => !n && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>
+            {editing ? `Edit day ${editing.dayNumber}` : `Add day ${nextDayNumber}`}
+          </DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-3"
+            onSubmit={form.handleSubmit((v) => save.mutate(v))}
+            noValidate
+          >
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Upper Body" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="focus"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Focus (optional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Chest & triceps" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="durationMinutes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Duration (minutes) *</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={String(field.value ?? "")} type="number" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="kcal"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Calories (kcal) *</FormLabel>
+                    <FormControl>
+                      <Input {...field} value={String(field.value ?? "")} type="number" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="imageUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <ImageUploadField
+                    label="Day image *"
+                    value={field.value}
+                    onChange={field.onChange}
+                    folder="exercises"
+                  />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={save.isPending}>
+                {save.isPending ? "Saving…" : "Save day"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Exercise dialog ──────────────────────────────────────────────────────────
+
+function ExerciseDialog({
+  open,
+  onClose,
+  dayId,
+  nextOrder,
+  editing,
+}: {
+  open: boolean;
+  onClose: () => void;
+  dayId: string;
+  nextOrder: number;
+  editing: Exercise | null;
+}) {
+  const qc = useQueryClient();
+  const form = useForm<ExerciseValues>({
+    resolver: zodResolver(exerciseSchema),
+    mode: "onTouched",
+    values: {
+      name: editing?.name ?? "",
+      sets: editing?.sets ?? 3,
+      reps: editing?.reps ?? 12,
+      duration: editing?.duration ?? undefined,
+      rest: editing?.rest ?? 30,
+      imageUrl: editing?.imageUrl ?? "",
+      videoUrl: editing?.videoUrl ?? "",
+    },
+  });
+
+  const save = useMutation({
+    mutationFn: (v: ExerciseValues) => {
+      const p = exerciseSchema.parse(v);
+      return editing
+        ? workoutService.updateExercise(editing.id, p)
+        : workoutService.createExercise(dayId, { ...p, order: nextOrder } as never);
+    },
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ["day-exercises", dayId] });
+      toast.success(editing ? "Exercise updated" : "Exercise added");
+      onClose();
+    },
+    onError: () => toast.error("Could not save the exercise"),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={(n) => !n && onClose()}>
+      <DialogContent className="max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{editing ? "Edit exercise" : "Add exercise"}</DialogTitle>
+        </DialogHeader>
+        <Form {...form}>
+          <form
+            className="space-y-3"
+            onSubmit={form.handleSubmit((v) => save.mutate(v))}
+            noValidate
+          >
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Name *</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="Push ups" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+              {(
+                [
+                  ["sets", "Sets"],
+                  ["reps", "Reps"],
+                  ["duration", "Seconds (alt)"],
+                  ["rest", "Rest (sec)"],
+                ] as const
+              ).map(([name, label]) => (
+                <FormField
+                  key={name}
+                  control={form.control}
+                  name={name}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{label}</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={String(field.value ?? "")} type="number" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <FormField
+                control={form.control}
+                name="imageUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <ImageUploadField
+                      label="Image *"
+                      value={field.value}
+                      onChange={field.onChange}
+                      folder="exercises"
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="videoUrl"
+                render={({ field }) => (
+                  <FormItem>
+                    <VideoUploadField
+                      label="Video (MP4) *"
+                      value={field.value}
+                      onChange={field.onChange}
+                    />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={save.isPending}>
+                {save.isPending ? "Saving…" : "Save exercise"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
+type Crumb = { workout?: Workout; day?: WorkoutDay };
+
+export default function WorkoutsPage() {
+  const qc = useQueryClient();
+  const [crumb, setCrumb] = useState<Crumb>({});
+  const [workoutDialog, setWorkoutDialog] = useState<{ open: boolean; editing: Workout | null }>({
+    open: false,
+    editing: null,
+  });
+  const [dayDialog, setDayDialog] = useState<{ open: boolean; editing: WorkoutDay | null }>({
+    open: false,
+    editing: null,
+  });
+  const [exDialog, setExDialog] = useState<{ open: boolean; editing: Exercise | null }>({
+    open: false,
+    editing: null,
+  });
+  const [confirm, setConfirm] = useState<{ label: string; run: () => void } | null>(null);
+
+  const level: "workouts" | "days" | "exercises" = crumb.day
+    ? "exercises"
+    : crumb.workout
+      ? "days"
+      : "workouts";
+
+  const workoutsQ = useQuery({ queryKey: ["workouts"], queryFn: () => workoutService.list() });
+  const daysQ = useQuery({
+    queryKey: ["workout-days", crumb.workout?.id],
+    queryFn: () => workoutService.getDays(crumb.workout!.id),
+    enabled: !!crumb.workout,
+  });
+  const exercisesQ = useQuery({
+    queryKey: ["day-exercises", crumb.day?.id],
+    queryFn: () => workoutService.getExercises(crumb.day!.id),
+    enabled: !!crumb.day,
+  });
+
+  const askDelete = (label: string, run: () => Promise<unknown>, invalidate: unknown[]) =>
+    setConfirm({
+      label,
+      run: () => {
+        void run()
+          .then(() => {
+            void qc.invalidateQueries({ queryKey: invalidate });
+            toast.success(`${label} deleted`);
+          })
+          .catch(() => toast.error(`Could not delete ${label.toLowerCase()}`));
+        setConfirm(null);
+      },
+    });
+
+  const workoutCols = useMemo<ColumnDef<Workout>[]>(
+    () => [
+      {
+        id: "title",
+        accessorKey: "title",
+        header: "Workout",
+        enableHiding: false,
+        cell: ({ row }) => (
+          <button
+            onClick={() => setCrumb({ workout: row.original })}
+            className="flex items-center gap-2 text-left font-medium text-foreground hover:text-primary"
+          >
+            <Dumbbell className="h-4 w-4 shrink-0 text-muted-foreground" />
+            {row.original.title}
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        ),
+      },
+      {
+        id: "level",
+        accessorKey: "level",
+        header: "Level",
+        cell: ({ row }) => (
+          <Badge variant={levelTone(row.original.level)}>{row.original.level}</Badge>
+        ),
+      },
+      { id: "goal", accessorKey: "goal", header: "Goal" },
+      {
+        id: "duration",
+        accessorKey: "duration",
+        header: "Days",
+        cell: ({ row }) => `${row.original.duration} days`,
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Edit workout"
+              onClick={() => setWorkoutDialog({ open: true, editing: row.original })}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Delete workout"
+              className="text-danger"
+              onClick={() =>
+                askDelete("Workout", () => workoutService.delete(row.original.id), ["workouts"])
+              }
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+
+  const dayCols = useMemo<ColumnDef<WorkoutDay>[]>(
+    () => [
+      {
+        id: "dayNumber",
+        accessorKey: "dayNumber",
+        header: "Day",
+        enableHiding: false,
+        cell: ({ row }) => (
+          <button
+            onClick={() => setCrumb((c) => ({ ...c, day: row.original }))}
+            className="flex items-center gap-2 text-left font-medium text-foreground hover:text-primary"
+          >
+            Day {row.original.dayNumber}
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
+        ),
+      },
+      { id: "title", accessorKey: "title", header: "Title" },
+      {
+        id: "focus",
+        accessorKey: "focus",
+        header: "Focus",
+        cell: ({ row }) =>
+          row.original.focus || <span className="text-xs text-muted-foreground">—</span>,
+      },
+      {
+        id: "durationMinutes",
+        accessorKey: "durationMinutes",
+        header: "Duration",
+        cell: ({ row }) => `${row.original.durationMinutes} min`,
+      },
+      {
+        id: "kcal",
+        accessorKey: "kcal",
+        header: "Calories",
+        cell: ({ row }) => `${row.original.kcal} kcal`,
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Edit day"
+              onClick={() => setDayDialog({ open: true, editing: row.original })}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Delete day"
+              className="text-danger"
+              onClick={() =>
+                askDelete("Day", () => workoutService.deleteDay(row.original.id), [
+                  "workout-days",
+                  crumb.workout?.id,
+                ])
+              }
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [crumb.workout?.id],
+  );
+
+  const exerciseCols = useMemo<ColumnDef<Exercise>[]>(
+    () => [
+      {
+        id: "name",
+        accessorKey: "name",
+        header: "Exercise",
+        enableHiding: false,
+        cell: ({ row }) => (
+          <span className="font-medium text-foreground">{row.original.name}</span>
+        ),
+      },
+      {
+        id: "setsReps",
+        header: "Sets × Reps",
+        enableSorting: false,
+        cell: ({ row }) =>
+          row.original.sets || row.original.reps
+            ? `${row.original.sets ?? "—"} × ${row.original.reps ?? "—"}`
+            : "—",
+      },
+      {
+        id: "duration",
+        accessorKey: "duration",
+        header: "Seconds",
+        cell: ({ row }) => row.original.duration ?? "—",
+      },
+      {
+        id: "rest",
+        accessorKey: "rest",
+        header: "Rest",
+        cell: ({ row }) => (row.original.rest != null ? `${row.original.rest}s` : "—"),
+      },
+      {
+        id: "media",
+        header: "Media",
+        enableSorting: false,
+        cell: ({ row }) => (
+          <div className="flex gap-1">
+            {row.original.imageUrl && <Badge variant="outline">Image</Badge>}
+            {row.original.videoUrl && <Badge variant="info">Video</Badge>}
+          </div>
+        ),
+      },
+      {
+        id: "actions",
+        header: "Actions",
+        enableSorting: false,
+        enableHiding: false,
+        cell: ({ row }) => (
+          <div className="flex gap-1.5">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Edit exercise"
+              onClick={() => setExDialog({ open: true, editing: row.original })}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Delete exercise"
+              className="text-danger"
+              onClick={() =>
+                askDelete("Exercise", () => workoutService.deleteExercise(row.original.id), [
+                  "day-exercises",
+                  crumb.day?.id,
+                ])
+              }
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        ),
+      },
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [crumb.day?.id],
+  );
+
+  const days = daysQ.data ?? [];
+  const exercises = exercisesQ.data ?? [];
+  const nextDayNumber = days.length ? Math.max(...days.map((d) => d.dayNumber)) + 1 : 1;
+  const nextOrder = exercises.length ? Math.max(...exercises.map((e) => e.order ?? 0)) + 1 : 0;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <PageHeader
           title="Workout Management"
           description="Build day-by-day workout plans with exercises."
         />
-        {!creating && (
-          <Button onClick={() => setCreating(true)}>+ New Workout</Button>
+        {level === "workouts" && (
+          <Button onClick={() => setWorkoutDialog({ open: true, editing: null })}>
+            + New workout
+          </Button>
+        )}
+        {level === "days" && (
+          <Button onClick={() => setDayDialog({ open: true, editing: null })}>
+            + Add day {nextDayNumber}
+          </Button>
+        )}
+        {level === "exercises" && (
+          <Button onClick={() => setExDialog({ open: true, editing: null })}>
+            + Add exercise
+          </Button>
         )}
       </div>
 
-      {creating && (
-        <WorkoutFormPanel
-          initial={emptyWorkout()}
-          onSave={(f) => createWorkout.mutate(f)}
-          onCancel={() => setCreating(false)}
-          loading={createWorkout.isPending}
+      {/* Drill-down trail. Kept in component state rather than the URL so the
+          topbar breadcrumb stays about routes, not table depth. */}
+      {level !== "workouts" && (
+        <nav aria-label="Workout drill-down" className="flex flex-wrap items-center gap-1 text-sm">
+          <button
+            onClick={() => setCrumb({})}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            Workouts
+          </button>
+          <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+          <button
+            onClick={() => setCrumb({ workout: crumb.workout })}
+            className={
+              level === "days"
+                ? "font-semibold text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            }
+          >
+            {crumb.workout?.title}
+          </button>
+          {crumb.day && (
+            <>
+              <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-semibold text-foreground">Day {crumb.day.dayNumber}</span>
+            </>
+          )}
+        </nav>
+      )}
+
+      {level === "workouts" &&
+        (workoutsQ.isLoading ? (
+          <TableSkeleton />
+        ) : (
+          <DataTable
+            columns={workoutCols}
+            data={workoutsQ.data ?? []}
+            manualSorting={false}
+            getRowId={(r) => r.id}
+            minWidth={760}
+            emptyState={
+              <EmptyState
+                title="No workouts yet"
+                description="Create a plan, then add days and exercises to it."
+                action={
+                  <Button
+                    size="sm"
+                    onClick={() => setWorkoutDialog({ open: true, editing: null })}
+                  >
+                    + New workout
+                  </Button>
+                }
+              />
+            }
+          />
+        ))}
+
+      {level === "days" &&
+        (daysQ.isLoading ? (
+          <TableSkeleton />
+        ) : (
+          <DataTable
+            columns={dayCols}
+            data={days}
+            manualSorting={false}
+            getRowId={(r) => r.id}
+            minWidth={760}
+            emptyState={
+              <EmptyState
+                title="No days yet"
+                description={`"${crumb.workout?.title}" has no days. Add day 1 to get started.`}
+                action={
+                  <Button size="sm" onClick={() => setDayDialog({ open: true, editing: null })}>
+                    + Add day 1
+                  </Button>
+                }
+              />
+            }
+          />
+        ))}
+
+      {level === "exercises" &&
+        (exercisesQ.isLoading ? (
+          <TableSkeleton />
+        ) : (
+          <DataTable
+            columns={exerciseCols}
+            data={exercises}
+            manualSorting={false}
+            getRowId={(r) => r.id}
+            minWidth={760}
+            emptyState={
+              <EmptyState
+                title="No exercises yet"
+                description={`Day ${crumb.day?.dayNumber} has no exercises.`}
+                action={
+                  <Button size="sm" onClick={() => setExDialog({ open: true, editing: null })}>
+                    + Add exercise
+                  </Button>
+                }
+              />
+            }
+          />
+        ))}
+
+      <WorkoutDialog
+        open={workoutDialog.open}
+        editing={workoutDialog.editing}
+        onClose={() => setWorkoutDialog({ open: false, editing: null })}
+      />
+      {crumb.workout && (
+        <DayDialog
+          open={dayDialog.open}
+          editing={dayDialog.editing}
+          workoutId={crumb.workout.id}
+          nextDayNumber={nextDayNumber}
+          onClose={() => setDayDialog({ open: false, editing: null })}
+        />
+      )}
+      {crumb.day && (
+        <ExerciseDialog
+          open={exDialog.open}
+          editing={exDialog.editing}
+          dayId={crumb.day.id}
+          nextOrder={nextOrder}
+          onClose={() => setExDialog({ open: false, editing: null })}
         />
       )}
 
-      {isLoading ? (
-        <Card><p className="text-sm text-slate-400">Loading workouts…</p></Card>
-      ) : workouts.length === 0 ? (
-        <Card><p className="text-sm text-slate-400">No workouts yet. Create your first one above.</p></Card>
-      ) : (
-        <div className="space-y-3">
-          {workouts.map((w) => (
-            <WorkoutRow
-              key={w.id}
-              workout={w}
-              onDeleted={() => void qc.invalidateQueries({ queryKey: ["workouts"] })}
-            />
-          ))}
-        </div>
-      )}
+      <ConfirmModal
+        open={!!confirm}
+        title={`Delete ${confirm?.label.toLowerCase() ?? "item"}?`}
+        onClose={() => setConfirm(null)}
+        onConfirm={() => confirm?.run()}
+        confirmLabel="Delete"
+      >
+        This cannot be undone.
+        {confirm?.label === "Day" && " Its exercises will be deleted too."}
+        {confirm?.label === "Workout" && " Its days and exercises will be deleted too."}
+      </ConfirmModal>
     </div>
   );
 }
