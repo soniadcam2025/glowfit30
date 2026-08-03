@@ -4,7 +4,10 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/home_controller.dart';
+import '../../controllers/water_controller.dart';
 import '../../routes/app_pages.dart';
+import '../streak/streak_goal_screen.dart';
+import '../water/water_tracker_screen.dart';
 import '../workout/workout_plan_screen.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -144,10 +147,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            _buildStatChip('🔥', _c.streak.value.toString(), 'Day Streak'),
+            GestureDetector(
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const StreakGoalScreen()),
+              ),
+              child: _buildStatChip(
+                '🔥',
+                _c.streak.value.toString(),
+                'Day Streak',
+              ),
+            ),
             const SizedBox(width: 8),
-            _buildStatChip('💧', '2.3L',
-                'of ${_c.waterGoalLiters.value.toStringAsFixed(1)}L'),
+            // Water chip opens the tracker. The controller is created lazily
+            // here rather than at app start, so the rest of the app pays
+            // nothing for it until this is first tapped.
+            GestureDetector(
+              onTap: () {
+                if (!Get.isRegistered<WaterController>()) {
+                  Get.put(WaterController(), permanent: true);
+                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const WaterTrackerScreen()),
+                );
+              },
+              child: Obx(() {
+                final water = Get.isRegistered<WaterController>()
+                    ? Get.find<WaterController>().consumedLabel
+                    : '0.0 L';
+                return _buildStatChip(
+                  '💧',
+                  water,
+                  'of ${_c.waterGoalLiters.value.toStringAsFixed(1)}L',
+                );
+              }),
+            ),
           ],
         ));
   }

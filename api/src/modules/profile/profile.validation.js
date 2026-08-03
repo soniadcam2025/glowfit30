@@ -14,4 +14,6 @@ export const patchProfileSchema = z.object({
   pushEnabled:     z.boolean().optional(),
   language:        z.string().optional(),
   appearance:      z.string().optional(),
+  // Target for the home-screen workout day-streak.
+  streakGoalDays:  z.coerce.number().int().min(3).max(365).optional(),
 }).strict();

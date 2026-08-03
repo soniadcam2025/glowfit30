@@ -45,10 +45,40 @@ model User {
   language        String  @default("English") @map("language")
   appearance      String  @default("System") @map("appearance")
 
+  // Hydration reminder settings. Columns on User rather than a separate table
+  // because the relation is strictly 1:1 and `waterGoalLiters` already lives
+  // here — splitting them would mean two round trips for one settings screen.
+  waterReminderEnabled  Boolean @default(true) @map("water_reminder_enabled")
+  waterReminderMinutes  Int     @default(60)   @map("water_reminder_minutes")
+  waterQuietFromHour    Int     @default(22)   @map("water_quiet_from_hour")
+  waterQuietToHour      Int     @default(7)    @map("water_quiet_to_hour")
+  waterSoundEnabled     Boolean @default(true) @map("water_sound_enabled")
+  waterVibrationEnabled Boolean @default(true) @map("water_vibration_enabled")
+  waterSmartMode        Boolean @default(true) @map("water_smart_mode")
+
+  /// Target for the workout day-streak shown on the home screen. Nothing stored
+  /// a target before — the streak was computed but had nothing to count towards.
+  streakGoalDays Int @default(30) @map("streak_goal_days")
+
   adminLogs    AdminLog[]
   progress     Progress[]
+  waterIntake  WaterIntake[]
 
   @@map("users")
+}
+
+/// One logged drink. Individual rows rather than a daily total so entries can be
+/// listed and deleted, and so intake can later be charted by time of day.
+model WaterIntake {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  amountMl Int      @map("amount_ml")
+  loggedAt DateTime @default(now()) @map("logged_at")
+
+  // Every read is "this user's rows for this day", so the index matches.
+  @@index([userId, loggedAt])
+  @@map("water_intake")
 }
 
 model Workout {

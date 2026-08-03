@@ -18,6 +18,7 @@ export async function getProfile(userId) {
       height: true,
       weight: true,
       waterGoalLiters: true,
+      streakGoalDays: true,
       pushEnabled: true,
       language: true,
       appearance: true,
@@ -47,6 +48,7 @@ export async function updateProfile(userId, data) {
   if (data.weight       !== undefined) payload.weight       = data.weight;
   if (data.dob          !== undefined) payload.dob          = new Date(data.dob);
   if (data.waterGoalLiters !== undefined) payload.waterGoalLiters = data.waterGoalLiters;
+  if (data.streakGoalDays !== undefined) payload.streakGoalDays = data.streakGoalDays;
   if (data.pushEnabled     !== undefined) payload.pushEnabled     = data.pushEnabled;
   if (data.language        !== undefined) payload.language       = data.language;
   if (data.appearance      !== undefined) payload.appearance     = data.appearance;
@@ -69,6 +71,7 @@ export async function updateProfile(userId, data) {
       height: true,
       weight: true,
       waterGoalLiters: true,
+      streakGoalDays: true,
       pushEnabled: true,
       language: true,
       appearance: true,

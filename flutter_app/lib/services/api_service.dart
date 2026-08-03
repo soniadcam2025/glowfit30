@@ -212,6 +212,56 @@ class ApiService extends GetxService {
     }
   }
 
+  // ── Water ────────────────────────────────────────────────────────────────────
+
+  /// Everything the tracker screen needs in one call: entries, goal, totals and
+  /// streak. Returns null on failure so the caller can tell "request failed"
+  /// apart from "no water logged today" — an empty list means the latter.
+  Future<Map<String, dynamic>?> getWaterToday() async {
+    try {
+      final r = await _client.get('/water/today');
+      return _data(r) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> addWater(int amountMl) async {
+    try {
+      final r = await _client.post('/water', data: {'amountMl': amountMl});
+      return _data(r) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<bool> deleteWater(String id) async {
+    try {
+      await _client.delete('/water/$id');
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getWaterSettings() async {
+    try {
+      final r = await _client.get('/water/settings');
+      return _data(r) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> updateWaterSettings(Map<String, dynamic> data) async {
+    try {
+      final r = await _client.patch('/water/settings', data: data);
+      return _data(r) as Map<String, dynamic>?;
+    } catch (_) {
+      return null;
+    }
+  }
+
   // ── Diet ─────────────────────────────────────────────────────────────────────
 
   Future<List<dynamic>> getDietPlans() async {

@@ -8,6 +8,8 @@ class HomeController extends GetxController {
 
   // Progress
   final streak       = 0.obs;
+  /// Target the streak counts towards, set on the Day Streak Goal screen.
+  final streakGoalDays = 30.obs;
   final currentDay   = 1.obs;
   final totalDays    = 30.obs;
   final todayKcal    = 0.obs;
@@ -60,6 +62,7 @@ class HomeController extends GetxController {
         final goal = profile['goal'] as String? ?? 'Loss weight';
         goalText(_goalToDisplay(goal));
         waterGoalLiters((profile['waterGoalLiters'] as num?)?.toDouble() ?? 3.0);
+        streakGoalDays((profile['streakGoalDays'] as num?)?.toInt() ?? 30);
       }
 
       if (progress != null) {

@@ -12,6 +12,7 @@ import glowRoutes from '../modules/glow/glow.routes.js';
 import notificationsRoutes from '../modules/notifications/notifications.routes.js';
 import uploadsRoutes from '../modules/uploads/uploads.routes.js';
 import legalRoutes from '../modules/legal/legal.routes.js';
+import waterRoutes from '../modules/water/water.routes.js';
 
 const router = Router();
 
@@ -28,5 +29,6 @@ router.use('/glow', glowRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/uploads', uploadsRoutes);
 router.use('/legal', legalRoutes);
+router.use('/water', waterRoutes);
 
 export default router;
