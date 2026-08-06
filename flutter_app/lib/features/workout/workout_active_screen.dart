@@ -3,6 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/exercise_video_player.dart';
+import '../../models/media.dart';
+import '../../services/media_preloader.dart';
+import '../../widgets/glow_image.dart';
 import 'music_settings_screen.dart';
 import 'workout_rest_screen.dart';
 import 'workout_settings_screen.dart';
@@ -16,12 +19,29 @@ class ActiveExercise {
   final String? videoUrl;
   final int durationSeconds;
 
+  /// Media objects, when the exercise came from an endpoint that returns them.
+  /// [imagePath] and [videoUrl] stay authoritative for anything built from a
+  /// local asset path, which these still are in places.
+  final MediaImage? image;
+  final MediaVideo? video;
+
   const ActiveExercise({
     required this.name,
     required this.imagePath,
     this.videoUrl,
     required this.durationSeconds,
+    this.image,
+    this.video,
   });
+
+  /// Everything worth having on disk before this exercise comes up: the still
+  /// it shows, and the poster its clip opens on. Never the clip itself — that
+  /// is megabytes and the player streams it.
+  Iterable<String?> get preloadUrls => [
+        image?.thumb,
+        image?.medium ?? image?.large ?? (imagePath.startsWith('http') ? imagePath : null),
+        video?.poster,
+      ];
 }
 
 class WorkoutActiveScreen extends StatefulWidget {
@@ -63,8 +83,19 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
     super.dispose();
   }
 
+  /// The next two exercises, fetched while this one plays. See the preloader
+  /// for the Wi-Fi and bandwidth rules.
+  void _preloadUpcoming() {
+    MediaPreloader.instance.warmNext<ActiveExercise>(
+      widget.exercises,
+      _currentIndex,
+      urlsOf: (e) => e.preloadUrls,
+    );
+  }
+
   void _startTimer() {
     _timer?.cancel();
+    _preloadUpcoming();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_isPaused) return;
       if (_secondsLeft > 0) {
@@ -261,7 +292,7 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          _buildExerciseImage(exercise.imagePath, exercise.videoUrl),
+          _buildExerciseImage(exercise),
           _buildProgressBar(),
           SafeArea(
             top: false,
@@ -301,7 +332,10 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
 
   // ─── EXERCISE IMAGE (with overlay controls) ──────────────────────────────
 
-  Widget _buildExerciseImage(String path, String? videoUrl) {
+  Widget _buildExerciseImage(ActiveExercise exercise) {
+    final path = exercise.imagePath;
+    final videoUrl = exercise.videoUrl;
+    final media = exercise.image;
     final isNetworkImage = path.startsWith('http');
 
     return Expanded(
@@ -309,11 +343,11 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
         fit: StackFit.expand,
         children: [
           isNetworkImage
-              ? Image.network(
-                  path,
+              ? GlowImage(
+                  url: path,
+                  media: media,
                   width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _imageFallback(),
+                  error: _imageFallback(),
                 )
               : (path.isEmpty
                   ? _imageFallback()
@@ -324,7 +358,15 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
                       errorBuilder: (_, __, ___) => _imageFallback(),
                     )),
           if (videoUrl != null && videoUrl.isNotEmpty)
-            ExerciseVideoPlayer(videoUrl: videoUrl, playing: !_isPaused),
+            // Keyed to the clip so a rebuild — and this screen rebuilds every
+            // second for the countdown — can never be mistaken for a different
+            // player and tear down a controller that is mid-playback.
+            ExerciseVideoPlayer(
+              key: ValueKey(videoUrl),
+              videoUrl: videoUrl,
+              playing: !_isPaused,
+              media: exercise.video,
+            ),
           SafeArea(
             bottom: false,
             child: Padding(

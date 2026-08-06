@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/media.dart';
+import '../../widgets/glow_image.dart';
 import 'workout_active_screen.dart';
 import 'workout_active_screen_v2.dart';
 
@@ -32,30 +34,53 @@ class WorkoutReadyScreen extends StatefulWidget {
 }
 
 class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
-  late int _secondsLeft;
+  /// Drives the countdown without a `setState`.
+  ///
+  /// Calling `setState` once a second rebuilt this entire screen — a full-bleed
+  /// network image and a 20-sigma `BackdropFilter` that re-samples everything
+  /// beneath it — to change one number. That rebuild is the blinking: the
+  /// backdrop re-composites and the image subtree is reconstructed on every
+  /// tick. Only the 92px circle actually changes, so only it rebuilds now.
+  late final ValueNotifier<int> _secondsLeft;
+
   Timer? _timer;
   bool _started = false;
+
+  /// Wall-clock deadline rather than a counter.
+  ///
+  /// A decrementing counter loses a second every time a tick is dropped, and if
+  /// the device stalls it simply stops where it was. Deriving the remaining
+  /// time from a fixed end time means a stalled countdown catches up and still
+  /// finishes instead of sitting frozen.
+  late final DateTime _endsAt;
 
   @override
   void initState() {
     super.initState();
-    _secondsLeft = widget.countdownSeconds;
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_secondsLeft > 1) {
-        setState(() => _secondsLeft--);
-      } else {
+    _secondsLeft = ValueNotifier(widget.countdownSeconds);
+    _endsAt = DateTime.now().add(Duration(seconds: widget.countdownSeconds));
+
+    // Faster than the display rate so a missed tick costs a fraction of a
+    // second rather than a whole one.
+    _timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      final remaining = _endsAt.difference(DateTime.now()).inMilliseconds;
+      if (remaining <= 0) {
         _start();
+        return;
       }
+      _secondsLeft.value = (remaining / 1000).ceil();
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _secondsLeft.dispose();
     super.dispose();
   }
 
-  double get _progress => 1 - (_secondsLeft / widget.countdownSeconds);
+  double _progressFor(int secondsLeft) =>
+      1 - (secondsLeft / widget.countdownSeconds);
 
   Future<void> _start() async {
     if (_started) return;
@@ -218,8 +243,8 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
   // ─── IMAGE ───────────────────────────────────────────────────────────────────
 
   Widget _buildExerciseImage() {
-    final path =
-        widget.exercises.isNotEmpty ? widget.exercises.first.imagePath : '';
+    final first = widget.exercises.isNotEmpty ? widget.exercises.first : null;
+    final path = first?.imagePath ?? '';
 
     final fallback = Container(
       color: const Color(0xFFFFE8F3),
@@ -231,11 +256,7 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
 
     if (path.isEmpty) return fallback;
     if (path.startsWith('http')) {
-      return Image.network(
-        path,
-        fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => fallback,
-      );
+      return GlowImage(url: path, media: first?.image, error: fallback);
     }
     return Image.asset(
       path,
@@ -264,26 +285,30 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
 
   // ─── COUNTDOWN CIRCLE ────────────────────────────────────────────────────────
 
+  /// The only part of this screen that changes each tick.
   Widget _buildCountdownCircle() {
-    return SizedBox(
-      width: 92,
-      height: 92,
-      child: CustomPaint(
-        painter: _ReadyArcPainter(progress: _progress),
-        child: Center(
-          child: Container(
-            width: 68,
-            height: 68,
-            decoration:
-                const BoxDecoration(color: _pink, shape: BoxShape.circle),
-            child: Center(
-              child: Text(
-                '$_secondsLeft',
-                style: GoogleFonts.poppins(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  color: Colors.white,
-                  height: 1,
+    return ValueListenableBuilder<int>(
+      valueListenable: _secondsLeft,
+      builder: (context, secondsLeft, _) => SizedBox(
+        width: 92,
+        height: 92,
+        child: CustomPaint(
+          painter: _ReadyArcPainter(progress: _progressFor(secondsLeft)),
+          child: Center(
+            child: Container(
+              width: 68,
+              height: 68,
+              decoration:
+                  const BoxDecoration(color: _pink, shape: BoxShape.circle),
+              child: Center(
+                child: Text(
+                  '$secondsLeft',
+                  style: GoogleFonts.poppins(
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.white,
+                    height: 1,
+                  ),
                 ),
               ),
             ),

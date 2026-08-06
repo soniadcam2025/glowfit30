@@ -4,6 +4,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/exercise_video_player.dart';
+import '../../models/media.dart';
+import '../../services/media_preloader.dart';
+import '../../widgets/glow_image.dart';
 import 'music_settings_screen.dart';
 import 'workout_active_screen.dart' show ActiveExercise;
 import 'workout_rest_screen.dart';
@@ -60,8 +63,22 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
     super.dispose();
   }
 
+  /// The next two exercises, fetched while this one plays.
+  ///
+  /// This is the ideal moment for it: the user is committed to a fixed sequence
+  /// and has 30 seconds of nothing to do, so by the time the transition happens
+  /// the media is already on disk. Gated on Wi-Fi inside the preloader.
+  void _preloadUpcoming() {
+    MediaPreloader.instance.warmNext<ActiveExercise>(
+      widget.exercises,
+      _currentIndex,
+      urlsOf: (e) => e.preloadUrls,
+    );
+  }
+
   void _startTimer() {
     _timer?.cancel();
+    _preloadUpcoming();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (_isPaused) return;
       if (_secondsLeft > 0) {
@@ -324,7 +341,7 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
         children: [
           // Full-bleed exercise video/image.
           Positioned.fill(
-            child: _buildExerciseImage(exercise.imagePath, exercise.videoUrl),
+            child: _buildExerciseImage(exercise),
           ),
           // Top: overall workout progress bar + back / more controls.
           Positioned(
@@ -594,18 +611,21 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
 
   // ─── EXERCISE IMAGE (with overlay controls) ──────────────────────────────
 
-  Widget _buildExerciseImage(String path, String? videoUrl) {
+  Widget _buildExerciseImage(ActiveExercise exercise) {
+    final path = exercise.imagePath;
+    final videoUrl = exercise.videoUrl;
+    final media = exercise.image;
     final isNetworkImage = path.startsWith('http');
 
     return Stack(
       fit: StackFit.expand,
       children: [
         isNetworkImage
-            ? Image.network(
-                path,
+            ? GlowImage(
+                url: path,
+                media: media,
                 width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _imageFallback(),
+                error: _imageFallback(),
               )
             : (path.isEmpty
                 ? _imageFallback()
@@ -616,7 +636,14 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
                     errorBuilder: (_, __, ___) => _imageFallback(),
                   )),
         if (videoUrl != null && videoUrl.isNotEmpty)
-          ExerciseVideoPlayer(videoUrl: videoUrl, playing: !_isPaused),
+          // Keyed to the clip: this screen rebuilds once a second for the
+          // countdown, and the player must survive every one of those.
+          ExerciseVideoPlayer(
+            key: ValueKey(videoUrl),
+            videoUrl: videoUrl,
+            playing: !_isPaused,
+            media: exercise.video,
+          ),
       ],
     );
   }
@@ -1217,10 +1244,10 @@ class _PlayerSheet extends StatelessWidget {
                       width: 64,
                       height: 48,
                       child: nextExercise!.imagePath.startsWith('http')
-                          ? Image.network(
-                              nextExercise!.imagePath,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _thumbFallback(),
+                          ? GlowImage(
+                              url: nextExercise!.imagePath,
+                              media: nextExercise!.image,
+                              error: _thumbFallback(),
                             )
                           : (nextExercise!.imagePath.isEmpty
                               ? _thumbFallback()

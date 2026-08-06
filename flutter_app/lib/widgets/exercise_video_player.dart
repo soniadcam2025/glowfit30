@@ -1,85 +1,219 @@
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
+import '../models/media.dart';
+import '../services/media_analytics.dart';
+import '../services/media_downloader.dart';
+import 'glow_image.dart';
+
+/// Lets a player know when its screen has been covered by another route.
+///
+/// Must be registered on the app's navigator (see `main.dart`). Without it the
+/// player has no way to learn that a screen was pushed on top of it — the
+/// widget stays mounted and `build` is never called again, so nothing else in
+/// the framework would tell it.
+final RouteObserver<ModalRoute<void>> videoRouteObserver =
+    RouteObserver<ModalRoute<void>>();
+
 /// Full-bleed looping video player for an exercise demo clip.
-/// Falls back to nothing visible on error — caller should show a
-/// placeholder image/icon behind this widget.
+///
+/// Shows the poster frame until the first video frame is ready. The API returns
+/// one with every clip, and it is what removes the black rectangle that used to
+/// sit there while the player initialised — the still appears from cache almost
+/// immediately, then the video takes over underneath it.
+///
+/// Plays only while its route is on top and the app is in the foreground. A
+/// video decoder left running behind a pushed screen is not merely wasteful:
+/// on a device with software codecs it saturates the CPU, and the starved Dart
+/// isolate stops delivering timer callbacks — which is a countdown on the
+/// screen above freezing mid-count.
 class ExerciseVideoPlayer extends StatefulWidget {
   final String videoUrl;
   final BoxFit fit;
   final bool playing;
+
+  /// Poster still and blurhash, when the API sent a media object.
+  final MediaVideo? media;
 
   const ExerciseVideoPlayer({
     super.key,
     required this.videoUrl,
     this.fit = BoxFit.cover,
     this.playing = true,
+    this.media,
   });
 
   @override
   State<ExerciseVideoPlayer> createState() => _ExerciseVideoPlayerState();
 }
 
-class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer> {
+class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
+    with RouteAware, WidgetsBindingObserver {
   VideoPlayerController? _controller;
   bool _hasError = false;
+
+  /// Set while the player is refilling, so one stall counts once rather than
+  /// once per notification.
+  bool _wasBuffering = false;
+
+  /// Another route is on top of this screen — the rest screen, a settings page,
+  /// a dialog route.
+  bool _covered = false;
+
+  /// The app is in the background.
+  bool _backgrounded = false;
+
+  /// Play only when this screen is the one the user is actually looking at.
+  bool get _shouldPlay => widget.playing && !_covered && !_backgrounded;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initialize(widget.videoUrl);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is ModalRoute<void>) {
+      videoRouteObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void didPushNext() => _syncPlayback(covered: true);
+
+  @override
+  void didPopNext() => _syncPlayback(covered: false);
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _syncPlayback(backgrounded: state != AppLifecycleState.resumed);
+  }
+
+  /// Single place that decides whether the clip runs, so the three independent
+  /// reasons to stop cannot contradict each other.
+  void _syncPlayback({bool? covered, bool? backgrounded}) {
+    if (covered != null) _covered = covered;
+    if (backgrounded != null) _backgrounded = backgrounded;
+
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    if (_shouldPlay) {
+      controller.play();
+    } else {
+      controller.pause();
+    }
   }
 
   @override
   void didUpdateWidget(ExerciseVideoPlayer old) {
     super.didUpdateWidget(old);
     if (old.videoUrl != widget.videoUrl) {
+      _detach();
       _controller?.dispose();
+      _hasError = false;
       _initialize(widget.videoUrl);
       return;
     }
-    final controller = _controller;
-    if (old.playing != widget.playing &&
-        controller != null &&
-        controller.value.isInitialized) {
-      widget.playing ? controller.play() : controller.pause();
-    }
+    if (old.playing != widget.playing) _syncPlayback();
   }
 
   void _initialize(String url) {
-    final controller = VideoPlayerController.networkUrl(Uri.parse(url));
+    // A downloaded copy wins over the network every time: no request, no
+    // buffering, and it works with the phone in aeroplane mode. This is what
+    // makes an offline workout actually play rather than merely be listed.
+    final local = MediaDownloader.instance.fileFor(url);
+    final controller = local != null
+        ? VideoPlayerController.file(local)
+        : VideoPlayerController.networkUrl(Uri.parse(url));
+
+    // Startup delay: from asking for the video to the first frame being ready.
+    // The single number the faststart work exists to move.
+    final timer = MediaTimer();
+
     controller.initialize().then((_) {
       if (!mounted) return;
+      timer.report((ms) => MediaAnalytics.instance.videoStart(ms: ms, url: url));
       controller
         ..setLooping(true)
         ..setVolume(0);
-      if (widget.playing) controller.play();
+      // Not `widget.playing`: by the time a clip finishes opening the screen may
+      // already have been covered, and starting it then is exactly the stall
+      // this class exists to avoid.
+      if (_shouldPlay) controller.play();
+      controller.addListener(_onPlayerTick);
       setState(() {});
     }).catchError((_) {
+      MediaAnalytics.instance.videoStartFailed(url);
       if (mounted) setState(() => _hasError = true);
     });
     _controller = controller;
   }
 
+  /// Counts stalls. A clip that buffers mid-set is the most visible media
+  /// failure in the app, and the one a bitrate or CDN change should fix.
+  void _onPlayerTick() {
+    final controller = _controller;
+    if (controller == null) return;
+    final buffering = controller.value.isBuffering;
+    if (buffering && !_wasBuffering) {
+      MediaAnalytics.instance.buffering(widget.videoUrl);
+    }
+    _wasBuffering = buffering;
+  }
+
+  void _detach() {
+    _controller?.removeListener(_onPlayerTick);
+    _wasBuffering = false;
+  }
+
   @override
   void dispose() {
+    videoRouteObserver.unsubscribe(this);
+    WidgetsBinding.instance.removeObserver(this);
+    _detach();
     _controller?.dispose();
     super.dispose();
+  }
+
+  Widget _poster() {
+    final poster = widget.media?.poster;
+    if (poster == null || poster.isEmpty) return const SizedBox.shrink();
+    return GlowImage(
+      media: MediaImage(
+        thumb: poster,
+        medium: poster,
+        large: poster,
+        blurhash: widget.media?.blurhash,
+      ),
+      fit: widget.fit,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
-    if (_hasError || controller == null || !controller.value.isInitialized) {
-      return const SizedBox.shrink();
-    }
-    return FittedBox(
-      fit: widget.fit,
-      child: SizedBox(
-        width: controller.value.size.width,
-        height: controller.value.size.height,
-        child: VideoPlayer(controller),
-      ),
+    final ready = !_hasError && controller != null && controller.value.isInitialized;
+
+    // The poster stays mounted underneath rather than being swapped out, so the
+    // handover has nothing to flash through.
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        _poster(),
+        if (ready)
+          FittedBox(
+            fit: widget.fit,
+            child: SizedBox(
+              width: controller.value.size.width,
+              height: controller.value.size.height,
+              child: VideoPlayer(controller),
+            ),
+          ),
+      ],
     );
   }
 }

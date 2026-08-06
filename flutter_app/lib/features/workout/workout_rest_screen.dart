@@ -31,45 +31,72 @@ class WorkoutRestScreen extends StatefulWidget {
 }
 
 class _WorkoutRestScreenState extends State<WorkoutRestScreen> {
-  late int _secondsLeft;
+  /// Ticks the countdown without rebuilding the screen.
+  ///
+  /// Only the 220px ring changes each second; the "up next" block and its image
+  /// below it do not, and rebuilding them on every tick is wasted work on the
+  /// one thread that has to stay responsive.
+  late final ValueNotifier<int> _secondsLeft;
+
   late int _totalSeconds;
+
+  /// Wall-clock deadline, not a decrementing counter.
+  ///
+  /// A counter stops wherever it was if the device stalls — which is exactly
+  /// how this screen came to sit frozen at 8 seconds while a video decoder ran
+  /// behind it. Reading the remaining time from a fixed end point means a
+  /// recovered stall catches up and the rest still ends.
+  late DateTime _endsAt;
+
   Timer? _timer;
+  bool _finished = false;
 
   @override
   void initState() {
     super.initState();
-    _secondsLeft = widget.restSeconds;
+    _secondsLeft = ValueNotifier(widget.restSeconds);
     _totalSeconds = widget.restSeconds;
+    _endsAt = DateTime.now().add(Duration(seconds: widget.restSeconds));
     _startTimer();
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    _secondsLeft.dispose();
     super.dispose();
   }
 
   void _startTimer() {
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_secondsLeft > 1) {
-        setState(() => _secondsLeft--);
-      } else {
+    _timer?.cancel();
+    // Sub-second so a dropped tick costs a fraction of a second, not a whole
+    // one, and so recovery from a stall is immediate rather than delayed.
+    _timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      final remaining = _endsAt.difference(DateTime.now()).inMilliseconds;
+      if (remaining <= 0) {
         _done();
+        return;
       }
+      _secondsLeft.value = (remaining / 1000).ceil();
     });
   }
 
-  void _addTime() => setState(() {
-        _secondsLeft += 15;
-        _totalSeconds += 15;
-      });
+  void _addTime() {
+    _endsAt = _endsAt.add(const Duration(seconds: 15));
+    setState(() => _totalSeconds += 15);
+    _secondsLeft.value =
+        (_endsAt.difference(DateTime.now()).inMilliseconds / 1000).ceil();
+  }
 
   void _done() {
+    if (_finished) return;
+    _finished = true;
     _timer?.cancel();
     if (mounted) Navigator.pop(context, true);
   }
 
-  double get _progress => 1 - (_secondsLeft / _totalSeconds);
+  double _progressFor(int secondsLeft) =>
+      _totalSeconds == 0 ? 0 : 1 - (secondsLeft / _totalSeconds);
 
   @override
   Widget build(BuildContext context) {
@@ -126,43 +153,46 @@ class _WorkoutRestScreenState extends State<WorkoutRestScreen> {
 
   Widget _buildTimerCircle() {
     return Center(
-      child: SizedBox(
-        width: 220,
-        height: 220,
-        child: CustomPaint(
-          painter: _RestArcPainter(progress: _progress),
-          child: Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'REST',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: _pink,
-                    letterSpacing: 2,
+      child: ValueListenableBuilder<int>(
+        valueListenable: _secondsLeft,
+        builder: (context, secondsLeft, _) => SizedBox(
+          width: 220,
+          height: 220,
+          child: CustomPaint(
+            painter: _RestArcPainter(progress: _progressFor(secondsLeft)),
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'REST',
+                    style: GoogleFonts.poppins(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _pink,
+                      letterSpacing: 2,
+                    ),
                   ),
-                ),
-                Text(
-                  '$_secondsLeft',
-                  style: GoogleFonts.poppins(
-                    fontSize: 72,
-                    fontWeight: FontWeight.w900,
-                    color: _darkText,
-                    height: 1,
+                  Text(
+                    '$secondsLeft',
+                    style: GoogleFonts.poppins(
+                      fontSize: 72,
+                      fontWeight: FontWeight.w900,
+                      color: _darkText,
+                      height: 1,
+                    ),
                   ),
-                ),
-                Text(
-                  'SECONDS',
-                  style: GoogleFonts.poppins(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[500],
-                    letterSpacing: 1.5,
+                  Text(
+                    'SECONDS',
+                    style: GoogleFonts.poppins(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey[500],
+                      letterSpacing: 1.5,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
