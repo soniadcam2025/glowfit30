@@ -111,6 +111,14 @@ Base: Express 4 + Prisma 6, `api/src`. Every route below is mounted at **both** 
 | POST | `/uploads/` | Image, memory storage, 5MB limit, `image/*` only |
 | POST | `/uploads/video` | Video, 100MB limit, `video/mp4` only — ⚠️ nginx may reject before reaching Express, see deployment docs |
 
+## Media Metrics — `/media-metrics` (new, 2026-08-06)
+| Method | Path | Auth | Notes |
+|---|---|---|---|
+| POST | `/media-metrics/` | Optional | Batched telemetry from the app. Max 200 events/request, own limiter at 30 req/min. Returns **202**. `optionalAuth`, so a signed-out screen can still report. |
+| GET | `/media-metrics/summary?days=N` | Admin | Aggregates for the Media Performance dashboard. `days` 1–90, default 7. |
+
+Event `type` is one of `image_load`, `video_start`, `buffer`, `download_ok`, `download_fail`. Each may carry `ms`, `bytes`, `cacheHit`, `ok`, `url`. Stored URLs are reduced to their path — a query string on a storage URL can carry a signature. Rows are kept 60 days and pruned during ingest (at most hourly), so there is no scheduled job to forget about.
+
 ## Rate Limits section note
 `/legal` is not currently in the auth-specific rate limiter — covered only by the global 400/15min limiter, same as other content modules (`beauty`, `glow`, etc.).
 

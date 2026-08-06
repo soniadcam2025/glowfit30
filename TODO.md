@@ -17,7 +17,28 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 
 ## 🟠 In Progress
 
-*(none — Task 28 completed and pushed 2026-07-26, see Completed note below)*
+### Media system — all 8 phases written, none deployed
+
+All code is on `main` **uncommitted**. Production is still on `5cbe352` and has none of it.
+
+- [x] ~~Phase 1 — Flutter image cache~~ (`GlowImage`, 31 `Image.network` call sites replaced)
+- [x] ~~Phase 2 — Sharp image pipeline~~ (thumb/medium/large WebP + metadata)
+- [x] ~~Phase 3 — Video pipeline~~ (validate, transcode, `+faststart`, poster)
+- [x] ~~Phase 4 — media objects in API responses~~ (additive; the `imageUrl`/`videoUrl` strings are still sent, because removing them would break the live app and admin panel at once)
+- [x] ~~Phase 5 — BlurHash~~
+- [x] ~~Phase 6 — `Cache-Control: public, max-age=31536000, immutable`~~ (verified on-device: pipeline file `validTill` 1 year vs legacy 7 days)
+- [x] ~~Phase 7 — intelligent preloading~~ (verified 2026-08-05: cold 568 ms → 3 ms preloaded; Wi-Fi gate proven both directions)
+- [x] ~~Phase 7b — background downloads + offline playback~~ (2026-08-06, 13 integration tests passing)
+- [x] ~~Phase 8a — media analytics + admin dashboard~~ (2026-08-06)
+- [ ] **Phase 8b — Cloudflare CDN cutover.** Code is written and reversible (DB always stores origin URLs; rewriting happens on the way out). **Blocked on a DNS record**: `media` CNAME → `wrkt1bckt1.blr1.vultrobjects.com`, **proxied / orange cloud**. `MEDIA_CDN_BASE` must stay unset until that resolves — a dead hostname breaks every image in the app. See `docs/MEDIA_CDN_SETUP.md`.
+
+**Before any of this can deploy:**
+
+- [ ] Apply 3 migrations: `20260804180000_add_media_assets`, `20260804190000_add_video_and_blurhash_to_media_assets`, `20260806120000_add_media_events`. **Never run `prisma migrate dev`** — see the schema-drift item below.
+- [ ] Install `sharp`, `ffmpeg-static`, `ffprobe-static`, `blurhash` on the VPS, and confirm it can actually download the ffmpeg binaries during `npm install` (they are fetched at install time, not bundled).
+- [ ] Run `npm run media:backfill -- --apply` on production. Never yet run there — only `--apply --limit 1` locally, against a single row.
+- [ ] Verify the three bug fixes from 2026-08-05 (ready-screen blink, exercise-screen blink, 32s video stalling at ~15s with unresponsive buttons). **Diagnosed by reading code, never reproduced**; they are in both client APKs and still need a real workout session to confirm.
+- [ ] Media Performance dashboard has never rendered real data — the DB tunnel needs an interactive SSH password, so `media_events` has never been written to.
 
 - [x] ~~Finish and commit Task 28~~ — Profile settings sub-screens (Workout/Diet/Notification/App Settings) + `user_preferences` API/DB support, committed in `52e4983` (2026-07-26). Original 28-task plan now 28/28.
 - [x] ~~Add `client-builds/` and `VPS` to root `.gitignore`~~ — done during Repository Maintenance Mode setup (2026-07-26), plus generic APK/ZIP/cert/key patterns added.

@@ -6,6 +6,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-06, Media phases 7–8)
+- **Offline downloads** (`flutter_app/lib/services/media_downloader.dart`) — downloads a day's images, posters and clips to application support so a workout plays with no connection. LRU eviction against a 512 MB budget, 30-day expiry, orphan cleanup, atomic `.part` → rename, and a download/cancel/remove control in the Day Detail app bar. `GlowImage` and `ExerciseVideoPlayer` prefer a downloaded file over the network.
+- **Storage controls in App Settings** — bytes used against the limit, and a Clear action. Media is the only thing this app puts on someone's phone at scale; a figure they cannot find or clear is how an app gets uninstalled.
+- **Media analytics** — `MediaAnalytics` (Flutter) buffers image load time, video startup delay, cache hit/miss, buffer events, download failures and transferred bytes; flushes in batches of 25, every 30s, and on app pause, capped at 200 events. New API module `media-metrics`: `POST /api/media-metrics` (rate-limited, `optionalAuth`) and `GET /api/media-metrics/summary` (admin-only), backed by a new `MediaEvent` model with 60-day retention pruned on ingest.
+- **`optionalAuth` middleware** (`api/src/middleware/auth.js`) — attaches `req.user` when a token is present and proceeds when it is not, for endpoints where identity is useful but a rejection would silently blind the metric.
+- **Admin page: Settings → Media Performance** — medians *and* p95 rather than averages alone, cache hit ratio, average media size, buffer/failure counts, a per-day trend chart, and the assets failing most often.
+- **Migration `20260806120000_add_media_events`** — hand-written, per the standing schema-drift rule.
+
+### Fixed (2026-08-06)
+- **`MediaDownloader.budgetBytes` clamped its floor to 1 MB**, silently substituting a different budget than the one requested so eviction never ran below that. Caught by a new integration test, not by reading. The floor was arbitrary and has been removed — only the ceiling is clamped now, and zero is a coherent instruction meaning "keep nothing".
+
 ### Added (2026-08-03)
 - **`PATCH /workouts/days/:dayId`** — days were create/delete only, so editing one meant deleting and re-adding it, destroying its exercises in the process.
 - **Workouts admin rebuilt as drill-down CRUD tables** (Workouts → Days → Exercises) with every create/edit in a modal and Zod range validation on all numeric fields. Previously three always-visible inline forms with no validation beyond a disabled button, and `sets`/`reps`/`kcal` were `parseInt`'d unbounded.

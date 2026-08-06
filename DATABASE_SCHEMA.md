@@ -5,10 +5,13 @@ PostgreSQL via Prisma (`api/prisma/schema.prisma`), generator `prisma-client-js`
 ## Enum
 `UserRole { super_admin, admin, user }`
 
-## Models (15)
+## Models (18)
 
 | Model | Table | Notes |
 |---|---|---|
+| `WaterIntake` | `water_intakes` | userId→User (cascade), amountMl, loggedAt. Backs the hydration tracker and day-streak goal; was missing from this table until 2026-08-06. |
+| `MediaAsset` | `media_assets` | Media pipeline output. baseKey unique, kind (`image`\|`video`), original/thumb/medium/large URLs + bytes, mime, blurhash, videoUrl, posterUrl, durationSeconds, width/height, legacyUrl unique (traceability for the backfill). Indexed on largeUrl and videoUrl, because a response is resolved by whichever URL the content row happens to hold. **Uncommitted, not deployed.** |
+| `MediaEvent` | `media_events` | Client telemetry: type, ms, bytes, cacheHit, ok, url (path only), platform, appVersion, userId (nullable and unenforced — metrics must survive a deleted account). 60-day retention pruned on ingest. **Uncommitted, not deployed.** |
 | `User` | `users` | email/firebaseUid unique, password nullable (social-only accounts), role, isBlocked, onboarding profile fields (fitnessLevel, goal, dietStyle, targetWeight, focusAreas[], dob, height, weight), waterGoalLiters, pushEnabled, fcmToken, **language** (new), **appearance** (new) |
 | `LegalDocument` | `legal_documents` | title (default "Privacy Policy & Terms"), content (Text), updatedAt — singleton-style, no relations; new 2026-07-26 |
 | `Workout` | `workouts` | title, level, duration, imageUrl, description, goal → `WorkoutDay[]` |
@@ -54,7 +57,15 @@ GlowCategory ──< GlowShort    (categoryId, onDelete: SetNull — real FK, ad
 11. `20260714020000_add_user_preferences` — water_goal_liters, push_enabled
 12. `20260726120000_add_app_settings_language_appearance_legal` — language, appearance on users; new legal_documents table
 13. `20260726150000_add_glow_category_links` — categoryId FK on beauty_posts/glow_shorts → glow_categories; heroImageUrl/topics on glow_categories
-14. `20260726170000_add_glow_content_detail_fields` — resultBadge/chips/sections/isPremium on beauty_posts and glow_shorts; content on glow_shorts (newest)
+14. `20260726170000_add_glow_content_detail_fields` — resultBadge/chips/sections/isPremium on beauty_posts and glow_shorts; content on glow_shorts
+15. `20260802090000_add_glow_short_placement_flags`
+16. `20260803120000_add_water_tracking` — water_intakes
+17. `20260803140000_add_streak_goal`
+18. `20260804180000_add_media_assets` — media_assets ⚠️ **not yet applied to production**
+19. `20260804190000_add_video_and_blurhash_to_media_assets` ⚠️ **not yet applied to production**
+20. `20260806120000_add_media_events` — media_events (newest) ⚠️ **not yet applied to production**
+
+Entries 15–17 were missing from this list until 2026-08-06 — the files were on disk and committed, only the documentation had fallen behind; their applied state was not re-verified when this list was corrected. Entries 18–20 exist on disk and are **uncommitted and unapplied everywhere** — the local DB is reached through an SSH tunnel that needs an interactive password, so they could not be run even locally.
 
 Migrations after `init` use defensive `IF NOT EXISTS`/`DO $$ EXCEPTION` guards — historically mixed `prisma migrate` and `prisma db push` usage across environments.
 
