@@ -14,6 +14,8 @@
     "db:migrate": "prisma migrate deploy",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
+    "media:backfill": "node scripts/backfill-media.mjs",
+    "media:verify": "node scripts/verify-media-headers.mjs",
     "seed:admin": "node scripts/seed-admin.mjs",
     "db:seed": "node scripts/seed.mjs",
     "postinstall": "prisma generate"
@@ -22,18 +24,22 @@
     "@aws-sdk/client-s3": "^3.1073.0",
     "@prisma/client": "^6.19.3",
     "bcryptjs": "^3.0.2",
+    "blurhash": "^2.0.5",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "exceljs": "^4.4.0",
     "express": "^4.21.2",
     "express-rate-limit": "^7.5.0",
+    "ffmpeg-static": "^5.3.0",
+    "ffprobe-static": "^3.1.0",
     "firebase-admin": "^14.0.0",
     "helmet": "^8.0.0",
     "ioredis": "^5.6.0",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.2.0",
     "prisma": "^6.19.3",
+    "sharp": "^0.35.3",
     "zod": "^3.24.2"
   }
 }

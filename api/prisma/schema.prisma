@@ -325,3 +325,100 @@ model LegalDocument {
 
   @@map("legal_documents")
 }
+
+/// One uploaded image and the WebP derivatives generated from it.
+///
+/// Deliberately not a relation to anything. Image urls live in a dozen columns
+/// and inside two Json columns (diet meals, Glow sections), so a foreign key
+/// would have to be added in a dozen places and would still miss the Json ones.
+/// Keyed by url instead: any url can be looked up, and a row with no match is
+/// simply pre-pipeline media that still works as a plain url.
+model MediaAsset {
+  id          String   @id @default(uuid()) @db.Uuid
+  /// Shared `<uuid>/` prefix for every object in the set.
+  baseKey     String   @unique @map("base_key")
+  bucket      String
+  /// `image` or `video`. Decides which half of this row is populated.
+  kind        String   @default("image")
+  /// Untouched upload, kept so the derivatives can be regenerated. Null for
+  /// video when KEEP_ORIGINAL_VIDEO is off — a second copy of every clip is
+  /// the single largest thing in the bucket.
+  originalUrl String?  @map("original_url")
+  originalMime String? @map("original_mime")
+  /// Mime of the delivered file: image/webp, or video/mp4.
+  mime        String?
+
+  /// Blurred placeholder, ~30 chars. For video this is the poster's hash.
+  blurhash    String?
+
+  /// Optimised h264 clip, faststart guaranteed.
+  videoUrl    String?  @map("video_url")
+  /// Still frame, served as WebP so it can appear before the video opens.
+  posterUrl   String?  @map("poster_url")
+  durationSeconds Float? @map("duration_seconds")
+  /// Source pixel dimensions. Lets a client reserve the right space before the
+  /// image arrives, which is what stops a list jumping as it loads.
+  width       Int?
+  height      Int?
+  bytes       Int?
+
+  thumbUrl    String?  @map("thumb_url")
+  thumbBytes  Int?     @map("thumb_bytes")
+  mediumUrl   String?  @map("medium_url")
+  mediumBytes Int?     @map("medium_bytes")
+  largeUrl    String?  @map("large_url")
+  largeBytes  Int?     @map("large_bytes")
+
+  /// Set by the backfill: the pre-pipeline url this set was generated from, so
+  /// old and new objects stay traceable to each other and the migration can be
+  /// re-run or audited without guessing.
+  legacyUrl   String?  @unique @map("legacy_url")
+
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  // Responses are resolved by whichever url the content row happens to hold, so
+  // every url a row can be referenced by needs to be findable.
+  @@index([largeUrl])
+  @@index([videoUrl])
+  @@map("media_assets")
+}
+
+/// One thing the app measured while loading media.
+///
+/// Raw rows rather than counters: the interesting questions turn out to be
+/// distributional ("how slow is the slow tail") rather than average, and an
+/// incrementing counter cannot answer those afterwards. Kept for 60 days and
+/// pruned on ingest, which bounds the table without a scheduled job.
+model MediaEvent {
+  id        String   @id @default(uuid())
+
+  /// image_load | video_start | buffer | download_ok | download_fail
+  type      String
+
+  /// Duration in milliseconds. Set for image_load and video_start.
+  ms        Int?
+  /// Transferred size. Only meaningful on a miss — a cache hit moves no bytes.
+  bytes     Int?
+  /// Whether the file came from disk. Null for events where it makes no sense.
+  cacheHit  Boolean? @map("cache_hit")
+  /// False for a failure. Kept separate from `type` so a failed video_start is
+  /// still counted as a startup attempt.
+  ok        Boolean  @default(true)
+
+  /// Truncated, and only the path — enough to find a specific bad asset without
+  /// storing anything that identifies a person.
+  url       String?  @db.VarChar(500)
+
+  platform   String? @db.VarChar(32)
+  appVersion String? @map("app_version") @db.VarChar(32)
+
+  /// Nullable and unenforced: metrics must still arrive from a signed-out
+  /// screen, and a deleted account should not take its measurements with it.
+  userId    String?  @map("user_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([type, createdAt])
+  @@index([createdAt])
+  @@map("media_events")
+}

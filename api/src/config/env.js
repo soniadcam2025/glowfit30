@@ -39,6 +39,10 @@ const schema = z.object({
   VULTR_S3_SECRET_KEY: z.string().optional(),
   VULTR_S3_BUCKET_EXERCISES: z.string().optional(),
   VULTR_S3_BUCKET_DIET: z.string().optional(),
+  /// "true" keeps the pre-optimisation upload alongside every clip.
+  KEEP_ORIGINAL_VIDEO: z.string().optional(),
+  /// CDN hostname for media, e.g. https://media.glowfit30.com. Unset = bucket.
+  MEDIA_CDN_BASE: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
@@ -70,4 +74,6 @@ export const env = {
   VULTR_S3_SECRET_KEY: p.VULTR_S3_SECRET_KEY,
   VULTR_S3_BUCKET_EXERCISES: p.VULTR_S3_BUCKET_EXERCISES,
   VULTR_S3_BUCKET_DIET: p.VULTR_S3_BUCKET_DIET,
+  KEEP_ORIGINAL_VIDEO: p.KEEP_ORIGINAL_VIDEO,
+  MEDIA_CDN_BASE: p.MEDIA_CDN_BASE,
 };
