@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/api_service.dart';
+import '../../models/media.dart';
+import '../../widgets/glow_image.dart';
 import 'glow_common.dart';
 
 /// "View All" destination for Glow Reads.
@@ -153,7 +155,7 @@ class _GlowReadsHubScreenState extends State<GlowReadsHubScreen> {
     // image stands in — falling back to the brand gradient.
     String? heroImage;
     for (final p in _posts) {
-      final url = (p as Map<String, dynamic>)['imageUrl'] as String?;
+      final url = MediaImage.read(p as Map<String, dynamic>)?.large;
       if (url != null && url.isNotEmpty) {
         heroImage = url;
         break;
@@ -166,11 +168,7 @@ class _GlowReadsHubScreenState extends State<GlowReadsHubScreen> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          if (heroImage != null)
-            Image.network(heroImage, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => _heroFallback())
-          else
-            _heroFallback(),
+          GlowImage(url: heroImage, error: _heroFallback()),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/glow_image.dart';
 import 'app_settings_screen.dart';
 import 'diet_preferences_screen.dart';
 import 'edit_profile_screen.dart';
@@ -262,21 +263,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           BorderSide(color: _pink, width: 1.6)),
                     ),
                     child: ClipOval(
-                      child: (_photoUrl == null || _photoUrl!.isEmpty)
-                          ? Container(
-                              color: const Color(0xFFFFD6E7),
-                              child: const Icon(Icons.person_rounded,
-                                  size: 40, color: _pink),
-                            )
-                          : Image.network(
-                              _photoUrl!,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                color: const Color(0xFFFFD6E7),
-                                child: const Icon(Icons.person_rounded,
-                                    size: 40, color: _pink),
-                              ),
-                            ),
+                      child: GlowImage(
+                        url: _photoUrl,
+                        error: Container(
+                          color: const Color(0xFFFFD6E7),
+                          child: const Icon(Icons.person_rounded,
+                              size: 40, color: _pink),
+                        ),
+                      ),
                     ),
                   ),
                   Positioned(

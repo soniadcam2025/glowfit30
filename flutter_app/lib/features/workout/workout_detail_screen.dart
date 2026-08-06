@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/media.dart';
 import '../../services/api_service.dart';
+import '../../widgets/glow_image.dart';
 import 'workout_active_screen.dart';
 import 'workout_complete_screen.dart';
 import 'workout_ready_screen.dart';
@@ -36,12 +38,16 @@ class DetailExercise {
   final int durationSeconds;
   final String? imageUrl;
   final String? videoUrl;
+  final MediaImage? image;
+  final MediaVideo? video;
 
   const DetailExercise({
     required this.name,
     required this.durationSeconds,
     this.imageUrl,
     this.videoUrl,
+    this.image,
+    this.video,
   });
 
   factory DetailExercise.fromJson(Map<String, dynamic> j) => DetailExercise(
@@ -49,6 +55,8 @@ class DetailExercise {
         durationSeconds: (j['durationSeconds'] as num?)?.toInt() ?? 30,
         imageUrl: j['imageUrl'] as String?,
         videoUrl: j['videoUrl'] as String?,
+        image: MediaImage.read(j),
+        video: MediaVideo.read(j),
       );
 }
 
@@ -158,6 +166,8 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
               imagePath: e.imageUrl ?? '',
               videoUrl: e.videoUrl,
               durationSeconds: e.durationSeconds,
+              image: e.image,
+              video: e.video,
             ))
         .toList();
   }
@@ -326,15 +336,13 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         Positioned(
           right: 0,
           top: 10,
-          child: (heroUrl == null || heroUrl.isEmpty)
-              ? _heroFallback()
-              : Image.network(
-                  heroUrl,
-                  width: 190,
-                  fit: BoxFit.contain,
-                  alignment: Alignment.topRight,
-                  errorBuilder: (_, __, ___) => _heroFallback(),
-                ),
+          child: GlowImage(
+            url: heroUrl,
+            width: 190,
+            fit: BoxFit.contain,
+            alignment: Alignment.topRight,
+            error: _heroFallback(),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 16, 170, 0),
@@ -629,15 +637,13 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
               ),
               child: (e.imageUrl == null || e.imageUrl!.isEmpty)
                   ? null
-                  : ClipRRect(
+                  : GlowImage(
+                      url: e.imageUrl,
+                      media: e.image,
+                      width: 90,
+                      height: 70,
                       borderRadius: BorderRadius.circular(14),
-                      child: Image.network(
-                        e.imageUrl!,
-                        width: 90,
-                        height: 70,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
-                      ),
+                      error: const SizedBox.shrink(),
                     ),
             ),
             if (e.videoUrl != null && e.videoUrl!.isNotEmpty)

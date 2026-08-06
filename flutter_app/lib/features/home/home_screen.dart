@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/home_controller.dart';
 import '../../controllers/water_controller.dart';
 import '../../routes/app_pages.dart';
+import '../../widgets/glow_image.dart';
 import '../streak/streak_goal_screen.dart';
 import '../water/water_tracker_screen.dart';
 import '../workout/workout_plan_screen.dart';
@@ -72,12 +73,11 @@ class _HomeScreenState extends State<HomeScreen> {
                   backgroundColor: const Color(0xFFFFD6E7),
                   child: ClipOval(
                     child: _c.photoUrl.value.isNotEmpty
-                        ? Image.network(
-                            _c.photoUrl.value,
+                        ? GlowImage(
+                            url: _c.photoUrl.value,
                             width: 56,
                             height: 56,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            error: const Icon(
                                 Icons.person,
                                 size: 28,
                                 color: _pink),

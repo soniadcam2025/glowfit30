@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../services/api_service.dart';
+import '../../models/media.dart';
+import '../../widgets/glow_image.dart';
 import 'glow_common.dart';
 
 /// "View All" destination for Shorts & Quick Tips.
@@ -296,7 +298,7 @@ class _GlowShortsHubScreenState extends State<GlowShortsHubScreen> {
   // ─── FEATURED ──────────────────────────────────────────────────────────────
 
   Widget _buildFeaturedCard(Map<String, dynamic> s) {
-    final img = s['imageUrl'] as String?;
+    final img = MediaImage.read(s);
     return GestureDetector(
       onTap: () => openGlowItem(context, s, isVideo: true),
       child: ClipRRect(
@@ -306,12 +308,7 @@ class _GlowShortsHubScreenState extends State<GlowShortsHubScreen> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              (img != null && img.isNotEmpty)
-                  ? Image.network(img,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
-                          Container(color: glowPlaceholder))
-                  : Container(color: glowPlaceholder),
+              GlowImage(media: img, error: Container(color: glowPlaceholder)),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -458,7 +455,7 @@ class _GlowShortsHubScreenState extends State<GlowShortsHubScreen> {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (_, i) {
           final s = items[i];
-          final img = s['imageUrl'] as String?;
+          final img = MediaImage.read(s);
           return GestureDetector(
             onTap: () => openGlowItem(context, s, isVideo: true),
             child: SizedBox(
@@ -468,12 +465,8 @@ class _GlowShortsHubScreenState extends State<GlowShortsHubScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    (img != null && img.isNotEmpty)
-                        ? Image.network(img,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                Container(color: glowPlaceholder))
-                        : Container(color: glowPlaceholder),
+                    GlowImage(
+                        media: img, error: Container(color: glowPlaceholder)),
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -556,7 +549,7 @@ class _GlowShortsHubScreenState extends State<GlowShortsHubScreen> {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (_, i) {
           final s = items[i];
-          final img = s['imageUrl'] as String?;
+          final img = MediaImage.read(s);
           return GestureDetector(
             onTap: () => openGlowItem(context, s, isVideo: true),
             child: SizedBox(
@@ -566,12 +559,8 @@ class _GlowShortsHubScreenState extends State<GlowShortsHubScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    (img != null && img.isNotEmpty)
-                        ? Image.network(img,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                Container(color: glowPlaceholder))
-                        : Container(color: glowPlaceholder),
+                    GlowImage(
+                        media: img, error: Container(color: glowPlaceholder)),
                     Container(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(

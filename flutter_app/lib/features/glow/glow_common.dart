@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../models/media.dart';
+import '../../widgets/glow_image.dart';
 import 'glow_content_detail_screen.dart';
 import 'glow_short_story_screen.dart';
 
@@ -220,7 +222,7 @@ class GlowVideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final img = item['imageUrl'] as String?;
+    final img = MediaImage.read(item);
     return GestureDetector(
       onTap: () => openGlowItem(context, item, isVideo: true),
       child: Column(
@@ -231,14 +233,10 @@ class GlowVideoCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                ClipRRect(
+                GlowImage(
+                  media: img,
                   borderRadius: BorderRadius.circular(16),
-                  child: (img != null && img.isNotEmpty)
-                      ? Image.network(img,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              Container(color: glowPlaceholder))
-                      : Container(color: glowPlaceholder),
+                  error: Container(color: glowPlaceholder),
                 ),
                 Positioned(
                   left: 8,
@@ -296,7 +294,7 @@ class GlowMixedCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isVideo = item['_type'] == 'video';
-    final img = item['imageUrl'] as String?;
+    final img = MediaImage.read(item);
     final meta = isVideo
         ? '${glowDurationMinutes(item['duration'] as String?)} min watch'
         : '${item['minutesRead'] ?? 4} min read';
@@ -311,14 +309,10 @@ class GlowMixedCard extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                ClipRRect(
+                GlowImage(
+                  media: img,
                   borderRadius: BorderRadius.circular(16),
-                  child: (img != null && img.isNotEmpty)
-                      ? Image.network(img,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
-                              Container(color: glowPlaceholder))
-                      : Container(color: glowPlaceholder),
+                  error: Container(color: glowPlaceholder),
                 ),
                 Positioned(
                   left: 8,

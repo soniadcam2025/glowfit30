@@ -40,9 +40,20 @@ dependencies:
 
   # Video Playback
   video_player: ^2.9.2
+  cached_network_image: ^3.4.1
+  flutter_cache_manager: ^3.4.2
+  flutter_blurhash: ^0.9.1
+  connectivity_plus: 6.1.0
+
+  # Offline downloads: a writable directory the OS will not sweep, and a stable
+  # filename per url.
+  path_provider: ^2.1.4
+  crypto: ^3.0.5
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
   flutter_lints: ^5.0.0
 

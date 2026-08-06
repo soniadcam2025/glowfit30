@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
+import '../../models/media.dart';
+import '../../widgets/glow_image.dart';
 import 'glow_content_detail_screen.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -81,7 +83,8 @@ class _GlowCategoryDetailScreenState extends State<GlowCategoryDetailScreen> {
 
   String get _title => (_category?['title'] as String?) ?? widget.fallbackTitle;
   String get _subtitle => (_category?['subtitle'] as String?) ?? widget.fallbackSubtitle;
-  String? get _heroImageUrl => _category?['heroImageUrl'] as String?;
+  MediaImage? get _heroImage =>
+      MediaImage.read(_category, object: 'heroImage', url: 'heroImageUrl');
   int get _videosCount => (_category?['shortsCount'] as num?)?.toInt() ?? _shorts.length;
   int get _postsCount => (_category?['postsCount'] as num?)?.toInt() ?? _posts.length;
   List<Map<String, dynamic>> get _topics =>
@@ -153,13 +156,7 @@ class _GlowCategoryDetailScreenState extends State<GlowCategoryDetailScreen> {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          _heroImageUrl != null
-              ? Image.network(
-                  _heroImageUrl!,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _heroFallback(),
-                )
-              : _heroFallback(),
+          GlowImage(media: _heroImage, error: _heroFallback()),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -381,12 +378,10 @@ class _GlowCategoryDetailScreenState extends State<GlowCategoryDetailScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    ClipRRect(
+                    GlowImage(
+                      media: MediaImage.read(s),
                       borderRadius: BorderRadius.circular(16),
-                      child: (s['imageUrl'] as String?) != null
-                          ? Image.network(s['imageUrl'] as String, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(color: const Color(0xFFFFD6E7)))
-                          : Container(color: const Color(0xFFFFD6E7)),
+                      error: Container(color: const Color(0xFFFFD6E7)),
                     ),
                     Positioned(
                       left: 8,
@@ -461,12 +456,10 @@ class _GlowCategoryDetailScreenState extends State<GlowCategoryDetailScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    ClipRRect(
+                    GlowImage(
+                      media: MediaImage.read(item),
                       borderRadius: BorderRadius.circular(16),
-                      child: (item['imageUrl'] as String?) != null
-                          ? Image.network(item['imageUrl'] as String, fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(color: const Color(0xFFFFD6E7)))
-                          : Container(color: const Color(0xFFFFD6E7)),
+                      error: Container(color: const Color(0xFFFFD6E7)),
                     ),
                     Positioned(
                       left: 8,

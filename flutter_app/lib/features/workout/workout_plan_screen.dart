@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/workout_controller.dart';
+import '../../widgets/glow_image.dart';
 import 'workout_day_detail_screen.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -315,18 +316,12 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
         color: isLocked ? Colors.grey[100] : const Color(0xFFFFE0EC),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: (imageUrl == null || imageUrl.isEmpty)
-          ? Icon(Icons.fitness_center, size: 28,
-              color: isLocked ? Colors.grey[300] : _pink)
-          : ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Icon(Icons.fitness_center, size: 28,
-                    color: isLocked ? Colors.grey[300] : _pink),
-              ),
-            ),
+      child: GlowImage(
+        url: imageUrl,
+        borderRadius: BorderRadius.circular(10),
+        error: Icon(Icons.fitness_center, size: 28,
+            color: isLocked ? Colors.grey[300] : _pink),
+      ),
     );
   }
 

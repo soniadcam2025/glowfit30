@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
+import '../../widgets/glow_image.dart';
 import 'workout_category_screen.dart';
 import 'workout_detail_screen.dart';
 
@@ -372,11 +373,7 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => _heroFallbackBg(),
                   )
-                : Image.network(
-                    heroImageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _heroFallbackBg(),
-                  ),
+                : GlowImage(url: heroImageUrl, error: _heroFallbackBg()),
             Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -594,15 +591,13 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
           : tagline,
       background: background,
       titleColor: titleColor,
-      image: (cardImageUrl != null && cardImageUrl.isNotEmpty)
-          ? Image.network(
-              cardImageUrl,
-              width: 130,
-              fit: BoxFit.contain,
-              alignment: Alignment.bottomRight,
-              errorBuilder: (_, __, ___) => fallbackImage(),
-            )
-          : fallbackImage(),
+      image: GlowImage(
+        url: cardImageUrl,
+        width: 130,
+        fit: BoxFit.contain,
+        alignment: Alignment.bottomRight,
+        error: fallbackImage(),
+      ),
       onTap: () => _openCategoryByName(
         name,
         fallbackImage: defaultAsset ?? 'assets/images/workout_cat_full_body.png',

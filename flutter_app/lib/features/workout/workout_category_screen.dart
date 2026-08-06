@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
+import '../../widgets/glow_image.dart';
 import 'workout_detail_screen.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -147,12 +148,12 @@ class _WorkoutCategoryScreenState extends State<WorkoutCategoryScreen> {
                       alignment: Alignment.bottomRight,
                       errorBuilder: (_, __, ___) => const SizedBox.shrink(),
                     )
-                  : Image.network(
-                      heroImageUrl,
+                  : GlowImage(
+                      url: heroImageUrl,
                       width: 190,
                       fit: BoxFit.contain,
                       alignment: Alignment.bottomRight,
-                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      error: const SizedBox.shrink(),
                     ),
             ),
             Padding(
@@ -431,10 +432,9 @@ class _WorkoutCategoryScreenState extends State<WorkoutCategoryScreen> {
                       child: const Icon(Icons.fitness_center_rounded,
                           color: Colors.white54, size: 30),
                     )
-                  : Image.network(
-                      imageUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                  : GlowImage(
+                      url: imageUrl,
+                      error: Container(
                         color: const Color(0xFFFFE0EC),
                         child: const Icon(Icons.fitness_center_rounded,
                             color: _pink, size: 30),

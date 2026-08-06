@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/home_controller.dart';
 import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
+import '../../models/media.dart';
+import '../../widgets/glow_image.dart';
 import 'glow_category_detail_screen.dart';
 import 'glow_common.dart';
 import 'glow_content_detail_screen.dart';
@@ -239,12 +241,11 @@ class _GlowScreenState extends State<GlowScreen> {
                   backgroundColor: const Color(0xFFFFD6E7),
                   child: ClipOval(
                     child: _c.photoUrl.value.isNotEmpty
-                        ? Image.network(
-                            _c.photoUrl.value,
+                        ? GlowImage(
+                            url: _c.photoUrl.value,
                             width: 52,
                             height: 52,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            error: const Icon(
                                 Icons.person, size: 26, color: _pink),
                           )
                         : Image.asset(
@@ -706,16 +707,13 @@ class _GlowScreenState extends State<GlowScreen> {
           final read = _apiReads[i] as Map<String, dynamic>;
           final tagColor = _hexColor(read['tagColor'] as String?, const Color(0xFFC4185A));
           final tagBg = _hexColor(read['tagBackground'] as String?, const Color(0xFFFCE4EC));
-          final imageUrl = read['imageUrl'] as String?;
+          final imageUrl = MediaImage.read(read);
           final minutesRead = read['minutesRead'];
           return _readCardRaw(
-            image: (imageUrl != null && imageUrl.isNotEmpty)
-                ? Image.network(
-                    imageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => _readImageFallback(tagBg, tagColor),
-                  )
-                : _readImageFallback(tagBg, tagColor),
+            image: GlowImage(
+              media: imageUrl,
+              error: _readImageFallback(tagBg, tagColor),
+            ),
             tag: (read['tag'] as String?) ?? '',
             tagColor: tagColor,
             tagBg: tagBg,
@@ -961,15 +959,12 @@ class _GlowScreenState extends State<GlowScreen> {
   }
 
   Widget _shortTileFromApi(Map<String, dynamic> s, {bool big = false}) {
-    final imageUrl = s['imageUrl'] as String?;
+    final imageUrl = MediaImage.read(s);
     return _shortTileRaw(
-      image: (imageUrl != null && imageUrl.isNotEmpty)
-          ? Image.network(
-              imageUrl,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _shortImageFallback(),
-            )
-          : _shortImageFallback(),
+      image: GlowImage(
+        media: imageUrl,
+        error: _shortImageFallback(),
+      ),
       duration: (s['duration'] as String?) ?? '',
       title: (s['title'] as String?) ?? '',
       views: (s['views'] as String?) ?? '',

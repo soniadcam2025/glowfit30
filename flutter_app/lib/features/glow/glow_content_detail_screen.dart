@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../models/media.dart';
+import '../../widgets/glow_image.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
 
 class _SectionItem {
-  final String? imageUrl;
+  final MediaImage? imageUrl;
   final String title;
   final String description;
   const _SectionItem({this.imageUrl, required this.title, required this.description});
 
   factory _SectionItem.fromJson(Map<String, dynamic> j) => _SectionItem(
-        imageUrl: j['imageUrl'] as String?,
+        imageUrl: MediaImage.read(j),
         title: (j['title'] as String?) ?? '',
         description: (j['description'] as String?) ?? '',
       );
@@ -83,7 +85,7 @@ class _GlowContentDetailScreenState extends State<GlowContentDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final title = (widget.item['title'] as String?) ?? '';
-    final imageUrl = widget.item['imageUrl'] as String?;
+    final imageUrl = MediaImage.read(widget.item);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -164,17 +166,17 @@ class _GlowContentDetailScreenState extends State<GlowContentDetailScreen> {
 
   // ─── HERO ───────────────────────────────────────────────────────────────────
 
-  Widget _buildHero(String? imageUrl) {
+  Widget _buildHero(MediaImage? imageUrl) {
     return SizedBox(
       height: 230,
       width: double.infinity,
       child: Stack(
         fit: StackFit.expand,
         children: [
-          imageUrl != null
-              ? Image.network(imageUrl, fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(color: const Color(0xFFFFD6E7)))
-              : Container(color: const Color(0xFFFFD6E7)),
+          GlowImage(
+            media: imageUrl,
+            error: Container(color: const Color(0xFFFFD6E7)),
+          ),
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -450,7 +452,7 @@ class _GlowContentDetailScreenState extends State<GlowContentDetailScreen> {
   Widget _buildAccordionCard(String tabKey, _SectionItem item) {
     final id = '$tabKey::${item.title}';
     final expanded = !_collapsed.contains(id);
-    final hasImage = item.imageUrl != null && item.imageUrl!.isNotEmpty;
+    final hasImage = item.imageUrl != null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -473,18 +475,15 @@ class _GlowContentDetailScreenState extends State<GlowContentDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (hasImage) ...[
-              ClipRRect(
+              GlowImage(
+                media: item.imageUrl,
+                width: 96,
+                height: 96,
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  item.imageUrl!,
+                error: Container(
                   width: 96,
                   height: 96,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    width: 96,
-                    height: 96,
-                    color: const Color(0xFFFFD6E7),
-                  ),
+                  color: const Color(0xFFFFD6E7),
                 ),
               ),
               const SizedBox(width: 12),

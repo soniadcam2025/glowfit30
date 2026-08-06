@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:video_player/video_player.dart';
+import '../../models/media.dart';
+import '../../services/media_preloader.dart';
+import '../../widgets/glow_image.dart';
 
 import 'glow_content_detail_screen.dart';
 
@@ -10,13 +13,17 @@ const _pink = Color(0xFFFF136B);
 /// in the admin panel (`{imageUrl, title, description}`), so no schema change
 /// was needed to drive this screen.
 class _Tip {
-  final String? imageUrl;
+  final MediaImage? imageUrl;
   final String? videoUrl;
+
+  /// Poster and dimensions for [videoUrl], when the API sent the object.
+  final MediaVideo? video;
   final String title;
   final String description;
   const _Tip({
     this.imageUrl,
     this.videoUrl,
+    this.video,
     required this.title,
     required this.description,
   });
@@ -24,8 +31,9 @@ class _Tip {
   bool get hasVideo => (videoUrl ?? '').isNotEmpty;
 
   factory _Tip.fromJson(Map<String, dynamic> j) => _Tip(
-        imageUrl: j['imageUrl'] as String?,
+        imageUrl: MediaImage.read(j),
         videoUrl: j['videoUrl'] as String?,
+        video: MediaVideo.read(j),
         title: (j['title'] as String?) ?? '',
         description: (j['description'] as String?) ?? '',
       );
@@ -83,7 +91,21 @@ class _GlowShortStoryScreenState extends State<GlowShortStoryScreen>
   /// Loads whatever the current tip needs and starts its progress segment.
   /// With a clip, the segment runs for the clip's real length so the bar and
   /// the video stay in step; otherwise it falls back to [_slice].
+  /// Images and poster frames for the tips after this one.
+  ///
+  /// A story player is the strongest case for preloading there is: the next
+  /// step is one tap away and always the same one, so fetching it during the
+  /// current step is the difference between an instant advance and a stall.
+  void _preloadUpcoming() {
+    MediaPreloader.instance.warmNext<_Tip>(
+      _tips,
+      _index,
+      urlsOf: (t) => preloadUrlsFor(image: t.imageUrl, video: t.video),
+    );
+  }
+
   Future<void> _startTip() async {
+    _preloadUpcoming();
     final token = ++_initToken;
     final old = _video;
     _video = null;
@@ -151,7 +173,7 @@ class _GlowShortStoryScreenState extends State<GlowShortStoryScreen>
       _Tip(
         title: (widget.item['title'] as String?) ?? '',
         description: content,
-        imageUrl: widget.item['imageUrl'] as String?,
+        imageUrl: MediaImage.read(widget.item),
       ),
     ];
   }
@@ -174,7 +196,7 @@ class _GlowShortStoryScreenState extends State<GlowShortStoryScreen>
 
   String get _title => (widget.item['title'] as String?) ?? '';
   String get _subtitle => (widget.item['content'] as String?) ?? '';
-  String? get _heroImage => widget.item['imageUrl'] as String?;
+  MediaImage? get _heroImage => MediaImage.read(widget.item);
 
   bool get _isPremium => (widget.item['isPremium'] as bool?) ?? false;
 
@@ -362,14 +384,22 @@ class _GlowShortStoryScreenState extends State<GlowShortStoryScreen>
       );
     }
 
-    final tipImage = _tips[_index].imageUrl;
-    final url = (tipImage != null && tipImage.isNotEmpty) ? tipImage : _heroImage;
-    if (url == null || url.isEmpty) return _imageFallback();
-    return Image.network(
-      url,
-      key: ValueKey(url),
-      fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _imageFallback(),
+    // While a clip is still opening, its own poster frame is the closest thing
+    // to what is about to appear — closer than the tip's cover image — so the
+    // handover to video has nothing to jump through.
+    final tip = _tips[_index];
+    final poster = tip.video?.poster;
+
+    return GlowImage(
+      media: (poster != null && poster.isNotEmpty)
+          ? MediaImage(
+              thumb: poster,
+              medium: poster,
+              large: poster,
+              blurhash: tip.video?.blurhash,
+            )
+          : tip.imageUrl ?? _heroImage,
+      error: _imageFallback(),
     );
   }
 
@@ -655,7 +685,7 @@ class _GlowShortStoryScreenState extends State<GlowShortStoryScreen>
     // Thumbnails preview the tips that come after this one.
     final upcoming = _tips
         .skip(_index + 1)
-        .where((t) => (t.imageUrl ?? '').isNotEmpty)
+        .where((t) => t.imageUrl != null)
         .toList();
     final shown = upcoming.take(2).toList();
     final more = upcoming.length - shown.length;
@@ -725,12 +755,11 @@ class _GlowShortStoryScreenState extends State<GlowShortStoryScreen>
             borderRadius: BorderRadius.circular(10),
             child: Stack(
               children: [
-                Image.network(
-                  shown[i].imageUrl!,
+                GlowImage(
+                  media: shown[i].imageUrl,
                   width: 44,
                   height: 44,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
+                  error: Container(
                     width: 44,
                     height: 44,
                     color: Colors.white.withValues(alpha: 0.4),

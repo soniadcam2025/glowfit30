@@ -1,9 +1,19 @@
+import 'media.dart';
+
+/// Workout content.
+///
+/// Each model keeps its raw `imageUrl` string *and* the API's media object.
+/// The string is what most of these screens still read and what older API
+/// responses carry; [image] is present only once an endpoint has been through
+/// the media pipeline. Keeping both means a screen can be moved over one at a
+/// time instead of all at once.
 class WorkoutModel {
   final String id;
   final String title;
   final String level;
   final int duration;
   final String? imageUrl;
+  final MediaImage? image;
   final String? description;
   final String? goal;
 
@@ -13,6 +23,7 @@ class WorkoutModel {
     required this.level,
     required this.duration,
     this.imageUrl,
+    this.image,
     this.description,
     this.goal,
   });
@@ -23,6 +34,7 @@ class WorkoutModel {
         level:       m['level'] as String,
         duration:    (m['duration'] as num).toInt(),
         imageUrl:    m['imageUrl'] as String?,
+        image:       MediaImage.read(m),
         description: m['description'] as String?,
         goal:        m['goal'] as String?,
       );
@@ -35,6 +47,7 @@ class WorkoutDayModel {
   final String title;
   final String? focus;
   final String? imageUrl;
+  final MediaImage? image;
   final int? durationMinutes;
   final int? kcal;
   final int exerciseCount;
@@ -46,6 +59,7 @@ class WorkoutDayModel {
     required this.title,
     this.focus,
     this.imageUrl,
+    this.image,
     this.durationMinutes,
     this.kcal,
     this.exerciseCount = 0,
@@ -58,6 +72,7 @@ class WorkoutDayModel {
         title:           m['title'] as String,
         focus:           m['focus'] as String?,
         imageUrl:        m['imageUrl'] as String?,
+        image:           MediaImage.read(m),
         durationMinutes: (m['durationMinutes'] as num?)?.toInt(),
         kcal:            (m['kcal'] as num?)?.toInt(),
         exerciseCount:   (m['_count']?['exercises'] as num?)?.toInt() ?? 0,
@@ -74,6 +89,13 @@ class ExerciseModel {
   final String? imageUrl;
   final String? gifUrl;
   final String? videoUrl;
+  final MediaImage? image;
+
+  /// Poster frame and dimensions for [videoUrl]. The poster is what lets the
+  /// player show something the instant the exercise appears, instead of a black
+  /// rectangle while the clip opens.
+  final MediaVideo? video;
+
   final int order;
 
   ExerciseModel({
@@ -86,6 +108,8 @@ class ExerciseModel {
     this.imageUrl,
     this.gifUrl,
     this.videoUrl,
+    this.image,
+    this.video,
     this.order = 0,
   });
 
@@ -99,6 +123,8 @@ class ExerciseModel {
         imageUrl: m['imageUrl'] as String?,
         gifUrl:   m['gifUrl'] as String?,
         videoUrl: m['videoUrl'] as String?,
+        image:    MediaImage.read(m),
+        video:    MediaVideo.read(m),
         order:    (m['order'] as num?)?.toInt() ?? 0,
       );
 

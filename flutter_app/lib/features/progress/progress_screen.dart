@@ -7,6 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import '../../routes/app_pages.dart';
 import '../../services/api_service.dart';
+import '../../widgets/glow_image.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -892,10 +893,9 @@ class _ProgressScreenState extends State<ProgressScreen> {
                       child: const Icon(Icons.fitness_center_rounded,
                           color: Colors.white54, size: 24),
                     )
-                  : Image.network(
-                      c.imageUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                  : GlowImage(
+                      url: c.imageUrl,
+                      error: Container(
                         color: const Color(0xFFFFE0EC),
                         child: const Icon(Icons.fitness_center_rounded,
                             color: _pink, size: 24),
