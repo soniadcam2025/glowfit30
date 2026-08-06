@@ -13,6 +13,7 @@ import notificationsRoutes from '../modules/notifications/notifications.routes.j
 import uploadsRoutes from '../modules/uploads/uploads.routes.js';
 import legalRoutes from '../modules/legal/legal.routes.js';
 import waterRoutes from '../modules/water/water.routes.js';
+import mediaMetricsRoutes from '../modules/media-metrics/media-metrics.routes.js';
 
 const router = Router();
 
@@ -30,5 +31,6 @@ router.use('/notifications', notificationsRoutes);
 router.use('/uploads', uploadsRoutes);
 router.use('/legal', legalRoutes);
 router.use('/water', waterRoutes);
+router.use('/media-metrics', mediaMetricsRoutes);
 
 export default router;

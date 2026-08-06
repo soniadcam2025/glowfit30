@@ -51,6 +51,7 @@ export const adminNavItems: AdminNavItem[] = [
       // three levels of nesting in a sidebar is hard to scan and harder to hit.
       { href: "/settings/delete-reset", label: "Delete / Reset", group: "Manage Settings" },
       { href: "/settings/server", label: "Server Setting" },
+      { href: "/settings/media", label: "Media Performance" },
     ],
   },
 ];
@@ -69,6 +70,7 @@ export const routeRoleMap: Record<string, Role[]> = {
   "/settings": ["super_admin"],
   "/settings/delete-reset": ["super_admin"],
   "/settings/server": ["super_admin"],
+  "/settings/media": ["super_admin"],
 };
 
 export const adminRoleBadgeColor: Record<Role, string> = {

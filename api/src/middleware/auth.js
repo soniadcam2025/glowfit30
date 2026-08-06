@@ -43,6 +43,27 @@ export async function verifyToken(req, res, next) {
   }
 }
 
+/**
+ * Attaches `req.user` when a valid token is present and moves on otherwise.
+ *
+ * For endpoints where identity is useful but not required — telemetry from a
+ * screen the user reaches before signing in still needs to arrive, and a
+ * rejected batch would silently blind the metric rather than fail loudly.
+ */
+export async function optionalAuth(req, _res, next) {
+  try {
+    const token = getToken(req);
+    if (!token) return next();
+    const payload = jwt.verify(token, env.JWT_SECRET);
+    if (!payload.sub) return next();
+    const user = await prisma.user.findUnique({ where: { id: payload.sub } });
+    if (user && !user.isBlocked) req.user = pickUser(user);
+  } catch {
+    // An expired or malformed token is simply an anonymous request here.
+  }
+  next();
+}
+
 export function requireRole(...allowed) {
   return (req, res, next) => {
     if (!req.user) return sendError(res, 'Unauthorized', 401);
