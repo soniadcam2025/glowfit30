@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
@@ -121,7 +123,7 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
     if (old.playing != widget.playing) _syncPlayback();
   }
 
-  void _initialize(String url) {
+  Future<void> _initialize(String url) async {
     // A downloaded copy wins over the network every time: no request, no
     // buffering, and it works with the phone in aeroplane mode. This is what
     // makes an offline workout actually play rather than merely be listed.
@@ -129,29 +131,57 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
     final controller = local != null
         ? VideoPlayerController.file(local)
         : VideoPlayerController.networkUrl(Uri.parse(url));
+    _controller = controller;
 
     // Startup delay: from asking for the video to the first frame being ready.
     // The single number the faststart work exists to move.
     final timer = MediaTimer();
 
-    controller.initialize().then((_) {
-      if (!mounted) return;
-      timer.report((ms) => MediaAnalytics.instance.videoStart(ms: ms, url: url));
-      controller
-        ..setLooping(true)
-        ..setVolume(0);
-      // Not `widget.playing`: by the time a clip finishes opening the screen may
-      // already have been covered, and starting it then is exactly the stall
-      // this class exists to avoid.
-      if (_shouldPlay) controller.play();
-      controller.addListener(_onPlayerTick);
-      setState(() {});
-    }).catchError((_) {
+    try {
+      await controller.initialize();
+    } catch (_) {
+      await controller.dispose();
       MediaAnalytics.instance.videoStartFailed(url);
-      if (mounted) setState(() => _hasError = true);
-    });
-    _controller = controller;
+      if (mounted && identical(_controller, controller)) {
+        setState(() => _hasError = true);
+      }
+      return;
+    }
+
+    // Opening a clip is not instant, and this widget may have been disposed or
+    // moved to another exercise while it happened. Releasing the orphan here
+    // rather than leaving it to chance is the whole point: a controller that
+    // finished initialising after its owner went away keeps a hardware decoder
+    // and its graphics buffers checked out. The pool is small — a handful of
+    // leaks and the next decoder can never dequeue a buffer, which deadlocks
+    // playback and takes the UI thread down with it.
+    if (!mounted || !identical(_controller, controller)) {
+      await controller.dispose();
+      return;
+    }
+
+    timer.report((ms) => MediaAnalytics.instance.videoStart(ms: ms, url: url));
+    await controller.setLooping(true);
+    await controller.setVolume(0);
+    if (!mounted || !identical(_controller, controller)) {
+      await controller.dispose();
+      return;
+    }
+
+    // Not `widget.playing`: by the time a clip finishes opening the screen may
+    // already have been covered, and starting it then is exactly the stall this
+    // class exists to avoid.
+    if (_shouldPlay) await controller.play();
+    controller.addListener(_onPlayerTick);
+    if (mounted) setState(() {});
   }
+
+  // Covered and backgrounded pause rather than release. Releasing was tried and
+  // reverted: VideoPlayerController.dispose() runs its platform work on the
+  // Android main thread, which is also where Choreographer drives Flutter's
+  // frames and input dispatch. A slow codec release there stops the app
+  // rendering or responding at all — trading a wasted decoder for a freeze.
+  // The leak fix in _initialize is what actually bounds decoder use.
 
   /// Counts stalls. A clip that buffers mid-set is the most visible media
   /// failure in the app, and the one a bitrate or CDN change should fix.
