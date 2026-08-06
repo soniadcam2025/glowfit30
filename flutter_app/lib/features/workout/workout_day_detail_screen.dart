@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../controllers/workout_controller.dart';
+import '../../models/media.dart';
 import '../../models/workout_model.dart';
+import '../../services/media_downloader.dart';
+import '../../widgets/glow_image.dart';
+import '../../widgets/offline_download_button.dart';
 import 'workout_active_screen.dart';
 import 'workout_complete_screen.dart';
 import 'workout_ready_screen.dart';
@@ -99,6 +103,8 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                 imagePath: e.gifUrl ?? e.imageUrl ?? '',
                 videoUrl: e.videoUrl,
                 durationSeconds: e.durationSeconds,
+                image: e.image,
+                video: e.video,
               ))
           .toList();
     }
@@ -231,9 +237,33 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
               ),
             ]),
           ),
+          // Obx because the exercises arrive after this bar is first built, and
+          // only offered once they have: the fallback list carries no media
+          // objects, so there would be nothing to save.
+          Align(
+            alignment: Alignment.centerRight,
+            child: Obx(() {
+              final urls = _offlineUrls;
+              if (urls.isEmpty) return const SizedBox(width: 38, height: 38);
+              return OfflineDownloadButton(
+                id: widget.dayId ?? 'day-${widget.day}',
+                urls: urls,
+                label: 'Day ${widget.day}',
+              );
+            }),
+          ),
         ],
       ),
     );
+  }
+
+  /// Every file needed to run this day with no connection, the clips included.
+  List<String?> get _offlineUrls {
+    final exercises = _wc?.dayExercises ?? const [];
+    if (exercises.isEmpty) return const [];
+    return [
+      for (final e in exercises) ...offlineUrlsFor(image: e.image, video: e.video),
+    ];
   }
 
   // ─── HERO SECTION ───────────────────────────────────────────────────────────
@@ -482,17 +512,13 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                   color: const Color(0xFFFFE0EC),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: (ex.imageUrl ?? ex.gifUrl) != null
-                    ? ClipRRect(
-                        borderRadius: BorderRadius.circular(12),
-                        child: Image.network(ex.imageUrl ?? ex.gifUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                                Icons.fitness_center,
-                                size: 28,
-                                color: _pink)),
-                      )
-                    : const Icon(Icons.fitness_center, size: 28, color: _pink),
+                child: GlowImage(
+                  url: ex.imageUrl ?? ex.gifUrl,
+                  media: ex.image,
+                  borderRadius: BorderRadius.circular(12),
+                  error: const Icon(Icons.fitness_center,
+                      size: 28, color: _pink),
+                ),
               ),
               if (ex.videoUrl != null)
                 Positioned(

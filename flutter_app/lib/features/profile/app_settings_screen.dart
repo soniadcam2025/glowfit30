@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
+import '../../services/media_downloader.dart';
+import '../../services/media_preloader.dart';
 import 'legal_content_screen.dart';
 
 const _pink = Color(0xFFFF136B);
@@ -23,6 +25,91 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
 
   String _language = _languages.first;
   String _appearance = _appearances.last;
+
+  /// Local, not part of the profile: it describes this device's connection and
+  /// data plan, which has nothing to do with the account. Syncing it would mean
+  /// a choice made on someone's home tablet silently applying to their phone.
+  bool _preloadOnCellular = MediaPreloader.instance.allowOnCellular;
+
+  void _setPreloadOnCellular(bool value) {
+    setState(() => _preloadOnCellular = value);
+    MediaPreloader.instance.allowOnCellular = value;
+  }
+
+  /// Offline downloads are the one thing in this app that takes real space on
+  /// someone's phone, so the amount is stated plainly and removing it is one
+  /// tap away. A storage figure a user cannot find or clear is how an app ends
+  /// up uninstalled.
+  Widget _downloadsSection() {
+    final downloader = MediaDownloader.instance;
+    final used = downloader.usedBytes;
+    final budget = downloader.budgetBytes;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _label('Offline downloads'),
+        Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${MediaDownloader.formatBytes(used)} used'
+                    '${downloader.fileCount > 0 ? ' · ${downloader.fileCount} files' : ''}',
+                    style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: _darkText),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Limit ${MediaDownloader.formatBytes(budget)}. Downloads older '
+                    'than 30 days are removed automatically, and the least used '
+                    'go first when the limit is reached.',
+                    style: GoogleFonts.poppins(
+                        fontSize: 11, color: Colors.grey[500]),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            TextButton(
+              onPressed: used == 0 ? null : _clearDownloads,
+              child: Text(
+                'Clear',
+                style: GoogleFonts.poppins(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: used == 0 ? Colors.grey[400] : _pink,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: budget == 0 ? 0 : (used / budget).clamp(0.0, 1.0),
+            minHeight: 6,
+            backgroundColor: const Color(0xFFF7F0F5),
+            valueColor: const AlwaysStoppedAnimation(_pink),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _clearDownloads() async {
+    await MediaDownloader.instance.clear();
+    if (!mounted) return;
+    setState(() {});
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Downloaded media removed.')),
+    );
+  }
 
   @override
   void initState() {
@@ -145,6 +232,30 @@ class _AppSettingsScreenState extends State<AppSettingsScreen> {
                             style: GoogleFonts.poppins(
                                 fontSize: 11, color: Colors.grey[400]),
                           ),
+                          const SizedBox(height: 26),
+                          _label('Data usage'),
+                          SwitchListTile.adaptive(
+                            contentPadding: EdgeInsets.zero,
+                            activeColor: _pink,
+                            value: _preloadOnCellular,
+                            onChanged: _setPreloadOnCellular,
+                            title: Text(
+                              'Preload on mobile data',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: _darkText),
+                            ),
+                            subtitle: Text(
+                              'The next exercises are downloaded ahead of time so they '
+                              'appear instantly. On by default over Wi-Fi only — turn '
+                              'this on to do it over mobile data too.',
+                              style: GoogleFonts.poppins(
+                                  fontSize: 11, color: Colors.grey[500]),
+                            ),
+                          ),
+                          const SizedBox(height: 26),
+                          _downloadsSection(),
                           const SizedBox(height: 26),
                           _label('More'),
                           _settingsRow(
