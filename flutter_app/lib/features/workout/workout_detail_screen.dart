@@ -165,6 +165,10 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
               name: e.name,
               imagePath: e.imageUrl ?? '',
               videoUrl: e.videoUrl,
+              // No restSeconds: workout-library exercises live in their own
+              // table, which has no rest column — only the plan's exercises do.
+              // ActiveExercise's default stands in, which is what this screen
+              // has always effectively used.
               durationSeconds: e.durationSeconds,
               image: e.image,
               video: e.video,

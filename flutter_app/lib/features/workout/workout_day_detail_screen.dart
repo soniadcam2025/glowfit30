@@ -103,6 +103,7 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
                 imagePath: e.gifUrl ?? e.imageUrl ?? '',
                 videoUrl: e.videoUrl,
                 durationSeconds: e.durationSeconds,
+                restSeconds: e.restSeconds,
                 image: e.image,
                 video: e.video,
               ))

@@ -128,5 +128,20 @@ class ExerciseModel {
         order:    (m['order'] as num?)?.toInt() ?? 0,
       );
 
+  /// What the player counts down for this exercise.
+  ///
+  /// `duration` is required by the API, so anything authored since the move to
+  /// a time-driven player has one. Exercises created before that do not, and
+  /// the column stays nullable rather than being backfilled with a guessed
+  /// number — so estimate here instead: three seconds a rep, or 30 seconds when
+  /// there is nothing at all to go on. An admin opening the exercise replaces
+  /// the estimate with a real value.
   int get durationSeconds => duration ?? (reps != null ? reps! * 3 : 30);
+
+  /// How long to rest after this exercise before the next one.
+  ///
+  /// Zero is a real answer — it means "go straight on" — so this only falls
+  /// back when the value is genuinely absent, which again means a row authored
+  /// before rest was required.
+  int get restSeconds => rest ?? 20;
 }

@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/media.dart';
+import '../../services/audio_cue.dart';
 import '../../widgets/glow_image.dart';
 import 'workout_active_screen.dart';
 import 'workout_active_screen_v2.dart';
@@ -46,6 +47,22 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
   Timer? _timer;
   bool _started = false;
 
+  /// The spoken "three · two · one" runs 2.8s, so starting it the moment the
+  /// display turns 3 lands it on zero.
+  ///
+  /// MP4-containered, not the bare `.aac` these were delivered as: a raw ADTS
+  /// stream carries no duration, and ExoPlayer reported one of them as 1ms —
+  /// which made the cue finish instantly and get disposed before it was
+  /// audible. The container holds the real length.
+  static const String _countdownCue = 'assets/audio/321.m4a';
+  static const String _readyCue = 'assets/audio/readytogo.m4a';
+
+  bool _countdownCuePlayed = false;
+
+  /// The countdown reached zero and the closing cue is playing. Distinct from
+  /// [_started], which means the exercise screen has actually been pushed.
+  bool _outroRunning = false;
+
   /// Wall-clock deadline rather than a counter.
   ///
   /// A decrementing counter loses a second every time a tick is dropped, and if
@@ -65,18 +82,45 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
     _timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
       final remaining = _endsAt.difference(DateTime.now()).inMilliseconds;
       if (remaining <= 0) {
-        _start();
+        unawaited(_runOutro());
         return;
       }
-      _secondsLeft.value = (remaining / 1000).ceil();
+      final left = (remaining / 1000).ceil();
+      _secondsLeft.value = left;
+
+      if (left <= 3 && !_countdownCuePlayed) {
+        _countdownCuePlayed = true;
+        // Not awaited: the countdown keeps running underneath the voice.
+        unawaited(AudioCue.instance.play(_countdownCue));
+      }
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
+    // A cue outliving the screen that started it would talk over the workout.
+    unawaited(AudioCue.instance.stop());
     _secondsLeft.dispose();
     super.dispose();
+  }
+
+  /// Runs when the countdown expires on its own: hold the circle at zero, say
+  /// "ready to go", and only then open the exercise screen.
+  ///
+  /// Skipping ahead does not come through here — that calls [_start] directly,
+  /// which silences the cues. Someone who taps past the countdown has said they
+  /// do not want to wait for it, and a voice they cannot skip would be exactly
+  /// the wait they declined.
+  Future<void> _runOutro() async {
+    if (_outroRunning || _started) return;
+    _outroRunning = true;
+    _timer?.cancel();
+    _secondsLeft.value = 0;
+
+    await AudioCue.instance.play(_readyCue);
+    if (!mounted) return;
+    await _start();
   }
 
   double _progressFor(int secondsLeft) =>
@@ -86,6 +130,12 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
     if (_started) return;
     _started = true;
     _timer?.cancel();
+
+    // Cuts off a cue mid-word when the user skips ahead, which is the point:
+    // they asked not to wait. A no-op when the countdown ran its course, since
+    // the closing cue has already finished by then.
+    await AudioCue.instance.stop();
+    if (!mounted) return;
 
     // Using the Liquid Glass v2 active screen. To switch back to the
     // original design, change WorkoutActiveScreenV2 → WorkoutActiveScreen here.
@@ -113,8 +163,8 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // ── Full-bleed exercise image ────────────────────────────────
-          _buildExerciseImage(),
+          // ── Full-bleed exercise media ────────────────────────────────
+          _buildExerciseMedia(),
 
           // ── Top overlay controls ─────────────────────────────────────
           SafeArea(
@@ -240,7 +290,34 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
     );
   }
 
-  // ─── IMAGE ───────────────────────────────────────────────────────────────────
+  // ─── MEDIA ───────────────────────────────────────────────────────────────────
+
+  /// The first exercise's clip, as its poster frame.
+  ///
+  /// The poster is a still taken from the clip itself, so this shows the
+  /// exercise the user is about to do rather than the day's cover image.
+  ///
+  /// Deliberately an image and not a paused player. Opening the clip here as
+  /// well as on the exercise screen puts two codec instances on one clip, and
+  /// on a device with software codecs that exhausts the graphics buffer pool —
+  /// the decoder then spends tens of seconds failing to dequeue an output
+  /// buffer, which the user sees as the clip playing in bursts. A still costs
+  /// nothing and looks the same.
+  Widget _buildExerciseMedia() {
+    final first = widget.exercises.isNotEmpty ? widget.exercises.first : null;
+    final poster = first?.video?.poster;
+    if (poster == null || poster.isEmpty) return _buildExerciseImage();
+
+    return GlowImage(
+      media: MediaImage(
+        thumb: poster,
+        medium: poster,
+        large: poster,
+        blurhash: first?.video?.blurhash,
+      ),
+      error: _buildExerciseImage(),
+    );
+  }
 
   Widget _buildExerciseImage() {
     final first = widget.exercises.isNotEmpty ? widget.exercises.first : null;

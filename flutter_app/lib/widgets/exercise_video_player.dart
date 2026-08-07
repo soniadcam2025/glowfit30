@@ -17,6 +17,15 @@ import 'glow_image.dart';
 final RouteObserver<ModalRoute<void>> videoRouteObserver =
     RouteObserver<ModalRoute<void>>();
 
+// A previous revision opened the clip on the ready screen too and handed the
+// controller to this screen, to save the cost of opening it twice. It was
+// reverted: two codec instances for one clip exhausted the device's graphics
+// buffer pool, and the decoder spent tens of seconds failing to dequeue an
+// output buffer (`C2BqBuffer: ... consecutive failures` in logcat), which is
+// playback stuttering — a burst of frames, a stall, another burst. The ready
+// screen shows the clip's poster instead. It is a frame from the same clip, so
+// it looks the same, and it costs no decoder at all.
+
 /// Full-bleed looping video player for an exercise demo clip.
 ///
 /// Shows the poster frame until the first video frame is ready. The API returns
@@ -34,6 +43,11 @@ class ExerciseVideoPlayer extends StatefulWidget {
   final BoxFit fit;
   final bool playing;
 
+  /// Silences the clip. Demo clips carry coaching audio and are meant to be
+  /// heard during the exercise, so the default is sound on; a player that is
+  /// only there to show a frame passes true.
+  final bool muted;
+
   /// Poster still and blurhash, when the API sent a media object.
   final MediaVideo? media;
 
@@ -42,14 +56,15 @@ class ExerciseVideoPlayer extends StatefulWidget {
     required this.videoUrl,
     this.fit = BoxFit.cover,
     this.playing = true,
+    this.muted = false,
     this.media,
   });
 
   @override
-  State<ExerciseVideoPlayer> createState() => _ExerciseVideoPlayerState();
+  State<ExerciseVideoPlayer> createState() => ExerciseVideoPlayerState();
 }
 
-class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
+class ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
     with RouteAware, WidgetsBindingObserver {
   VideoPlayerController? _controller;
   bool _hasError = false;
@@ -111,16 +126,19 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
   }
 
   @override
-  void didUpdateWidget(ExerciseVideoPlayer old) {
-    super.didUpdateWidget(old);
-    if (old.videoUrl != widget.videoUrl) {
+  void didUpdateWidget(ExerciseVideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.videoUrl != widget.videoUrl) {
       _detach();
       _controller?.dispose();
       _hasError = false;
       _initialize(widget.videoUrl);
       return;
     }
-    if (old.playing != widget.playing) _syncPlayback();
+    if (oldWidget.playing != widget.playing) _syncPlayback();
+    if (oldWidget.muted != widget.muted) {
+      _controller?.setVolume(widget.muted ? 0 : 1);
+    }
   }
 
   Future<void> _initialize(String url) async {
@@ -161,8 +179,18 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
     }
 
     timer.report((ms) => MediaAnalytics.instance.videoStart(ms: ms, url: url));
+    await _configure(controller);
+  }
+
+  /// Applies looping, volume and playback state to a controller that is open.
+  ///
+  /// Looping matters for more than tidiness: the exercise runs for the number
+  /// of seconds an admin set, which has nothing to do with how long the clip
+  /// happens to be. A clip shorter than the exercise restarts and keeps going
+  /// until the countdown ends; a longer one is simply cut off when it does.
+  Future<void> _configure(VideoPlayerController controller) async {
     await controller.setLooping(true);
-    await controller.setVolume(0);
+    await controller.setVolume(widget.muted ? 0 : 1);
     if (!mounted || !identical(_controller, controller)) {
       await controller.dispose();
       return;
@@ -226,7 +254,8 @@ class _ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
   @override
   Widget build(BuildContext context) {
     final controller = _controller;
-    final ready = !_hasError && controller != null && controller.value.isInitialized;
+    final ready =
+        !_hasError && controller != null && controller.value.isInitialized;
 
     // The poster stays mounted underneath rather than being swapped out, so the
     // handover has nothing to flash through.

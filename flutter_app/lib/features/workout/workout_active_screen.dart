@@ -19,6 +19,11 @@ class ActiveExercise {
   final String? videoUrl;
   final int durationSeconds;
 
+  /// How long to rest after this exercise before the next one starts. Twenty
+  /// seconds is the fallback for the callers that have no rest value to pass —
+  /// the hardcoded default the rest screen used to apply to every exercise.
+  final int restSeconds;
+
   /// Media objects, when the exercise came from an endpoint that returns them.
   /// [imagePath] and [videoUrl] stay authoritative for anything built from a
   /// local asset path, which these still are in places.
@@ -30,6 +35,7 @@ class ActiveExercise {
     required this.imagePath,
     this.videoUrl,
     required this.durationSeconds,
+    this.restSeconds = 20,
     this.image,
     this.video,
   });
@@ -204,6 +210,7 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
         builder: (_) => WorkoutRestScreen(
           nextExerciseName: next.name,
           nextExerciseImage: next.imagePath,
+          nextExerciseMedia: next.image,
           nextExerciseDuration: next.durationSeconds >= 60
               ? '${next.durationSeconds ~/ 60} Min'
               : '${next.durationSeconds} Sec',
@@ -229,6 +236,7 @@ class _WorkoutActiveScreenState extends State<WorkoutActiveScreen> {
         builder: (_) => WorkoutRestScreen(
           nextExerciseName: prev.name,
           nextExerciseImage: prev.imagePath,
+          nextExerciseMedia: prev.image,
           nextExerciseDuration: prev.durationSeconds >= 60
               ? '${prev.durationSeconds ~/ 60} Min'
               : '${prev.durationSeconds} Sec',

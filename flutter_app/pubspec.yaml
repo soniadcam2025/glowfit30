@@ -65,4 +65,6 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/illustrations/
+    # Spoken cues for the "ready to go" countdown.
+    - assets/audio/
 

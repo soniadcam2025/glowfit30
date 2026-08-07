@@ -50,6 +50,35 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
   // time stay live. Null whenever the sheet is closed.
   StateSetter? _sheetSetState;
 
+  /// When the current exercise ends, as a wall-clock time.
+  ///
+  /// The countdown used to decrement a counter once a second. That loses a
+  /// second for every tick the device fails to deliver, and if it stalls badly
+  /// the number simply stops where it is — which is what a frozen countdown
+  /// mid-exercise actually was. Deriving the remaining time from a fixed end
+  /// time means a recovered stall catches up and the exercise still ends on
+  /// the number of seconds the admin set.
+  DateTime? _endsAt;
+
+  /// When the current pause began, so paused time can be added back to the
+  /// deadline rather than counting against the exercise.
+  DateTime? _pausedAt;
+
+  /// Seconds the whole day is scheduled to take.
+  int get _totalPlannedSeconds =>
+      widget.exercises.fold(0, (sum, e) => sum + e.durationSeconds);
+
+  /// Seconds actually worked so far, counted from each exercise's own duration
+  /// rather than assuming they all share the current one's.
+  int get _elapsedSeconds {
+    var seconds = 0;
+    for (var i = 0; i < _currentIndex; i++) {
+      seconds += widget.exercises[i].durationSeconds;
+    }
+    return seconds +
+        (widget.exercises[_currentIndex].durationSeconds - _secondsLeft);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -79,23 +108,41 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
   void _startTimer() {
     _timer?.cancel();
     _preloadUpcoming();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (_isPaused) return;
-      if (_secondsLeft > 0) {
+    _pausedAt = null;
+    _endsAt = DateTime.now().add(Duration(seconds: _secondsLeft));
+
+    // Faster than the display rate, so a missed tick costs a fraction of a
+    // second rather than a whole one.
+    _timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
+      final endsAt = _endsAt;
+      if (endsAt == null) return;
+
+      if (_isPaused) {
+        _pausedAt ??= DateTime.now();
+        return;
+      }
+      final pausedAt = _pausedAt;
+      if (pausedAt != null) {
+        // Give back exactly the time spent paused, so pausing never shortens
+        // an exercise.
+        _endsAt = endsAt.add(DateTime.now().difference(pausedAt));
+        _pausedAt = null;
+        return;
+      }
+
+      final remaining = _endsAt!.difference(DateTime.now()).inMilliseconds;
+      final left = remaining <= 0 ? 0 : (remaining / 1000).ceil();
+      if (left != _secondsLeft) {
         setState(() {
-          _secondsLeft--;
-          _earnedKcal = ((_currentIndex *
-                          widget.exercises[_currentIndex].durationSeconds +
-                      (widget.exercises[_currentIndex].durationSeconds -
-                          _secondsLeft)) /
-                  (widget.exercises.length *
-                      widget.exercises[_currentIndex].durationSeconds) *
-                  widget.totalKcal)
-              .clamp(0, widget.totalKcal)
-              .toInt();
+          _secondsLeft = left;
+          _earnedKcal =
+              (_elapsedSeconds / _totalPlannedSeconds * widget.totalKcal)
+                  .clamp(0, widget.totalKcal)
+                  .toInt();
         });
         _sheetSetState?.call(() {});
-      } else {
+      }
+      if (left <= 0) {
         _timer?.cancel();
         _onExerciseComplete();
       }
@@ -133,12 +180,9 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
   }
 
   void _showLeaveDialog() {
-    final elapsed = widget.exercises[_currentIndex].durationSeconds -
-        _secondsLeft +
-        _currentIndex *
-            (widget.exercises.isNotEmpty
-                ? widget.exercises[0].durationSeconds
-                : 0);
+    // Every exercise carries its own duration, so the exercises already done
+    // are summed rather than multiplied by the first one's length.
+    final elapsed = _elapsedSeconds;
     final mm = (elapsed ~/ 60).toString().padLeft(2, '0');
     final ss = (elapsed % 60).toString().padLeft(2, '0');
 
@@ -238,8 +282,14 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
       context,
       MaterialPageRoute(
         builder: (_) => WorkoutRestScreen(
+          // Rest belongs to the exercise just finished, not the one coming up:
+          // it is recovery from what was performed. Without this the screen ran
+          // on its own 20-second default and the admin-authored value, which is
+          // now a required field, never reached the player at all.
+          restSeconds: widget.exercises[_currentIndex].restSeconds,
           nextExerciseName: next.name,
           nextExerciseImage: next.imagePath,
+          nextExerciseMedia: next.image,
           nextExerciseDuration: next.durationSeconds >= 60
               ? '${next.durationSeconds ~/ 60} Min'
               : '${next.durationSeconds} Sec',
@@ -265,6 +315,7 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
         builder: (_) => WorkoutRestScreen(
           nextExerciseName: prev.name,
           nextExerciseImage: prev.imagePath,
+          nextExerciseMedia: prev.image,
           nextExerciseDuration: prev.durationSeconds >= 60
               ? '${prev.durationSeconds ~/ 60} Min'
               : '${prev.durationSeconds} Sec',
@@ -1427,7 +1478,12 @@ class _GlassCapsule extends StatelessWidget {
           filter: ImageFilter.blur(sigmaX: 35, sigmaY: 35),
           child: Container(
             decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.32),
+              // 4%: the capsule is meant to read as glass over the clip, not as
+              // a panel sitting on top of it. The 35-sigma blur below is what
+              // keeps the white text legible now that the tint barely darkens
+              // anything — without it this would be unreadable over a bright
+              // frame.
+              color: Colors.black.withValues(alpha: 0.04),
               borderRadius: BorderRadius.circular(radius),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.08),

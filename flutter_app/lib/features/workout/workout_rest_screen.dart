@@ -3,12 +3,20 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../models/media.dart';
+import '../../widgets/glow_image.dart';
+
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
 
 class WorkoutRestScreen extends StatefulWidget {
   final String nextExerciseName;
   final String nextExerciseImage;
+
+  /// Sized variants and blurhash for [nextExerciseImage], when the exercise
+  /// came from an endpoint that returns media objects.
+  final MediaImage? nextExerciseMedia;
+
   final String nextExerciseDuration;
   final String nextExerciseKcal;
   final int exerciseNumber;
@@ -19,6 +27,7 @@ class WorkoutRestScreen extends StatefulWidget {
     super.key,
     required this.nextExerciseName,
     required this.nextExerciseImage,
+    this.nextExerciseMedia,
     required this.nextExerciseDuration,
     required this.nextExerciseKcal,
     required this.exerciseNumber,
@@ -344,23 +353,117 @@ class _WorkoutRestScreenState extends State<WorkoutRestScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: Container(
-            width: double.infinity,
-            height: 200,
-            color: const Color(0xFFFFE8F3),
-            child: Image.asset(
-              widget.nextExerciseImage,
-              fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => Center(
-                child: Icon(Icons.fitness_center,
-                    size: 60, color: _pink.withValues(alpha: 0.4)),
+        _buildNextExerciseCard(),
+      ],
+    );
+  }
+
+  /// Card showing the exercise that starts when this rest ends.
+  ///
+  /// This used to be `Image.asset` on a path that is a URL for every exercise
+  /// the API returns, so it failed every time and rendered the dumbbell
+  /// placeholder — the card has never actually shown an exercise. Network paths
+  /// now go through [GlowImage], which is cached, right-sized and blurhash
+  /// backed; the asset branch stays for the exercises still built from bundled
+  /// assets.
+  Widget _buildNextExerciseCard() {
+    final path = widget.nextExerciseImage;
+
+    final placeholder = Center(
+      child: Icon(Icons.fitness_center, size: 60, color: _pink.withValues(alpha: 0.4)),
+    );
+
+    final Widget image;
+    if (path.isEmpty) {
+      image = placeholder;
+    } else if (path.startsWith('http')) {
+      image = GlowImage(
+        url: path,
+        media: widget.nextExerciseMedia,
+        fit: BoxFit.cover,
+        error: placeholder,
+      );
+    } else {
+      image = Image.asset(
+        path,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => placeholder,
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      height: 200,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFE8F3),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: _pink.withValues(alpha: 0.10),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            image,
+            // The name is already the heading above, but the card is what the
+            // eye lands on during a rest, so it carries the label too.
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(14, 24, 14, 12),
+                decoration: BoxDecoration(
+                  // Weighted towards the bottom rather than a straight fade.
+                  // These stills are mostly light, so a gentle gradient leaves
+                  // white text on near-white and the label disappears.
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withValues(alpha: 0.45),
+                      Colors.black.withValues(alpha: 0.75),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.nextExerciseName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      widget.nextExerciseDuration,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white.withValues(alpha: 0.9),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
