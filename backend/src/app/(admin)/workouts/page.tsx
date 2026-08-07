@@ -91,12 +91,45 @@ const daySchema = z.object({
 });
 type DayValues = z.input<typeof daySchema>;
 
+/**
+ * A number input hands back "" when it is cleared, and z.coerce turns "" into
+ * 0 — which then trips the minimum with a message about the wrong thing. For
+ * the informational fields blank means "not set", so it becomes undefined
+ * before any checking happens.
+ */
+const blankToUndefined = (v: unknown) => (v === "" || v === null ? undefined : v);
+
+/**
+ * Mirrors `createExerciseSchema` in the API. Exercises are time-driven:
+ * `duration` (seconds) is what the player counts down, and reps are recorded
+ * because "3 × 12" is still how a plan is written down — nothing sequences on
+ * them. The two schemas have to agree, or the form accepts input the API then
+ * rejects with a toast that says nothing useful.
+ */
 const exerciseSchema = z.object({
   name: z.string().min(1, "Name is required").max(300),
-  sets: z.coerce.number().int().min(1).max(50).optional(),
-  reps: z.coerce.number().int().min(1).max(500).optional(),
-  duration: z.coerce.number().int().min(1).max(3600).optional(),
-  rest: z.coerce.number().int().min(0).max(600).optional(),
+  // Five seconds is the floor because anything shorter cannot be performed,
+  // and a zero would leave the player with nothing to count.
+  duration: z.coerce
+    .number({ message: "Enter a number" })
+    .int()
+    .min(5, "At least 5 seconds")
+    .max(3600, "3600 seconds maximum"),
+  // Zero is meaningful — it means "no rest, go straight on" — so this is
+  // min(0), not min(1).
+  rest: z.coerce
+    .number({ message: "Enter a number" })
+    .int()
+    .min(0, "Rest cannot be negative")
+    .max(600, "600 seconds maximum"),
+  sets: z.preprocess(
+    blankToUndefined,
+    z.coerce.number().int().min(1, "At least 1 set").max(50, "50 sets maximum").optional(),
+  ),
+  reps: z.preprocess(
+    blankToUndefined,
+    z.coerce.number().int().min(1, "At least 1 rep").max(500, "500 reps maximum").optional(),
+  ),
   imageUrl: z.string().url("An exercise image is required"),
   videoUrl: z.string().url("An MP4 video is required"),
 });
@@ -416,10 +449,14 @@ function ExerciseDialog({
     mode: "onTouched",
     values: {
       name: editing?.name ?? "",
-      sets: editing?.sets ?? 3,
-      reps: editing?.reps ?? 12,
-      duration: editing?.duration ?? undefined,
+      // Seconds leads because it is the field that actually drives the workout.
+      // An exercise authored before the move to a time-driven player has no
+      // value for it; opening it here is what gives it one, so the blank is
+      // left visible rather than pre-filled with a number nobody chose.
+      duration: editing ? (editing.duration ?? "") : 30,
       rest: editing?.rest ?? 30,
+      sets: editing?.sets ?? 1,
+      reps: editing?.reps ?? "",
       imageUrl: editing?.imageUrl ?? "",
       videoUrl: editing?.videoUrl ?? "",
     },
@@ -428,8 +465,12 @@ function ExerciseDialog({
   const save = useMutation({
     mutationFn: (v: ExerciseValues) => {
       const p = exerciseSchema.parse(v);
+      // An undefined field is dropped by JSON.stringify, and the PATCH route
+      // treats an absent key as "leave it alone" — so clearing reps has to be
+      // sent as an explicit null or the old value survives the edit. The API
+      // accepts null here for exactly this reason.
       return editing
-        ? workoutService.updateExercise(editing.id, p)
+        ? workoutService.updateExercise(editing.id, { ...p, reps: p.reps ?? null } as never)
         : workoutService.createExercise(dayId, { ...p, order: nextOrder } as never);
     },
     onSuccess: () => {
@@ -468,10 +509,10 @@ function ExerciseDialog({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {(
                 [
+                  ["duration", "Seconds *"],
+                  ["rest", "Rest (sec) *"],
                   ["sets", "Sets"],
                   ["reps", "Reps"],
-                  ["duration", "Seconds (alt)"],
-                  ["rest", "Rest (sec)"],
                 ] as const
               ).map(([name, label]) => (
                 <FormField
@@ -490,6 +531,11 @@ function ExerciseDialog({
                 />
               ))}
             </div>
+            <p className="text-xs text-muted-foreground">
+              The app counts down <strong>Seconds</strong> for the exercise and{" "}
+              <strong>Rest</strong> before the next one. Sets and reps are shown to the
+              user but do not control the timer.
+            </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <FormField
                 control={form.control}
@@ -742,6 +788,27 @@ export default function WorkoutsPage() {
         ),
       },
       {
+        id: "duration",
+        accessorKey: "duration",
+        header: "Seconds",
+        // Seconds is required of anything saved through this form, so a blank
+        // here means a row authored before the player became time-driven. It
+        // is running on the client's fallback, which is a guess — flag it so an
+        // admin can see which exercises still need a real number.
+        cell: ({ row }) =>
+          row.original.duration != null ? (
+            `${row.original.duration}s`
+          ) : (
+            <Badge variant="warning">Not set</Badge>
+          ),
+      },
+      {
+        id: "rest",
+        accessorKey: "rest",
+        header: "Rest",
+        cell: ({ row }) => (row.original.rest != null ? `${row.original.rest}s` : "—"),
+      },
+      {
         id: "setsReps",
         header: "Sets × Reps",
         enableSorting: false,
@@ -749,18 +816,6 @@ export default function WorkoutsPage() {
           row.original.sets || row.original.reps
             ? `${row.original.sets ?? "—"} × ${row.original.reps ?? "—"}`
             : "—",
-      },
-      {
-        id: "duration",
-        accessorKey: "duration",
-        header: "Seconds",
-        cell: ({ row }) => row.original.duration ?? "—",
-      },
-      {
-        id: "rest",
-        accessorKey: "rest",
-        header: "Rest",
-        cell: ({ row }) => (row.original.rest != null ? `${row.original.rest}s` : "—"),
       },
       {
         id: "media",

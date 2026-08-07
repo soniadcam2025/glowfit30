@@ -121,7 +121,15 @@ model Exercise {
   workoutDay   WorkoutDay @relation(fields: [workoutDayId], references: [id], onDelete: Cascade)
   name         String
   sets         Int?
+  /// Informational only since the move to a time-driven player. Kept because
+  /// "3 × 12" is still how a plan is written down, but nothing sequences on it.
   reps         Int?
+  /// Seconds the exercise runs for. This is what drives the workout.
+  ///
+  /// Required by the API and the admin form, yet deliberately still nullable
+  /// here: exercises authored before the time-first change have no value, and
+  /// a NOT NULL column would mean either rejecting them or inventing a number
+  /// on their behalf. The client falls back for those until an admin edits them.
   duration     Int?
   rest         Int?
   imageUrl     String?    @map("image_url")
