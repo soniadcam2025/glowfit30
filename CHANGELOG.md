@@ -6,6 +6,39 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-07, spoken countdown cues)
+- **The "READY TO GO" countdown now speaks.** `assets/audio/321.aac` (2.1s) starts the moment the circle turns 3, so "three · two · one" lands on zero; `assets/audio/readytogo.aac` (1.2s) then plays with the circle held at zero, and the exercise screen opens when it finishes. **Skipping ahead plays nothing** — tapping the arrow silences any cue mid-word and goes straight through, because someone who skips the countdown has said they do not want to wait for it.
+- **`AudioCue`** (`flutter_app/lib/services/audio_cue.dart`) — one-shot cue playback built on the existing `video_player` rather than a new audio dependency. An audio-only clip allocates no graphics buffers, so cues stay clear of the decoder pool the exercise clips compete for. Every failure path is silent by design: a missing or undecodable cue costs a sound, never the start of a workout.
+
+### Fixed (2026-08-07, rest screen's next-exercise card)
+- **The "up next" card has never shown an exercise.** It called `Image.asset` on `nextExerciseImage`, which is a URL for every exercise the API returns, so the load failed every time and the dumbbell placeholder rendered instead. Network paths now go through `GlowImage` (cached, right-sized, blurhash-backed) and the media object is threaded through from all four call sites; the asset branch stays for exercises still built from bundled assets. The card also carries the exercise name and duration over a bottom gradient.
+
+### Changed (2026-08-07, active workout capsule)
+- **The player capsule is now 4% black instead of 32%**, so it reads as glass over the clip rather than a panel on top of it. The 35-sigma backdrop blur is what keeps the white text legible at that tint.
+
+### Added (2026-08-07, exercise clip audio)
+- **Exercise demo clips now play their audio.** `ExerciseVideoPlayer` called `setVolume(0)` unconditionally, so every clip was silent regardless of what was uploaded. Volume is now a `muted` flag defaulting to sound on. The clips do carry audio — both sampled files probe as `h264 + aac`, and the pipeline transcodes audio to AAC rather than stripping it.
+
+### Changed (2026-08-07, ready screen shows the clip's poster)
+- **The "READY TO GO" screen now shows the first exercise's poster frame** instead of the day's cover image, so the user sees the exercise they are about to do. The poster is a still taken from the clip itself, which the media pipeline already produces for every video.
+
+### Fixed (2026-08-07, workout countdown)
+- **The active workout countdown decremented a counter once a second**, so every tick the device failed to deliver lost a whole second, and a bad stall left the number frozen where it stood. It now reads from a wall-clock deadline, like the rest and ready screens already did — a recovered stall catches up and the exercise still ends on the seconds an admin set. Pause credits its time back to the deadline rather than shortening the exercise.
+- **Elapsed time and calories assumed every exercise shared the current one's duration** (`_currentIndex * durationSeconds`). With a 30s exercise followed by a 25s one that is simply wrong; both now sum each exercise's own duration. The leave-workout dialog's "time elapsed" used the same broken formula.
+
+### Reverted (2026-08-07)
+- **A prewarmed video controller on the ready screen.** It opened the clip during the countdown and handed the controller to the exercise screen so playback started instantly. Two codec instances for one clip exhausted the device's graphics buffer pool: the decoder spent tens of seconds failing to dequeue an output buffer (`C2BqBuffer: ... 3457 consecutive failures`), which presents as a clip playing in bursts — a few seconds, a stall, a few more. Reverted in favour of the poster, which costs no decoder. **Reachability of a frame is not the same as capacity to decode it.**
+
+### Changed (2026-08-07, exercises are time-driven)
+- **`duration` and `rest` are now required** when creating or editing an exercise — in the API (`createExerciseSchema`) and in the admin form, which previously labelled seconds "Seconds (alt)" and left it optional. `duration` is what the player counts down; reps are informational and now optional and clearable. The columns stay **nullable on purpose**: exercises authored before this change have no value, and a NOT NULL column would mean either rejecting those rows or inventing a number for them. Requiring it at the edge means everything new or edited carries a real duration while the old rows keep working on the client fallback.
+- **The admin exercises table leads with Seconds** and flags a missing value as a "Not set" badge rather than an em dash, so the rows still running on the client's estimate are visible instead of blending in with an empty optional field.
+
+### Fixed (2026-08-07)
+- **The admin-authored `rest` value never reached the player.** `WorkoutRestScreen` was never passed `restSeconds`, so every rest between exercises ran on its hardcoded 20-second default regardless of what was saved. The rest screen now uses the rest of the exercise just finished — recovery belongs to what was performed, not to what is coming up.
+- **Clearing reps on an existing exercise did nothing.** The admin sent `undefined`, which `JSON.stringify` drops, and the PATCH route reads an absent key as "leave it alone", so the old value survived. It now sends an explicit `null`, which the API already accepted for exactly this case.
+- **`required_error` on a coerced number is unreachable** — `z.coerce` runs `Number()` first, so a missing field arrives at the type check as `NaN`, never `undefined`. `duration` and `rest` were reporting "Expected number, received nan" instead of "Seconds is required"; both now use `invalid_type_error`, which covers absent and non-numeric alike.
+- **Android build failed on this machine** with `Could not close incremental caches` / `this and base files have different roots`: the pub cache is on `C:` and the project on `F:`, and Kotlin's relocatable incremental caches relativize plugin sources against the project root. `kotlin.incremental=false` in `android/gradle.properties`.
+
 ### Added (2026-08-06, Media phases 7–8)
 - **Offline downloads** (`flutter_app/lib/services/media_downloader.dart`) — downloads a day's images, posters and clips to application support so a workout plays with no connection. LRU eviction against a 512 MB budget, 30-day expiry, orphan cleanup, atomic `.part` → rename, and a download/cancel/remove control in the Day Detail app bar. `GlowImage` and `ExerciseVideoPlayer` prefer a downloaded file over the network.
 - **Storage controls in App Settings** — bytes used against the limit, and a Clear action. Media is the only thing this app puts on someone's phone at scale; a figure they cannot find or clear is how an app gets uninstalled.

@@ -17,6 +17,25 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 
 ## 🟠 In Progress
 
+### Time-driven exercises — complete, awaiting on-device test
+
+Uncommitted on `main`. API + admin + Flutter all on the new contract; verified by analysis, typecheck, lint and direct schema exercise, but not yet confirmed by the user in the app.
+
+- [x] ~~`duration`/`rest` required in `createExerciseSchema`~~
+- [x] ~~Admin exercise form aligned with the API (seconds leads, reps optional and clearable, "Not set" badge on legacy rows)~~
+- [x] ~~Admin-authored `rest` actually reaches `WorkoutRestScreen`~~ (it never had — every rest was the hardcoded 20s)
+- [ ] **Backfill the exercises with no `duration`/`rest`.** They play on the client's estimate (3s per rep, else 30s; 20s rest), which is a guess. The admin table badges them "Not set" — open each and give it a real number, then consider whether the columns can become NOT NULL.
+
+### Exercise playback — sound, poster, countdown (2026-08-07)
+
+Uncommitted on `main`. Verified on the emulator end to end; not deployed.
+
+- [x] ~~Demo clips play their audio~~ (`setVolume(0)` was unconditional — every clip has always been silent)
+- [x] ~~Ready screen shows the first exercise's poster frame~~
+- [x] ~~Active countdown on a wall-clock deadline~~ (it was the one screen `e70717b` missed)
+- [x] ~~Elapsed/kcal sum each exercise's own duration~~ (they assumed all exercises share the current one's)
+- [ ] **Decide whether clip audio should be user-controllable.** Workout Settings already draws a Background Music toggle and volume slider, but they are local `setState` only — wired to nothing, not persisted. Clip audio is currently always on with no way to silence it short of the device volume.
+
 ### Media system — all 8 phases written, none deployed
 
 All code is on `main` **uncommitted**. Production is still on `5cbe352` and has none of it.

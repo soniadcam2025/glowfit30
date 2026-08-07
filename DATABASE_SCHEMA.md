@@ -16,7 +16,7 @@ PostgreSQL via Prisma (`api/prisma/schema.prisma`), generator `prisma-client-js`
 | `LegalDocument` | `legal_documents` | title (default "Privacy Policy & Terms"), content (Text), updatedAt — singleton-style, no relations; new 2026-07-26 |
 | `Workout` | `workouts` | title, level, duration, imageUrl, description, goal → `WorkoutDay[]` |
 | `WorkoutDay` | `workout_days` | workoutId→Workout (cascade), dayNumber, title, focus, imageUrl, durationMinutes, kcal → `Exercise[]`, `Progress[]` |
-| `Exercise` | `exercises` | workoutDayId→WorkoutDay (cascade), name, sets, reps, duration, rest, imageUrl, gifUrl, videoUrl, order |
+| `Exercise` | `exercises` | workoutDayId→WorkoutDay (cascade), name, **duration** (seconds — this is what the player counts down), **rest** (seconds after the exercise), sets, reps (informational only), imageUrl, gifUrl, videoUrl, order. `duration`/`rest` are **required by the API and the admin form but still nullable in the column** — exercises authored before the move to a time-driven player have no value, and a NOT NULL column would mean either rejecting those rows or inventing a number on their behalf. The Flutter client falls back (`durationSeconds`, `restSeconds` in `workout_model.dart`) until an admin opens them. |
 | `Progress` | `progress` | userId→User (cascade), workoutDayId→WorkoutDay (cascade), completedAt, caloriesBurned, durationMin; unique(userId, workoutDayId) |
 | `DietPlan` | `diet_plans` | type, goal, calories, meals(Json, legacy), imageUrl → `DietPlanDay[]` |
 | `DietPlanDay` | `diet_plan_days` | dietPlanId→DietPlan (cascade), dayNumber, meals(Json); unique(dietPlanId, dayNumber) |

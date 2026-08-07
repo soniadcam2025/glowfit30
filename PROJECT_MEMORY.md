@@ -4,7 +4,7 @@
 - This file has two parts: a **Current State** snapshot (top) and an **Update Log** (bottom, append-only).
 - The **Current State** section reflects "as of Last Updated" — it gets edited in place each time something changes, because it's a pointer to *now*, not history.
 - The **Update Log** is **never edited or deleted** — every completed feature/fix appends one new dated entry at the bottom describing what changed. History is preserved permanently there even after the Current State section above it moves on.
-- Last Updated: **2026-07-26**
+- Last Updated: **2026-08-07**
 
 ---
 
@@ -74,6 +74,8 @@ PostgreSQL via Prisma (`api/prisma/schema.prisma`), 15 models, all relations `on
 `User` (email/firebaseUid unique, role enum, isBlocked, profile+prefs fields incl. `language`/`appearance`) · `Workout` → `WorkoutDay` → `Exercise` · `Progress` (user+day, unique) · `DietPlan` → `DietPlanDay` · `WorkoutLibraryCategory` (soft-linked, no FK) / `WorkoutLibraryItem` → `WorkoutLibraryExercise` · `BeautyPost`/`GlowShort` → `categoryId` FK → `GlowCategory` (real FK, added 2026-07-26 — `BeautyPost`/`GlowShort` also gained `resultBadge`/`chips`/`sections`/`isPremium`; `GlowCategory` gained `heroImageUrl`/`topics`) · `AdminLog` · `LegalDocument`.
 
 **Known drift:** `User.fcmToken`, `Exercise.videoUrl`, `DietPlan.imageUrl` — confirmed 2026-07-26 to already exist live in the DB (added via `db push`, no matching migration file); reproducibility gap, not a live bug.
+
+**`Exercise.duration`/`Exercise.rest` are nullable by design, not by omission** (2026-08-07): both are required by the API and the admin form, but the columns stay nullable so exercises authored before the player became time-driven are neither rejected nor backfilled with an invented number. The Flutter client covers them with `durationSeconds`/`restSeconds` fallbacks in `workout_model.dart`, and the admin exercises table badges them "Not set" so they can be found and fixed. **No migration was needed for this change** — it is a validation and UI change only.
 
 ### API Endpoints
 
@@ -266,3 +268,63 @@ Completed the last two items of the media programme, both of which were genuinel
 Image timing is measured through the cache manager rather than by wrapping the render path, so it reports time-to-bytes and not time-to-pixels; wrapping `CachedNetworkImage.imageBuilder` would have meant rebuilding every image widget by hand and risking a visual regression across the whole app for the sake of a number.
 
 **Verification.** 13 new integration tests on the emulator, all passing, plus the 8 existing preloader tests re-run green after the `GlowImage` change (21 total). The budget test caught a real defect: a 1 MB clamp floor silently overrode the requested budget so eviction never ran — the floor was arbitrary and was removed, and eviction is now measured genuinely (103 KB -> 55 KB under a 56 KB budget, keeping the most-recently-used file). `flutter analyze` 0 errors / 8 pre-existing warnings; admin `tsc --noEmit` clean; API routes load (15 routers). Endpoints probed live: 422 on an invalid event type, 401 unauthenticated on the summary, and a valid POST reaching `prisma.mediaEvent.createMany()` and failing only on the unreachable DB (tunnel down) — so routing, validation, auth and the generated model are all confirmed. **The DB migration has never been applied and the dashboard has never rendered real data**, because the DB tunnel needs an interactive SSH password. Nothing committed, pushed or deployed.
+
+### 2026-08-07 — Exercises made genuinely time-driven (finishing the in-flight change)
+Picked up an uncommitted change that had reached the API and stopped there: `createExerciseSchema` had been rewritten to require `duration` and `rest`, with the reasoning written into the schema and the Prisma model as comments, but nothing downstream had been brought onto the new contract. Completed it across the admin and the app.
+
+**The admin form was still the old contract.** Seconds was labelled "Seconds (alt)" and optional, sets and reps defaulted to 3 and 12, and duration defaulted to blank — precisely inverted from what now drives the workout. The form schema now mirrors the API field for field (a form that accepts what the API rejects produces a toast that explains nothing), seconds and rest lead the grid and are marked required, reps default to blank because a number nobody chose is worse than an empty field, and a line under the inputs says plainly which fields the timer reads. The exercises table leads with Seconds and badges a missing value **"Not set"** rather than an em dash, so rows still running on the client's estimate are findable instead of looking like an ordinary blank optional.
+
+**Three real defects surfaced while wiring it up, none of them visible from reading the diff.**
+
+First and worst: **`rest` was collected, validated, stored, and never used.** `WorkoutRestScreen` takes a `restSeconds` parameter defaulting to 20, and neither call site in `workout_active_screen_v2.dart` passed it — every rest in the app has always been 20 seconds regardless of what an admin saved. Making the field required without this would have been ceremony. Rest now comes from the exercise just *finished*, not the one coming up: recovery belongs to what was performed. That meant threading `restSeconds` through `ActiveExercise` (the view model, which carried only duration) and adding a `restSeconds` getter beside `durationSeconds` on the model. `WorkoutDetailScreen` deliberately does **not** pass one — its exercises come from `workout_library_exercises`, a different table with no rest column at all, so the default correctly stands.
+
+Second: **clearing reps was impossible.** The API's schema comment anticipated it exactly — `nullish()` was chosen so a clear could be expressed — but the admin sent `undefined`, `JSON.stringify` drops undefined, and `createExerciseSchema.partial()` reads an absent key as "leave it alone", so the old value survived every attempt. The form now sends an explicit `null` on edit.
+
+Third: **`required_error` on a coerced number can never fire.** `z.coerce` runs `Number()` before the type check, so a missing field arrives as `NaN`, never `undefined` — the carefully written "Seconds is required" was dead code and the user would have seen "Expected number, received nan". Verified by running the schema rather than reasoning about it; `invalid_type_error` covers absent and non-numeric together. **Lesson: `required_error` and `z.coerce` are mutually exclusive — always exercise a schema's failure paths, not just its happy path.**
+
+Also checked and cleared a suspected fourth: `.partial()` on a field with `.default()` looked like it would silently reset `sets` to 1 and `order` to 0 on any PATCH that omitted them. Running it showed Zod 3's `.partial()` drops defaults, so the PATCH route is safe as written.
+
+**Verification.** API schema exercised directly across eight cases (missing/short/valid duration, missing/negative rest, string coercion, explicit null reps, sets defaulting) — all correct. `tsc --noEmit` clean and `npm run lint` clean in the admin (one pre-existing unrelated warning). `flutter analyze` 0 errors / 8 pre-existing warnings, unchanged. App rebuilt and reinstalled on the Pixel8a emulator. **Not committed, not pushed, not deployed** — awaiting the user's on-device test.
+
+**Environment finding:** the Android build fails on this machine with `Could not close incremental caches` / `this and base files have different roots`. The pub cache is on `C:` and the project on `F:`, and Kotlin's relocatable incremental caches relativize plugin sources against the project root, which cannot cross drives. Fixed with `kotlin.incremental=false` in `flutter_app/android/gradle.properties`. This is the same family as the Gradle file-lock noted on 2026-08-02 but a distinct cause — that one needed `gradlew --stop` and a directory delete, this one is structural and recurs on every clean build until the property is set.
+
+### 2026-08-07 — Clip audio, a poster on the ready screen, and a countdown that stops losing seconds
+Three user requests, one of which I got wrong first and had to back out.
+
+**Sound.** `ExerciseVideoPlayer` called `setVolume(0)` unconditionally — every demo clip in the app has always been silent. Now a `muted` flag defaulting to sound on. Checked the obvious way this could be pointless before changing anything: ffprobe on two live clips shows `h264 + aac`, and `api/src/config/video.js` transcodes audio with `-c:a aac` rather than stripping it, so there was really something to hear. Confirmed on device via `dumpsys audio`: `AudioPlaybackConfiguration ... u/pid:10221 state:started ... USAGE_MEDIA CONTENT_TYPE_MOVIE mutedState:none ... 48000Hz stereo`. Note `setVolume(0)` only ever set the gain — ExoPlayer was decoding the audio track all along, so unmuting added no decode load.
+
+**The ready screen, and the mistake.** The ask was for the ready screen to show the exercise clip as a thumbnail so the player would have no delay when the exercise starts. I built a prewarmed controller: the ready screen opened the clip, held it on its first frame, and handed the controller to the exercise screen through a small park/claim cache so it was opened once. It worked, and it broke playback. Two codec instances on one clip exhausted the device's graphics buffer pool and the decoder began failing to dequeue output buffers — `C2BqBuffer: last successful dequeue was 38083442 us ago, 3457 consecutive failures` — which the user sees as a clip that plays five seconds, stops, plays again. **The file's own comments had warned about exactly this** ("the pool is small — a handful of leaks and the next decoder can never dequeue a buffer"); I read them, wrote a handoff to keep only one controller alive, and still doubled peak codec usage across the transition.
+
+Reverted to the clip's **poster frame** — a still the media pipeline already produces for every video, so it shows the same thing the paused player would have and costs no decoder at all. The lesson: the request was for a *thumbnail*, and I built a video player to display one still. **When the ask is for an image, an image is the implementation.**
+
+Two things ruled out along the way rather than assumed. The buffer exhaustion was *not* accumulated damage from force-stopping the app mid-playback during testing — it reproduced within two minutes of a full `adb reboot`. And it was *not* the audio change, for the gain-vs-decode reason above.
+
+**The countdown.** Yesterday's `e70717b` moved the ready and rest screens onto a wall-clock deadline because a decrementing counter loses a second per dropped tick and stops dead on a stall. **The active workout screen was never converted** and still decremented — which is what left it frozen at `00:24` with taps ignored while I was testing. Now on a deadline, with pause crediting its own time back so pausing cannot shorten an exercise. Also fixed the elapsed/kcal maths, which computed `_currentIndex * durationSeconds` — i.e. assumed every exercise is as long as the current one. This day has a 30s exercise followed by a 25s one, so it was already wrong in production; both now sum each exercise's own duration, as does the leave-dialog's "time elapsed".
+
+**Confirmed the time-driven behaviour the user specified**, which needed no new code: the exercise ends on the admin's `duration` and the clip is set to loop, so a 32s clip under a 30s exercise is cut off at 30s, and a 28s clip under a 30s exercise restarts and plays 2s more. Progress and calories count from the exercise duration, never the clip length.
+
+**Verification.** Full three-exercise workout driven on the emulator end to end: no freeze, rest screens counting the authored 15s, per-exercise durations honoured (30s / 25s / 30s), and back to the day screen. Playback sampled at 900ms intervals gave 6/6 distinct frames with **zero** `C2BqBuffer` lines. Ready screen visually confirmed showing the Jumping Jacks poster. `flutter analyze` 0 errors / 8 pre-existing warnings.
+
+**Emulator note for future sessions:** driving this app by blind `adb shell input tap` is unreliable — the Workout tab is the *Library*, not the 30-day plan (that is Home -> Continue Workout), and the play button on a day card behaves differently depending on whether a workout is already in progress. Screenshot between taps rather than chaining them, and remember that real time passes between tool calls, so a 25s exercise can complete while a screenshot is being read.
+
+### 2026-08-07 — Two workout-screen UI requests, and a card that had never worked
+Both requested against screenshots, both verified on the emulator.
+
+**Player capsule to 4%.** `_GlassCapsule`'s fill went from `black @ 0.32` to `0.04`. It still reads as glass rather than a flat panel because the 35-sigma `BackdropFilter` underneath is doing the legibility work, not the tint — worth remembering before anyone "simplifies" the blur away.
+
+**The rest screen's "up next" card was broken, not merely unstyled.** It called `Image.asset(widget.nextExerciseImage)` — and that string is a URL for every exercise the API returns, so the asset load failed on every single render and fell through to the dumbbell placeholder. The card has never once shown an exercise in production; it read as a deliberate placeholder, which is why it survived this long. Now routed through `GlowImage` for `http` paths with the `MediaImage` threaded from all four `WorkoutRestScreen` call sites (both active screens, forward and backward), keeping the `Image.asset` branch for exercises still built from bundled assets.
+
+The label gradient needed a second pass: these exercise stills are mostly white, and a straight `transparent -> black@0.55` fade left white text on near-white. Weighted it to `0.45` at 55% and `0.75` at the bottom.
+
+**Same shape of bug as `Image.asset`-on-a-URL is worth watching for elsewhere** — it fails silently into a fallback that looks intentional.
+
+### 2026-08-07 — Spoken countdown cues on the ready screen
+`321.aac` fires the moment the circle turns 3 (the clip is 2.1s, so "three · two · one" lands on zero), then `readytogo.aac` plays with the circle held at zero and the exercise screen opens when it finishes. Skipping plays nothing and cuts off anything mid-word — a voice you cannot skip is exactly the wait the user declined by tapping the arrow.
+
+**No new dependency.** The app had no audio package, and `video_player` decodes a bare AAC file fine on both platforms, so `AudioCue` (`lib/services/audio_cue.dart`) is built on it. The deciding factor was today's buffer-pool incident: an audio-only clip allocates no graphics buffers, so cues cannot compete with the exercise clips for decoder output buffers. Every failure path in `AudioCue` is deliberately silent — a missing or undecodable cue must cost a sound, never the start of a workout — and completion is driven by a position listener with a duration-plus-one-second timeout as a backstop.
+
+Source files came from the repo root and were copied to `flutter_app/assets/audio/` with `- assets/audio/` added to pubspec. **A new asset directory needs a full rebuild; hot reload will not pick it up.**
+
+**Verified on device by timing against `dumpsys audio`** rather than by listening, which is the only option here: at 7.4s into the 10s countdown an `AudioTrack` for uid 10221 reads `state:started` while a screenshot confirms the circle showing **3**; tapping the arrow at 7.6s leaves zero tracks by 8.4s with the exercise screen open at `00:30`. The normal path was confirmed separately — cue at 3, exercise screen afterwards with the clip's own audio running.
+
+Careful with UI-driving timing when checking this: navigation taps take a few seconds, so an unmeasured `Start-Sleep` before tapping the skip arrow lands *after* the countdown has already finished and silently tests the normal path instead. Two runs did exactly that before the stopwatch was added.

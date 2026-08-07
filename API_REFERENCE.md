@@ -58,9 +58,13 @@ Base: Express 4 + Prisma 6, `api/src`. Every route below is mounted at **both** 
 | POST | `/workouts/:id/days` | Admin | Create day |
 | DELETE | `/workouts/days/:dayId` | Admin | Delete day |
 | GET | `/workouts/days/:dayId/exercises` | Auth | List exercises |
-| POST | `/workouts/days/:dayId/exercises` | Admin | Create exercise |
-| PATCH | `/workouts/exercises/:id` | Admin | Update exercise |
+| POST | `/workouts/days/:dayId/exercises` | Admin | Create exercise. `duration` (5–3600s) and `rest` (0–600s) are **required** — see below |
+| PATCH | `/workouts/exercises/:id` | Admin | Update exercise (`createExerciseSchema.partial()`, so an absent key means "leave it alone") |
 | DELETE | `/workouts/exercises/:id` | Admin | Delete exercise |
+
+**Exercises are time-driven.** `duration` in seconds is what the app's player counts down and `rest` is the gap before the next exercise; `sets` (default 1) and `reps` are recorded for display and sequence nothing. `rest` allows 0 — "no rest, go straight on" is a real instruction. `reps` accepts `null` so an edit can clear it: `.partial()` means an omitted key leaves the stored value untouched, so the only way to express "remove this" is to send null explicitly.
+
+Both fields stay nullable in the database even though the API requires them — see `DATABASE_SCHEMA.md` for why, and for the client-side fallback that keeps pre-existing exercises playable.
 
 ## Workout Library — `/workout-library`
 | Method | Path | Auth | Notes |
