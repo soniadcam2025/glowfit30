@@ -328,3 +328,16 @@ Source files came from the repo root and were copied to `flutter_app/assets/audi
 **Verified on device by timing against `dumpsys audio`** rather than by listening, which is the only option here: at 7.4s into the 10s countdown an `AudioTrack` for uid 10221 reads `state:started` while a screenshot confirms the circle showing **3**; tapping the arrow at 7.6s leaves zero tracks by 8.4s with the exercise screen open at `00:30`. The normal path was confirmed separately — cue at 3, exercise screen afterwards with the clip's own audio running.
 
 Careful with UI-driving timing when checking this: navigation taps take a few seconds, so an unmeasured `Start-Sleep` before tapping the skip arrow lands *after* the countdown has already finished and silently tests the normal path instead. Two runs did exactly that before the stopwatch was added.
+
+### 2026-08-07 — First production deploy of the media system, plus today's workout work
+Pushed 12 commits (`5cbe352..2b5e391`): the 8 media-system commits from 2026-08-06 that had been sitting unpushed, and today's 4. **This is the deploy that finally put the media pipeline into production** — it had been written, committed and never shipped.
+
+Flagged the scope before pushing rather than after, because push to `main` auto-deploys: the user was choosing to release eight commits of never-deployed work, not just today's. They chose to push everything.
+
+**The migration worry did not materialise.** `PROJECT_MEMORY` had recorded that `20260806120000_add_media_events` "has never been applied", so the expectation was that `prisma migrate deploy` would apply it mid-deploy. It reported `20 migrations found` / **`No pending migrations to apply`** — the migration was already live, presumably applied through the parallel `webhook.service` deploy path that runs alongside GitHub Actions. Worth remembering that a second deploy mechanism means the recorded DB state can be stale in either direction.
+
+All three jobs green (build-check, deploy, verify). Probed live afterwards: `/api/workouts` 401, **`/api/media-metrics/summary` 401 rather than 404** — which is the proof the new module actually deployed, not merely that the server is up — admin 200, landing 200.
+
+Client build `client-builds/GlowFit30-2026-08-07.zip` (60.3 MB APK, 29.6 MB zipped) built from this commit. Still debug-signed; no release keystore exists.
+
+The two source cue files (`321.aac`, `readytogo.aac`) remain untracked at the repo root on purpose — the app ships the remuxed `.m4a` copies under `flutter_app/assets/audio/`, and the raw ADTS originals are what caused the 1ms-duration failure.
