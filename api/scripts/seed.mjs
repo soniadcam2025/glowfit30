@@ -78,12 +78,16 @@ async function main() {
 
   // ── Exercises (Day 1) ────────────────────────────────────────────────────────
 
+  // Every exercise carries a duration. The player is time-driven — duration is
+  // what it counts down and reps are informational — so a seeded exercise
+  // without one is a row the API's own schema would now reject, and it would
+  // play on the client's guessed estimate instead.
   const exercises = [
-    { name: 'Jumping Jacks',    sets: 3, reps: 20, rest: 30, order: 1 },
-    { name: 'Plank Hold',       sets: 3, duration: 30, rest: 20, order: 2 },
-    { name: 'Crunches',         sets: 3, reps: 15, rest: 30, order: 3 },
-    { name: 'Leg Raises',       sets: 3, reps: 12, rest: 30, order: 4 },
-    { name: 'Mountain Climbers', sets: 3, reps: 20, rest: 30, order: 5 },
+    { name: 'Jumping Jacks',     sets: 3, reps: 20, duration: 30, rest: 30, order: 1 },
+    { name: 'Plank Hold',        sets: 3,           duration: 30, rest: 20, order: 2 },
+    { name: 'Crunches',          sets: 3, reps: 15, duration: 30, rest: 30, order: 3 },
+    { name: 'Leg Raises',        sets: 3, reps: 12, duration: 30, rest: 30, order: 4 },
+    { name: 'Mountain Climbers', sets: 3, reps: 20, duration: 30, rest: 30, order: 5 },
   ];
 
   for (const ex of exercises) {
@@ -98,11 +102,11 @@ async function main() {
   // ── Exercises (Day 2) ────────────────────────────────────────────────────────
 
   const day2Exercises = [
-    { name: 'Squats',           sets: 4, reps: 15, rest: 40, order: 1 },
-    { name: 'Lunges',           sets: 3, reps: 12, rest: 30, order: 2 },
-    { name: 'Glute Bridges',    sets: 3, reps: 15, rest: 30, order: 3 },
-    { name: 'Donkey Kicks',     sets: 3, reps: 15, rest: 30, order: 4 },
-    { name: 'Wall Sit',         sets: 3, duration: 45, rest: 30, order: 5 },
+    { name: 'Squats',        sets: 4, reps: 15, duration: 40, rest: 40, order: 1 },
+    { name: 'Lunges',        sets: 3, reps: 12, duration: 40, rest: 30, order: 2 },
+    { name: 'Glute Bridges', sets: 3, reps: 15, duration: 35, rest: 30, order: 3 },
+    { name: 'Donkey Kicks',  sets: 3, reps: 15, duration: 35, rest: 30, order: 4 },
+    { name: 'Wall Sit',      sets: 3,           duration: 45, rest: 30, order: 5 },
   ];
 
   for (const ex of day2Exercises) {
