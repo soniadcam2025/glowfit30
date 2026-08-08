@@ -25,7 +25,7 @@ Shipped in `29872a9`. API + admin + Flutter all on the new contract.
 - [x] ~~Admin exercise form aligned with the API (seconds leads, reps optional and clearable, "Not set" badge on legacy rows)~~
 - [x] ~~Admin-authored `rest` actually reaches `WorkoutRestScreen`~~ (it never had — every rest was the hardcoded 20s)
 - [x] ~~Backfill exercises with no `duration`/`rest`~~ — **nothing to backfill**: surveyed production 2026-08-08, all 4 exercises already carry both and are in range. The real gap was `api/scripts/seed.mjs`, which created 8 of 10 exercises with no duration at all — rows the API's own schema would now reject. Fixed.
-- [ ] **Consider `NOT NULL` on `exercises.duration` and `exercises.rest`.** Now safe: no row violates it and the seed no longer produces one. It would have caught the seed bug. Needs a hand-written migration (never `migrate dev`) and applies on the next push, so it is a deliberate call, not a drive-by.
+- [x] ~~`NOT NULL` on `exercises.duration` and `exercises.rest`~~ (2026-08-08, `20260808120000_exercise_duration_rest_not_null`) — hand-written, verified against production first and dry-run inside a rolled-back transaction. `api/scripts/check-exercise-nullability.mjs` keeps that check runnable.
 
 ### Exercise playback — done and deployed (2026-08-07)
 

@@ -6,6 +6,11 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Changed (2026-08-08, exercise duration and rest are NOT NULL)
+- **Migration `20260808120000_exercise_duration_rest_not_null`.** Both have been required by the API and admin form since 2026-08-07; the columns stayed nullable so exercises authored before that were neither rejected nor backfilled with an invented number. Every row now carries both and the seed no longer produces rows without them, so the constraint states an invariant the data already satisfies.
+- Hand-written, not generated — `prisma migrate dev` would sweep five unrelated `ALTER COLUMN "id" DROP DEFAULT` statements (pre-existing schema drift) into the same migration and apply them to production as a side effect.
+- **`api/scripts/check-exercise-nullability.mjs`** — reports rows that would violate the constraint and, with `--dry-run`, applies the real statements inside a transaction it rolls back. Local development points at the production database, so there is no separate database to trial a migration against; this is how one gets tested here.
+
 ### Added (2026-08-08, exercise clip sound is user-controllable)
 - **Exercise Sound** — a toggle and volume slider in Workout Settings that genuinely control the audio on exercise clips, backed by `WorkoutAudioSettings` (`flutter_app/lib/services/workout_audio_settings.dart`). Stored on the device rather than synced through `/profile`, because it is a property of where someone is working out — a quiet room, a shared gym, headphones — not of their account, and it has to work offline. Exposed as listenables so a player already built picks up the change immediately instead of at the next exercise.
 - The slider stays visible but dimmed when the sound is off: a control that vanishes makes the screen jump, and the level someone chose is still worth showing.

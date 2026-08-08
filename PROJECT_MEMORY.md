@@ -357,3 +357,12 @@ That also settles the follow-on question the TODO left open. `NOT NULL` on `exer
 **CDN cutover (Phase 8b) remains blocked and I cannot unblock it.** `media.glowfit30.com` returns NXDOMAIN. The code is written, off by default (`MEDIA_CDN_BASE` unset), and reversible; the missing piece is a **proxied** CNAME in Cloudflare, which needs their login. Pointing `MEDIA_CDN_BASE` at a hostname that does not resolve would break every image in the app, so it stays unset.
 
 Also corrected `TODO.md`, which still claimed the media system was uncommitted and undeployed and listed three migrations as pending — all of that shipped on 2026-08-07.
+
+### 2026-08-08 — `exercises.duration` / `exercises.rest` are NOT NULL
+Migration `20260808120000_exercise_duration_rest_not_null`, hand-written per the standing rule — `prisma migrate dev` would have swept the five pre-existing `ALTER COLUMN "id" DROP DEFAULT` drift statements into it and applied them to production as a side effect.
+
+**The interesting part is how it was tested.** Local development points at the production database through the SSH tunnel, so there is no separate database to trial a migration against. Instead the real statements were run inside a transaction that was then rolled back: the columns flipped to `NOT NULL`, an `UPDATE ... SET duration = null` was rejected with Postgres `23502`, and the rollback restored `is_nullable = YES`. That proves the migration applies to the actual data and that the constraint bites, without committing anything. `api/scripts/check-exercise-nullability.mjs` keeps it runnable — **reach for this pattern whenever a migration needs testing on this project**, because "test locally first" has no other meaning here.
+
+Verified before writing anything: 4 exercises, 0 null duration, 0 null rest. After regenerating the client, `exercise.create` without a duration is refused with `Argument 'duration' is missing.`, and a valid create succeeds. Both CI checks reproduced locally first (`API_OK`, admin `tsc` clean, lint clean bar one pre-existing warning).
+
+The schema comment explaining *why* the columns were nullable was rewritten rather than deleted — the reasoning still matters, it just now describes a finished transition. The Flutter `durationSeconds`/`restSeconds` fallbacks stay as cheap defence against an older API.
