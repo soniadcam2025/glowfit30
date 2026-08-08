@@ -126,12 +126,15 @@ model Exercise {
   reps         Int?
   /// Seconds the exercise runs for. This is what drives the workout.
   ///
-  /// Required by the API and the admin form, yet deliberately still nullable
-  /// here: exercises authored before the time-first change have no value, and
-  /// a NOT NULL column would mean either rejecting them or inventing a number
-  /// on their behalf. The client falls back for those until an admin edits them.
-  duration     Int?
-  rest         Int?
+  /// Non-null since 2026-08-08. It was left nullable through the move to a
+  /// time-driven player so exercises authored beforehand were neither rejected
+  /// nor backfilled with an invented number; by the time the constraint went on,
+  /// every row already carried a real value and the seed had been fixed to stop
+  /// producing rows without one. The client keeps its fallback anyway — cheap
+  /// defensive code against a response from an older API.
+  duration     Int
+  /// Seconds of rest after this exercise. Zero is meaningful: go straight on.
+  rest         Int
   imageUrl     String?    @map("image_url")
   gifUrl       String?    @map("gif_url")
   videoUrl     String?    @map("video_url")
