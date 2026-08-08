@@ -11,6 +11,7 @@ import 'routes/app_pages.dart';
 import 'bindings/initial_binding.dart';
 import 'services/media_analytics.dart';
 import 'services/media_downloader.dart';
+import 'services/workout_audio_settings.dart';
 import 'widgets/exercise_video_player.dart';
 
 @pragma('vm:entry-point')
@@ -28,6 +29,10 @@ void main() async {
 
   // Initialize GetStorage
   await GetStorage.init();
+
+  // Straight after the box opens, so the first clip already plays at the
+  // volume the user chose rather than starting loud and correcting itself.
+  WorkoutAudioSettings.instance.load();
 
   // Force portrait mode
   await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);

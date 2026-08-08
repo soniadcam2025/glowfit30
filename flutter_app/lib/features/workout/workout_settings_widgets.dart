@@ -162,6 +162,64 @@ class SettingsDivider extends StatelessWidget {
   }
 }
 
+/// A labelled volume slider, indented to sit under the toggle it belongs to.
+class SettingsVolumeRow extends StatelessWidget {
+  final double value;
+  final ValueChanged<double> onChanged;
+  final bool enabled;
+
+  const SettingsVolumeRow({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // Dimmed rather than removed when the sound is off: a control that vanishes
+    // makes the screen jump, and the level someone chose is still worth showing.
+    return Opacity(
+      opacity: enabled ? 1 : 0.4,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(74, 0, 20, 10),
+        child: Row(
+          children: [
+            Icon(Icons.volume_up_rounded, size: 18, color: Colors.grey[500]),
+            Expanded(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  trackHeight: 3,
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                ),
+                child: Slider(
+                  value: value,
+                  onChanged: enabled ? onChanged : null,
+                  activeColor: kSettingsPink,
+                  inactiveColor: Colors.grey[200],
+                ),
+              ),
+            ),
+            SizedBox(
+              width: 40,
+              child: Text(
+                '${(value * 100).round()}%',
+                textAlign: TextAlign.end,
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  color: kSettingsPink,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// The "Fresh Day" now-playing card with transport controls + volume slider,
 /// shown under Background Music on both the Workout Settings and Music
 /// Settings screens.

@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 import '../models/media.dart';
 import '../services/media_analytics.dart';
 import '../services/media_downloader.dart';
+import '../services/workout_audio_settings.dart';
 import 'glow_image.dart';
 
 /// Lets a player know when its screen has been covered by another route.
@@ -43,9 +44,9 @@ class ExerciseVideoPlayer extends StatefulWidget {
   final BoxFit fit;
   final bool playing;
 
-  /// Silences the clip. Demo clips carry coaching audio and are meant to be
-  /// heard during the exercise, so the default is sound on; a player that is
-  /// only there to show a frame passes true.
+  /// Silences the clip regardless of the user's setting. For a player that is
+  /// only there to show a frame — never for expressing a sound preference,
+  /// which belongs to [WorkoutAudioSettings].
   final bool muted;
 
   /// Poster still and blurhash, when the API sent a media object.
@@ -87,7 +88,21 @@ class ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // The settings screen sits on top of a running workout, so the clip has to
+    // follow the slider as it moves rather than at the next exercise.
+    WorkoutAudioSettings.instance.enabled.addListener(_applyVolume);
+    WorkoutAudioSettings.instance.volume.addListener(_applyVolume);
     _initialize(widget.videoUrl);
+  }
+
+  /// The volume this player should be at right now.
+  double get _volume =>
+      widget.muted ? 0 : WorkoutAudioSettings.instance.effectiveVolume;
+
+  void _applyVolume() {
+    final controller = _controller;
+    if (controller == null || !controller.value.isInitialized) return;
+    controller.setVolume(_volume);
   }
 
   @override
@@ -136,9 +151,7 @@ class ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
       return;
     }
     if (oldWidget.playing != widget.playing) _syncPlayback();
-    if (oldWidget.muted != widget.muted) {
-      _controller?.setVolume(widget.muted ? 0 : 1);
-    }
+    if (oldWidget.muted != widget.muted) _applyVolume();
   }
 
   Future<void> _initialize(String url) async {
@@ -190,7 +203,7 @@ class ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
   /// until the countdown ends; a longer one is simply cut off when it does.
   Future<void> _configure(VideoPlayerController controller) async {
     await controller.setLooping(true);
-    await controller.setVolume(widget.muted ? 0 : 1);
+    await controller.setVolume(_volume);
     if (!mounted || !identical(_controller, controller)) {
       await controller.dispose();
       return;
@@ -232,6 +245,8 @@ class ExerciseVideoPlayerState extends State<ExerciseVideoPlayer>
   void dispose() {
     videoRouteObserver.unsubscribe(this);
     WidgetsBinding.instance.removeObserver(this);
+    WorkoutAudioSettings.instance.enabled.removeListener(_applyVolume);
+    WorkoutAudioSettings.instance.volume.removeListener(_applyVolume);
     _detach();
     _controller?.dispose();
     super.dispose();

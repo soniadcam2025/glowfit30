@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+
+import '../../services/workout_audio_settings.dart';
 import 'workout_settings_widgets.dart';
 
 class WorkoutSettingsScreen extends StatefulWidget {
@@ -10,6 +12,11 @@ class WorkoutSettingsScreen extends StatefulWidget {
 }
 
 class _WorkoutSettingsScreenState extends State<WorkoutSettingsScreen> {
+  // Everything below is still local state that survives nothing and controls
+  // nothing — the screen was built to a design ahead of the features. Exercise
+  // Sound is the exception; it lives in WorkoutAudioSettings because it is
+  // real. Wire these to something or take them off the screen; leaving a
+  // toggle that silently does nothing is worse than not offering it.
   bool _voiceGuide = true;
   bool _coachTips = true;
   bool _backgroundMusic = true;
@@ -35,6 +42,11 @@ class _WorkoutSettingsScreenState extends State<WorkoutSettingsScreen> {
               ),
               const SizedBox(height: 8),
               const SettingsSectionHeader('AUDIO'),
+              // The one control on this screen that is actually wired to
+              // something. The rest are still local state (see the note on
+              // _voiceGuide) and change nothing.
+              _buildExerciseSoundRows(),
+              const SettingsDivider(),
               SettingsToggleRow(
                 icon: Icons.record_voice_over_rounded,
                 title: 'Voice Guide',
@@ -101,6 +113,37 @@ class _WorkoutSettingsScreenState extends State<WorkoutSettingsScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  /// Exercise clip sound: a real setting, stored on the device and pushed to
+  /// the live player as it changes. The clip itself is paused while this screen
+  /// covers it, so the new level is heard the moment the workout resumes rather
+  /// than at the next exercise.
+  Widget _buildExerciseSoundRows() {
+    final settings = WorkoutAudioSettings.instance;
+    return ValueListenableBuilder<bool>(
+      valueListenable: settings.enabled,
+      builder: (context, enabled, _) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SettingsToggleRow(
+            icon: Icons.volume_up_rounded,
+            title: 'Exercise Sound',
+            subtitle: 'Play the audio that comes with each clip',
+            value: enabled,
+            onChanged: settings.setEnabled,
+          ),
+          ValueListenableBuilder<double>(
+            valueListenable: settings.volume,
+            builder: (context, volume, _) => SettingsVolumeRow(
+              value: volume,
+              enabled: enabled,
+              onChanged: settings.setVolume,
+            ),
+          ),
+        ],
       ),
     );
   }
