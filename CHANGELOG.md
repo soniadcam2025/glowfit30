@@ -6,6 +6,13 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-08-08, exercise clip sound is user-controllable)
+- **Exercise Sound** — a toggle and volume slider in Workout Settings that genuinely control the audio on exercise clips, backed by `WorkoutAudioSettings` (`flutter_app/lib/services/workout_audio_settings.dart`). Stored on the device rather than synced through `/profile`, because it is a property of where someone is working out — a quiet room, a shared gym, headphones — not of their account, and it has to work offline. Exposed as listenables so a player already built picks up the change immediately instead of at the next exercise.
+- The slider stays visible but dimmed when the sound is off: a control that vanishes makes the screen jump, and the level someone chose is still worth showing.
+
+### Fixed (2026-08-08, seed script)
+- **`api/scripts/seed.mjs` created 8 of its 10 exercises with no `duration`.** Since the move to a time-driven player those are rows the API's own schema would reject, and in the app they would play on the client's guessed estimate rather than an authored length. Every seeded exercise now carries one.
+
 ### Added (2026-08-07, spoken countdown cues)
 - **The "READY TO GO" countdown now speaks.** `assets/audio/321.aac` (2.1s) starts the moment the circle turns 3, so "three · two · one" lands on zero; `assets/audio/readytogo.aac` (1.2s) then plays with the circle held at zero, and the exercise screen opens when it finishes. **Skipping ahead plays nothing** — tapping the arrow silences any cue mid-word and goes straight through, because someone who skips the countdown has said they do not want to wait for it.
 - **`AudioCue`** (`flutter_app/lib/services/audio_cue.dart`) — one-shot cue playback built on the existing `video_player` rather than a new audio dependency. An audio-only clip allocates no graphics buffers, so cues stay clear of the decoder pool the exercise clips compete for. Every failure path is silent by design: a missing or undecodable cue costs a sound, never the start of a workout.

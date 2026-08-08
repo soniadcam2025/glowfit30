@@ -17,28 +17,34 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 
 ## 🟠 In Progress
 
-### Time-driven exercises — complete, awaiting on-device test
+### Time-driven exercises — done and deployed (2026-08-07)
 
-Uncommitted on `main`. API + admin + Flutter all on the new contract; verified by analysis, typecheck, lint and direct schema exercise, but not yet confirmed by the user in the app.
+Shipped in `29872a9`. API + admin + Flutter all on the new contract.
 
 - [x] ~~`duration`/`rest` required in `createExerciseSchema`~~
 - [x] ~~Admin exercise form aligned with the API (seconds leads, reps optional and clearable, "Not set" badge on legacy rows)~~
 - [x] ~~Admin-authored `rest` actually reaches `WorkoutRestScreen`~~ (it never had — every rest was the hardcoded 20s)
-- [ ] **Backfill the exercises with no `duration`/`rest`.** They play on the client's estimate (3s per rep, else 30s; 20s rest), which is a guess. The admin table badges them "Not set" — open each and give it a real number, then consider whether the columns can become NOT NULL.
+- [x] ~~Backfill exercises with no `duration`/`rest`~~ — **nothing to backfill**: surveyed production 2026-08-08, all 4 exercises already carry both and are in range. The real gap was `api/scripts/seed.mjs`, which created 8 of 10 exercises with no duration at all — rows the API's own schema would now reject. Fixed.
+- [ ] **Consider `NOT NULL` on `exercises.duration` and `exercises.rest`.** Now safe: no row violates it and the seed no longer produces one. It would have caught the seed bug. Needs a hand-written migration (never `migrate dev`) and applies on the next push, so it is a deliberate call, not a drive-by.
 
-### Exercise playback — sound, poster, countdown (2026-08-07)
+### Exercise playback — done and deployed (2026-08-07)
 
-Uncommitted on `main`. Verified on the emulator end to end; not deployed.
+Shipped in `76f5487`.
 
 - [x] ~~Demo clips play their audio~~ (`setVolume(0)` was unconditional — every clip has always been silent)
 - [x] ~~Ready screen shows the first exercise's poster frame~~
 - [x] ~~Active countdown on a wall-clock deadline~~ (it was the one screen `e70717b` missed)
 - [x] ~~Elapsed/kcal sum each exercise's own duration~~ (they assumed all exercises share the current one's)
-- [ ] **Decide whether clip audio should be user-controllable.** Workout Settings already draws a Background Music toggle and volume slider, but they are local `setState` only — wired to nothing, not persisted. Clip audio is currently always on with no way to silence it short of the device volume.
+- [x] ~~Clip audio is user-controllable~~ (2026-08-08) — **Exercise Sound** toggle + volume slider in Workout Settings, stored on the device via `WorkoutAudioSettings` and pushed to the live player as it changes.
 
-### Media system — all 8 phases written, none deployed
+### Workout Settings — one real control, the rest still decorative
 
-All code is on `main` **uncommitted**. Production is still on `5cbe352` and has none of it.
+- [ ] **Voice Guide, Coach Tips, Background Music, Preparation Countdown, Rest Timer and Keep Screen Awake are all local `setState`** — they persist nothing and control nothing. Exercise Sound is now the only working control on that screen. Wire them or take them off; a toggle that silently does nothing is worse than not offering it.
+- [ ] **Opening Workout Settings mid-workout does not pause the workout.** The exercise keeps counting down underneath, and when it finishes the rest-screen push pops the settings route out from under the user. Observed 2026-08-08 while testing.
+
+### Media system — deployed 2026-08-07
+
+Phases 1–8a are **live in production** (pushed `5cbe352..2b5e391`, all deploy jobs green). Only the CDN cutover remains.
 
 - [x] ~~Phase 1 — Flutter image cache~~ (`GlowImage`, 31 `Image.network` call sites replaced)
 - [x] ~~Phase 2 — Sharp image pipeline~~ (thumb/medium/large WebP + metadata)
@@ -51,9 +57,9 @@ All code is on `main` **uncommitted**. Production is still on `5cbe352` and has 
 - [x] ~~Phase 8a — media analytics + admin dashboard~~ (2026-08-06)
 - [ ] **Phase 8b — Cloudflare CDN cutover.** Code is written and reversible (DB always stores origin URLs; rewriting happens on the way out). **Blocked on a DNS record**: `media` CNAME → `wrkt1bckt1.blr1.vultrobjects.com`, **proxied / orange cloud**. `MEDIA_CDN_BASE` must stay unset until that resolves — a dead hostname breaks every image in the app. See `docs/MEDIA_CDN_SETUP.md`.
 
-**Before any of this can deploy:**
+**Remaining production work:**
 
-- [ ] Apply 3 migrations: `20260804180000_add_media_assets`, `20260804190000_add_video_and_blurhash_to_media_assets`, `20260806120000_add_media_events`. **Never run `prisma migrate dev`** — see the schema-drift item below.
+- [x] ~~Apply 3 migrations~~ — the 2026-08-07 deploy reported `20 migrations found` / `No pending migrations to apply`, so all three were already live (applied out-of-band by the parallel `webhook.service` path). **Never run `prisma migrate dev`** — see the schema-drift item below.
 - [ ] Install `sharp`, `ffmpeg-static`, `ffprobe-static`, `blurhash` on the VPS, and confirm it can actually download the ffmpeg binaries during `npm install` (they are fetched at install time, not bundled).
 - [ ] Run `npm run media:backfill -- --apply` on production. Never yet run there — only `--apply --limit 1` locally, against a single row.
 - [ ] Verify the three bug fixes from 2026-08-05 (ready-screen blink, exercise-screen blink, 32s video stalling at ~15s with unresponsive buttons). **Diagnosed by reading code, never reproduced**; they are in both client APKs and still need a real workout session to confirm.

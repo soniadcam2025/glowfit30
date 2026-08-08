@@ -4,7 +4,7 @@
 - This file has two parts: a **Current State** snapshot (top) and an **Update Log** (bottom, append-only).
 - The **Current State** section reflects "as of Last Updated" — it gets edited in place each time something changes, because it's a pointer to *now*, not history.
 - The **Update Log** is **never edited or deleted** — every completed feature/fix appends one new dated entry at the bottom describing what changed. History is preserved permanently there even after the Current State section above it moves on.
-- Last Updated: **2026-08-07**
+- Last Updated: **2026-08-08**
 
 ---
 
@@ -341,3 +341,19 @@ All three jobs green (build-check, deploy, verify). Probed live afterwards: `/ap
 Client build `client-builds/GlowFit30-2026-08-07.zip` (60.3 MB APK, 29.6 MB zipped) built from this commit. Still debug-signed; no release keystore exists.
 
 The two source cue files (`321.aac`, `readytogo.aac`) remain untracked at the repo root on purpose — the app ships the remuxed `.m4a` copies under `flutter_app/assets/audio/`, and the raw ADTS originals are what caused the 1ms-duration failure.
+
+### 2026-08-08 — Backfill (there was nothing to backfill), clip-sound control, CDN still blocked
+
+**Backfill: a no-op, and the real bug was next door.** Surveyed production before writing anything: 4 exercises, **0 missing duration, 0 missing rest, 0 out of range**. Nothing to backfill. What the survey did expose is that `api/scripts/seed.mjs` created **8 of its 10 exercises with no duration at all** — rows the API's own `createExerciseSchema` would now reject, and which in the app would play on the client's guessed estimate. Fixed by giving every seeded exercise a duration. **The task was "backfill the data"; the data was clean and the generator was broken.**
+
+That also settles the follow-on question the TODO left open. `NOT NULL` on `exercises.duration`/`rest` is now safe — no row violates it and the seed no longer produces one — and it would have caught this exact bug. Deliberately *not* done unprompted: it needs a hand-written migration and would apply to production on the next push, which is the user's call rather than a drive-by.
+
+**Clip sound is now user-controllable.** `WorkoutAudioSettings` (GetStorage-backed, `ValueNotifier`-exposed) with an **Exercise Sound** toggle + volume slider in the AUDIO section of Workout Settings. Device-local rather than `/profile`-synced, because it describes the room someone is in, not their account, and must work offline. `ExerciseVideoPlayer` subscribes to both notifiers, so the value reaches a controller that already exists rather than only the next one.
+
+**Verified at the storage layer, not just the UI** — the strongest available check here, since `setVolume(0)` leaves the AudioTrack `state:started` so `dumpsys` cannot distinguish muted from loud. Read `run-as com.glowfit.glowfit cat .../app_flutter/GetStorage.gs` directly: `workoutClipVolume: 0.4029` after moving the slider, `workoutClipSoundEnabled: false` after the toggle, and the UI came back showing 40% after a force-stop and relaunch.
+
+**Two things found while testing, logged not fixed:** opening Workout Settings mid-workout does **not** pause the workout — the exercise keeps counting down underneath and the rest-screen push pops the settings route out from under the user (this is why an early attempt to move the slider landed on the workout screen instead). And Exercise Sound is now the *only* working control on that screen; Voice Guide, Coach Tips, Background Music, both timer steppers and Keep Screen Awake are still local `setState` wired to nothing.
+
+**CDN cutover (Phase 8b) remains blocked and I cannot unblock it.** `media.glowfit30.com` returns NXDOMAIN. The code is written, off by default (`MEDIA_CDN_BASE` unset), and reversible; the missing piece is a **proxied** CNAME in Cloudflare, which needs their login. Pointing `MEDIA_CDN_BASE` at a hostname that does not resolve would break every image in the app, so it stays unset.
+
+Also corrected `TODO.md`, which still claimed the media system was uncommitted and undeployed and listed three migrations as pending — all of that shipped on 2026-08-07.
