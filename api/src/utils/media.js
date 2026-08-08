@@ -44,9 +44,20 @@ function imageObject(a) {
   };
 }
 
+/**
+ * Video stays on the bucket; only its poster goes through the CDN.
+ *
+ * Cloudflare retired the old "non-HTML content" clause, but the substance
+ * survives: video and large files hosted outside Cloudflare are still
+ * restricted on Free, Pro and Business, and they may redirect or throttle
+ * content that looks like a video CDN. An exercise clip is 6.4 MB — not the
+ * ~136 kB an earlier note in the docs claimed — so routing clips through the
+ * Worker is exactly the pattern that gets acted on. Images are the win here
+ * anyway: many more of them, far smaller, and requested far more often.
+ */
 function videoObject(a) {
   return {
-    url: toCdnUrl(a.videoUrl),
+    url: a.videoUrl,
     poster: toCdnUrl(a.posterUrl),
     duration: a.durationSeconds,
     width: a.width,
@@ -81,7 +92,8 @@ function legacyImage(rawUrl) {
 }
 
 function legacyVideo(rawUrl) {
-  return { url: toCdnUrl(rawUrl), poster: null, duration: null, width: null, height: null, mime: 'video/mp4', size: null, blurhash: null };
+  // Origin, for the same reason as videoObject above.
+  return { url: rawUrl, poster: null, duration: null, width: null, height: null, mime: 'video/mp4', size: null, blurhash: null };
 }
 
 /** Walks a payload collecting every imageUrl/videoUrl string value. */
@@ -123,15 +135,17 @@ function attach(node, assets, depth = 0) {
     const objectKey = OBJECT_KEY[k];
     if (!objectKey || typeof v !== 'string' || !v.startsWith('http')) continue;
 
+    const isVideo = k === 'videoUrl';
+
     // The legacy string is rewritten too, not just the object. Screens that
     // still read `imageUrl` — the workout ones — get the CDN without any app
-    // change, which is the point of doing this at the edge.
-    out[k] = toCdnUrl(v);
+    // change, which is the point of doing this at the edge. Video is left on
+    // the bucket; see videoObject.
+    out[k] = isVideo ? v : toCdnUrl(v);
     // Never clobber a real field that happens to share the name.
     if (objectKey in node) continue;
 
     const asset = assets.get(v);
-    const isVideo = k === 'videoUrl';
     out[objectKey] = asset
       ? (isVideo ? videoObject(asset) : imageObject(asset))
       : (isVideo ? legacyVideo(v) : legacyImage(v));

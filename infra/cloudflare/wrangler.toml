@@ -1,0 +1,10 @@
+name = "glowfit-media"
+main = "media-worker.js"
+compatibility_date = "2026-08-08"
+
+# Serves every path on the media hostname. The DNS record for `media` must
+# exist and be proxied (orange cloud) for the route to bind; the Worker
+# replaces the origin entirely, so what the record points at is irrelevant.
+[[routes]]
+pattern = "media.glowfit30.com/*"
+zone_name = "glowfit30.com"

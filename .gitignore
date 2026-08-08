@@ -49,3 +49,7 @@ client-builds/
 /VPS
 /api/VPS
 /help
+
+# Wrangler build output and local state (infra/cloudflare)
+.wrangler/
+.wrangler-build/
