@@ -9,12 +9,16 @@ import { prisma } from '../src/database/prisma.js';
 
 const dryRun = process.argv.includes('--dry-run');
 
-const [total, nullDuration, nullRest] = await Promise.all([
-  prisma.exercise.count(),
-  prisma.exercise.count({ where: { duration: null } }),
-  prisma.exercise.count({ where: { rest: null } }),
-]);
-console.log('DATA:', JSON.stringify({ total, nullDuration, nullRest }));
+// Raw SQL rather than `where: { duration: null }`: once the schema marks these
+// non-nullable the typed filter is a validation error, and this script has to
+// keep working on both sides of the migration.
+const [counts] = await prisma.$queryRawUnsafe(
+  `select count(*)::int as total,
+          count(*) filter (where duration is null)::int as "nullDuration",
+          count(*) filter (where rest is null)::int as "nullRest"
+   from "exercises"`,
+);
+console.log('DATA:', JSON.stringify(counts));
 
 const columns = await prisma.$queryRawUnsafe(
   `select column_name, is_nullable from information_schema.columns
