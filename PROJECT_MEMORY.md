@@ -366,3 +366,16 @@ Migration `20260808120000_exercise_duration_rest_not_null`, hand-written per the
 Verified before writing anything: 4 exercises, 0 null duration, 0 null rest. After regenerating the client, `exercise.create` without a duration is refused with `Argument 'duration' is missing.`, and a valid create succeeds. Both CI checks reproduced locally first (`API_OK`, admin `tsc` clean, lint clean bar one pre-existing warning).
 
 The schema comment explaining *why* the columns were nullable was rewritten rather than deleted — the reasoning still matters, it just now describes a finished transition. The Flutter `durationSeconds`/`restSeconds` fallbacks stay as cheap defence against an older API.
+
+### 2026-08-08 — Media CDN live: Cloudflare Free Worker in front of Vultr
+`MEDIA_CDN_BASE=https://media.glowfit30.com` is set on the VPS and images are served through Cloudflare. Video deliberately stays on the bucket.
+
+**The blocker was one header.** Vultr is Ceph RadosGW and derives the bucket from the Host header; Cloudflare forwards `Host: media.glowfit30.com`, so it answered `NoSuchBucket`. DNS could never fix that, and declarative Host-header override is an Origin Rules feature this Free plan does not offer. A Worker solves it for nothing by fetching the endpoint url — `fetch` sets Host to match the URL it is given. `infra/cloudflare/` holds the Worker, its route and a local harness that runs the real source against the real bucket.
+
+**Two mistakes of mine worth remembering.** First, I reported SSH to the VPS as impossible after `ssh sprsadmin@139.84.149.147` was refused — but `~/.ssh/config` defines a **`glowfit` host alias** (root + `vultr_nopass` key) that works. Always check the SSH config before concluding there is no access; I blocked two separate tasks on a wrong conclusion. Second, a live sweep reported 21 broken images that were fine: it compared a CDN `GET` against an origin `HEAD`, and **undici reports `content-length: 0` on HEAD**, so every real body "mismatched" zero. The tell was that every failure had `origin len=0`. Compare bodies, not HEAD metadata.
+
+**Cache warms slowly on Free and that is normal.** Repeated requests to one object gave 7 HIT / 5 MISS from a single colo, because edge cache is per-server and Free has no Tiered Cache. Do not read early MISSes as a broken cache; check `age` and repeat.
+
+**Verified after activation:** 40/40 stored images byte-identical through the CDN with `immutable` preserved, 4/4 videos still served from the bucket, api 401 (alive), admin 200, landing 200, both PM2 processes online with only `glowfit-api` restarted.
+
+**Rollback is two steps:** remove the `MEDIA_CDN_BASE` line from `/var/www/glowfit/api/.env` and restart `glowfit-api`. A timestamped backup sits beside it (`.env.bak-20260808-190242`, chmod 600). The database only ever stores origin urls, so nothing needs migrating either way.
