@@ -175,9 +175,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   TextSpan(
                     text: 'Settings',
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.ptSerif(
                       fontSize: 24,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.bold,
                       color: _pink,
                     ),
                   ),

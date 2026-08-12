@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../config/theme/app_colors.dart';
 import '../controllers/onboarding_controller.dart';
 
 class OnboardingBase extends StatelessWidget {
@@ -11,7 +10,6 @@ class OnboardingBase extends StatelessWidget {
   final Widget content;
   final VoidCallback? onContinue;
   final bool showBack;
-  final String footerText;
 
   const OnboardingBase({
     super.key,
@@ -22,7 +20,6 @@ class OnboardingBase extends StatelessWidget {
     this.subtitle,
     this.onContinue,
     this.showBack = true,
-    this.footerText = 'You can change this later',
   });
 
   @override
@@ -30,14 +27,6 @@ class OnboardingBase extends StatelessWidget {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // Wave background
-        const Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: _WaveBackground(),
-        ),
-        // Content — transparent so wave shows through footer area
         SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -85,79 +74,13 @@ class OnboardingBase extends StatelessWidget {
                   ),
                 ),
               ),
-              // Footer sits over the wave (transparent background)
-              _Footer(onContinue: onContinue, footerText: footerText),
+              _Footer(onContinue: onContinue),
             ],
           ),
         ),
       ],
     );
   }
-}
-
-class _WaveBackground extends StatelessWidget {
-  const _WaveBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 160,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _WavePainter(),
-      ),
-    );
-  }
-}
-
-class _WavePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final backPaint = Paint()
-      ..color = AppColors.splashGradientStart.withValues(alpha: 0.5)
-      ..style = PaintingStyle.fill;
-
-    final backPath = Path();
-    backPath.moveTo(0, size.height * 0.55);
-    backPath.cubicTo(
-      size.width * 0.2, size.height * 0.25,
-      size.width * 0.45, size.height * 0.65,
-      size.width * 0.65, size.height * 0.38,
-    );
-    backPath.cubicTo(
-      size.width * 0.8, size.height * 0.18,
-      size.width * 0.9, size.height * 0.45,
-      size.width, size.height * 0.3,
-    );
-    backPath.lineTo(size.width, size.height);
-    backPath.lineTo(0, size.height);
-    backPath.close();
-    canvas.drawPath(backPath, backPaint);
-
-    final frontPaint = Paint()
-      ..color = AppColors.splashGradientEnd.withValues(alpha: 0.6)
-      ..style = PaintingStyle.fill;
-
-    final frontPath = Path();
-    frontPath.moveTo(0, size.height * 0.75);
-    frontPath.cubicTo(
-      size.width * 0.15, size.height * 0.5,
-      size.width * 0.38, size.height * 0.85,
-      size.width * 0.55, size.height * 0.62,
-    );
-    frontPath.cubicTo(
-      size.width * 0.72, size.height * 0.42,
-      size.width * 0.88, size.height * 0.72,
-      size.width, size.height * 0.55,
-    );
-    frontPath.lineTo(size.width, size.height);
-    frontPath.lineTo(0, size.height);
-    frontPath.close();
-    canvas.drawPath(frontPath, frontPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _Header extends StatelessWidget {
@@ -209,9 +132,8 @@ class _Header extends StatelessWidget {
 
 class _Footer extends StatelessWidget {
   final VoidCallback? onContinue;
-  final String footerText;
 
-  const _Footer({this.onContinue, required this.footerText});
+  const _Footer({this.onContinue});
 
   @override
   Widget build(BuildContext context) {
@@ -231,7 +153,7 @@ class _Footer extends StatelessWidget {
                   end: Alignment(0.98, 0.29),
                   colors: [Color(0xFFFF136B), Color(0xFFFF607B)],
                 ),
-                borderRadius: BorderRadius.circular(23),
+                borderRadius: BorderRadius.circular(45),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -248,13 +170,6 @@ class _Footer extends StatelessWidget {
                   const Icon(Icons.arrow_forward_ios, color: Colors.white, size: 14),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            footerText,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Colors.grey,
             ),
           ),
         ],

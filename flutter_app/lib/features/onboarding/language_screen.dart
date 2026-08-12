@@ -32,41 +32,35 @@ class LanguageScreen extends StatelessWidget {
                 builder: (_) => Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      "We'll personalize everything for you",
-                      style: AppTypography.bodyMedium().copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 24),
                     _LanguageOption(
                       flag: 'assets/images/usa.png',
                       language: 'English',
                       isSelected: controller.userProfile.language == 'English',
                       onTap: () => controller.selectLanguage('English'),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _LanguageOption(
                       flag: 'assets/images/india.png',
                       language: 'Hindi',
                       isSelected: controller.userProfile.language == 'Hindi',
                       onTap: () => controller.selectLanguage('Hindi'),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _LanguageOption(
                       flag: 'assets/images/india.png',
                       language: 'Bengali',
                       isSelected: controller.userProfile.language == 'Bengali',
                       onTap: () => controller.selectLanguage('Bengali'),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _LanguageOption(
                       flag: 'assets/images/espanol.png',
                       language: 'Espanol',
                       isSelected: controller.userProfile.language == 'Espanol',
                       onTap: () => controller.selectLanguage('Espanol'),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     _LanguageOption(
                       flag: 'assets/images/brazil.png',
                       language: 'Brazil',

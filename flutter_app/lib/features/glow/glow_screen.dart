@@ -480,9 +480,9 @@ class _GlowScreenState extends State<GlowScreen> {
                             ),
                             TextSpan(
                               text: '7 Days',
-                              style: GoogleFonts.poppins(
+                              style: GoogleFonts.ptSerif(
                                 fontSize: 26,
-                                fontWeight: FontWeight.w900,
+                                fontWeight: FontWeight.bold,
                                 color: _pink,
                               ),
                             ),

@@ -169,23 +169,6 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              'Your best version starts today ',
-                              textAlign: TextAlign.center,
-                              style: AppTypography.bodySmall().copyWith(color: AppColors.textSecondary),
-                            ),
-                            Image.asset(
-                              'assets/images/star1.png',
-                              height: 18,
-                              width: 18,
-                              fit: BoxFit.contain,
-                            ),
-                          ],
-                        ),
                       ],
                     ),
                   ),

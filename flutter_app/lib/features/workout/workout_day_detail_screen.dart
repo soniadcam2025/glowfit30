@@ -230,9 +230,9 @@ class _WorkoutDayDetailScreenState extends State<WorkoutDayDetailScreen> {
               ),
               TextSpan(
                 text: '${widget.day}',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.ptSerif(
                   fontSize: 20,
-                  fontWeight: FontWeight.w700,
+                  fontWeight: FontWeight.bold,
                   color: _pink,
                 ),
               ),

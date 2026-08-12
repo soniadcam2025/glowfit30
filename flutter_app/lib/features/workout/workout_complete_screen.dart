@@ -205,9 +205,9 @@ class _WorkoutCompleteScreenState extends State<WorkoutCompleteScreen> {
                     ),
                     Text(
                       _dayLabel,
-                      style: GoogleFonts.poppins(
+                      style: GoogleFonts.ptSerif(
                         fontSize: 28,
-                        fontWeight: FontWeight.w900,
+                        fontWeight: FontWeight.bold,
                         color: _pink,
                         height: 1.1,
                       ),

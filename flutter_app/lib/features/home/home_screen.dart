@@ -127,10 +127,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     children: [
                       Text(
                         '${_c.userName.value} ',
-                        style: GoogleFonts.poppins(
+                        style: GoogleFonts.ptSerif(
                           fontSize: 16,
                           color: _pink,
-                          fontWeight: FontWeight.w700,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
                       SvgPicture.asset(
@@ -297,9 +297,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     )),
                 Text(
                   'IN 30 DAYS',
-                  style: GoogleFonts.poppins(
+                  style: GoogleFonts.ptSerif(
                     fontSize: 26,
-                    fontWeight: FontWeight.w900,
+                    fontWeight: FontWeight.bold,
                     color: _pink,
                     height: 1.15,
                   ),

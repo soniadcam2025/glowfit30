@@ -129,9 +129,9 @@ class AppTypography {
     height: 1.2,
   );
 
-  // Highlight: Poppins 32 bold, brand pink
-  static TextStyle onboardingHighlight() => GoogleFonts.poppins(
-    fontSize: 32,
+  // Highlight: PT Serif 30 bold, brand pink
+  static TextStyle onboardingHighlight() => GoogleFonts.ptSerif(
+    fontSize: 30,
     fontWeight: FontWeight.w700,
     color: _highlightColor,
     height: 1.2,
@@ -177,9 +177,7 @@ class AppTypography {
           if (prefix.isNotEmpty) TextSpan(text: prefix),
           TextSpan(
             text: highlight,
-            style: onboardingHighlight().copyWith(
-              fontFamily: GoogleFonts.poppins().fontFamily,
-            ),
+            style: onboardingHighlight(),
           ),
           if (inlineTrailing != null)
             WidgetSpan(

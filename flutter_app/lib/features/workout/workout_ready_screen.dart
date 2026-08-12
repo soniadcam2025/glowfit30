@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:math' as math;
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../models/media.dart';
@@ -8,6 +7,7 @@ import '../../services/audio_cue.dart';
 import '../../widgets/glow_image.dart';
 import 'workout_active_screen.dart';
 import 'workout_active_screen_v2.dart';
+import 'workout_stats_pill.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -166,127 +166,138 @@ class _WorkoutReadyScreenState extends State<WorkoutReadyScreen> {
           // ── Full-bleed exercise media ────────────────────────────────
           _buildExerciseMedia(),
 
+          // ── Legibility scrim for the dark caption ────────────────────
+          _buildCaptionScrim(),
+
           // ── Top overlay controls ─────────────────────────────────────
           SafeArea(
             bottom: false,
             child: Padding(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              // Wrapped in a min-height Column on purpose. This sits in a
+              // StackFit.expand Stack, so the row is handed the full screen
+              // height — and a Center inside it then centred the pill halfway
+              // down the photo rather than between the two buttons.
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  _roundButton(
-                    color: Colors.black38,
-                    icon: const Icon(Icons.arrow_back_ios_new,
-                        size: 16, color: Colors.white),
-                    onTap: () => Navigator.pop(context),
-                  ),
-                  _roundButton(
-                    color: Colors.white70,
-                    icon: const Icon(Icons.more_vert,
-                        size: 18, color: _darkText),
-                    onTap: () {},
+                  Row(
+                    children: [
+                      _roundButton(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        icon: const Icon(Icons.arrow_back_ios_new,
+                            size: 15, color: _darkText),
+                        onTap: () => Navigator.pop(context),
+                      ),
+                      Expanded(
+                        child: Center(
+                          // Nothing has been done yet, so the exercise counter
+                          // opens on the first one and kcal on zero — showing
+                          // calories before the workout starts would be a
+                          // number the user has not earned.
+                          child: WorkoutStatsPill(
+                            currentExercise: 1,
+                            totalExercises: widget.exercises.length,
+                            earnedKcal: 0,
+                            totalKcal: widget.totalKcal,
+                          ),
+                        ),
+                      ),
+                      _roundButton(
+                        color: Colors.white.withValues(alpha: 0.85),
+                        icon: const Icon(Icons.more_vert,
+                            size: 18, color: _darkText),
+                        onTap: () {},
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
 
-          // ── Floating Liquid Glass "READY TO GO" panel ────────────────
+          // ── Caption + countdown, straight on the photo ───────────────
           Positioned(
             left: 16,
             right: 16,
-            bottom: MediaQuery.of(context).padding.bottom + 20,
-            child: _buildGlassReadyPanel(firstName),
+            bottom: MediaQuery.of(context).padding.bottom + 24,
+            child: _buildReadyCaption(firstName),
           ),
         ],
       ),
     );
   }
 
-  // ─── LIQUID GLASS READY PANEL ──────────────────────────────────────────────
+  // ─── CAPTION SCRIM ─────────────────────────────────────────────────────────
 
-  Widget _buildGlassReadyPanel(String name) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(32),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          padding: const EdgeInsets.fromLTRB(24, 26, 24, 28),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(32),
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Colors.white.withValues(alpha: 0.09),
-                const Color(0xFFFFF3F7).withValues(alpha: 0.03),
-                Colors.white.withValues(alpha: 0.02),
-              ],
-              stops: const [0.0, 0.45, 1.0],
-            ),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.18),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'READY TO GO !',
-                style: GoogleFonts.poppins(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: _darkText,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                name,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w500,
-                  color: _darkText,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                width: 30,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: _pink,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 18),
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: double.infinity,
-                    height: 96,
-                    child: Center(child: _buildCountdownCircle()),
-                  ),
-                  Positioned(
-                    right: 4,
-                    // Only tapping this arrow jumps ahead instantly; the
-                    // circle itself no longer responds to taps — the
-                    // countdown otherwise runs its course on its own.
-                    child: GestureDetector(
-                      onTap: _start,
-                      child: const Icon(Icons.arrow_forward_ios_rounded,
-                          size: 26, color: _darkText),
-                    ),
-                  ),
+  /// A light wash behind the lower third so the dark caption stays readable.
+  ///
+  /// The caption sits directly on the poster frame, and poster frames vary — a
+  /// dim or busy one would swallow near-black text. White rather than the usual
+  /// black scrim, because the text it protects is dark: on the bright studio
+  /// shots these clips mostly use it is imperceptible, and it only does visible
+  /// work on the frames that would otherwise be unreadable.
+  Widget _buildCaptionScrim() {
+    return IgnorePointer(
+      child: Align(
+        alignment: Alignment.bottomCenter,
+        child: FractionallySizedBox(
+          heightFactor: 0.42,
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.white.withValues(alpha: 0.0),
+                  Colors.white.withValues(alpha: 0.38),
+                  Colors.white.withValues(alpha: 0.72),
                 ],
+                stops: const [0.0, 0.55, 1.0],
               ),
-            ],
+            ),
           ),
         ),
       ),
+    );
+  }
+
+  // ─── READY CAPTION ─────────────────────────────────────────────────────────
+
+  Widget _buildReadyCaption(String name) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'READY TO GO !',
+          style: GoogleFonts.poppins(
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            color: _darkText,
+            letterSpacing: 0.5,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          name,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.poppins(
+            fontSize: 19,
+            fontWeight: FontWeight.w500,
+            color: _darkText,
+          ),
+        ),
+        const SizedBox(height: 26),
+        // The visible skip arrow is gone, but skipping is not: the circle
+        // itself takes the tap. Someone who does not want to sit through the
+        // countdown still has a way past it, without an arrow the design
+        // does not have.
+        GestureDetector(
+          onTap: _start,
+          behavior: HitTestBehavior.opaque,
+          child: _buildCountdownCircle(),
+        ),
+      ],
     );
   }
 
@@ -407,12 +418,14 @@ class _ReadyArcPainter extends CustomPainter {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = size.width / 2 - 4;
 
-    // Track
+    // Track. White rather than tinted pink: the ring now sits on the photo
+    // itself instead of inside a panel, and a pale pink track disappeared
+    // against the light frames these clips use.
     canvas.drawCircle(
       center,
       radius,
       Paint()
-        ..color = _pink.withValues(alpha: 0.25)
+        ..color = Colors.white.withValues(alpha: 0.9)
         ..strokeWidth = 5
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round,

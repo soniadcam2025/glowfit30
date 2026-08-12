@@ -276,9 +276,9 @@ class _WorkoutLibraryScreenState extends State<WorkoutLibraryScreen> {
               ),
               TextSpan(
                 text: 'Library',
-                style: GoogleFonts.poppins(
+                style: GoogleFonts.ptSerif(
                   fontSize: 26,
-                  fontWeight: FontWeight.w800,
+                  fontWeight: FontWeight.bold,
                   color: _pink,
                 ),
               ),

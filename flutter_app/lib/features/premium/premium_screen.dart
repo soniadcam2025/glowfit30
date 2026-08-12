@@ -647,7 +647,7 @@ class _PremiumScreenState extends State<PremiumScreen> {
               padding: const EdgeInsets.symmetric(vertical: 15),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(colors: [Color(0xFFFF4E8D), _pink]),
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: BorderRadius.circular(45),
                 boxShadow: [
                   BoxShadow(color: _pink.withValues(alpha: 0.35), blurRadius: 10, offset: const Offset(0, 4)),
                 ],

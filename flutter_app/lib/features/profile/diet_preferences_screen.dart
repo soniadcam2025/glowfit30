@@ -155,7 +155,7 @@ class _DietPreferencesScreenState extends State<DietPreferencesScreen> {
                                     const EdgeInsets.symmetric(vertical: 15),
                                 decoration: BoxDecoration(
                                   color: _pink,
-                                  borderRadius: BorderRadius.circular(26),
+                                  borderRadius: BorderRadius.circular(45),
                                   boxShadow: [
                                     BoxShadow(
                                       color: _pink.withValues(alpha: 0.35),

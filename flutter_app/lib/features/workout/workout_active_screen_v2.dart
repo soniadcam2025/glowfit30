@@ -11,6 +11,7 @@ import 'music_settings_screen.dart';
 import 'workout_active_screen.dart' show ActiveExercise;
 import 'workout_rest_screen.dart';
 import 'workout_settings_screen.dart';
+import 'workout_stats_pill.dart';
 
 const _pink = Color(0xFFFF136B);
 const _darkText = Color(0xFF1A1A2E);
@@ -405,7 +406,12 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
           Positioned(
             left: 16,
             right: 16,
-            bottom: MediaQuery.of(context).padding.bottom + 20,
+            // 17 rather than 20 drops the whole cluster 3px. The ring then
+            // falls a further 14px because the gap below it is gone — this
+            // column is anchored to the bottom, so the only way to move the
+            // ring down relative to the hint row is to take space out from
+            // between them. Net: ring 17px down, hint row 3px down.
+            bottom: MediaQuery.of(context).padding.bottom + 17,
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -413,7 +419,9 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
                   padding: const EdgeInsets.symmetric(horizontal: 30),
                   child: _buildCapsule(),
                 ),
-                const SizedBox(height: 14),
+                // No SizedBox here on purpose: the capsule already carries
+                // 12px of its own padding below the ring, which is the
+                // separation you see.
                 _buildHintRow(),
               ],
             ),
@@ -444,34 +452,17 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
                   onTap: _openControlSheet,
                 ),
                 Expanded(
+                  // The same counter the ready screen shows, carried across
+                  // unchanged. It replaced a "Workout Progress NN%" chip: the
+                  // bar directly above already reports that percentage, and
+                  // the exercise and kcal counts were only available further
+                  // down in the capsule.
                   child: Center(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 9),
-                      decoration: BoxDecoration(
-                        color: Colors.black38,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: RichText(
-                        text: TextSpan(children: [
-                          TextSpan(
-                            text: 'Workout Progress  ',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          TextSpan(
-                            text: '${(_overallProgress * 100).round()}%',
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: _pink,
-                            ),
-                          ),
-                        ]),
-                      ),
+                    child: WorkoutStatsPill(
+                      currentExercise: _currentIndex + 1,
+                      totalExercises: widget.exercises.length,
+                      earnedKcal: _earnedKcal,
+                      totalKcal: widget.totalKcal,
                     ),
                   ),
                 ),
@@ -521,24 +512,18 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
         if (_isLocked) return;
         if ((details.primaryVelocity ?? 0) < -200) _openControlSheet();
       },
-      child: _GlassCapsule(
-        radius: 34,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              _capsuleStat(emoji: '🔥', value: '$_earnedKcal', label: 'kcal'),
-              _PressableScale(
-                onTap: _isLocked ? () {} : _toggleRingPause,
-                child: _buildRingTimer(),
-              ),
-              _capsuleStat(
-                value: '${_currentIndex + 1}/${widget.exercises.length}',
-                label: 'Exercise',
-              ),
-            ],
+      behavior: HitTestBehavior.opaque,
+      // The ring alone. The kcal and exercise counts that used to flank it,
+      // and the frosted pill drawn behind all three, are gone: both numbers
+      // now live in the header pill, and repeating them here stated the same
+      // thing twice on one screen. Vertical padding matches the pill's old
+      // internal padding so the ring does not shift position.
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        child: Center(
+          child: _PressableScale(
+            onTap: _isLocked ? () {} : _toggleRingPause,
+            child: _buildRingTimer(),
           ),
         ),
       ),
@@ -551,59 +536,6 @@ class _WorkoutActiveScreenV2State extends State<WorkoutActiveScreenV2> {
       strokeWidth: 6,
       progress: _progress,
       label: _timeFormatted,
-    );
-  }
-
-  Widget _capsuleStat({String? emoji, required String value, required String label}) {
-    final valueText = Text(
-      value,
-      style: GoogleFonts.poppins(
-        fontSize: 17,
-        fontWeight: FontWeight.w600,
-        color: Colors.white,
-        height: 1.15,
-      ),
-    );
-    final labelText = Text(
-      label,
-      style: GoogleFonts.poppins(
-        fontSize: 11,
-        fontWeight: FontWeight.w500,
-        color: Colors.white.withValues(alpha: 0.6),
-        height: 1.2,
-      ),
-    );
-
-    if (emoji == null) {
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [valueText, labelText],
-      );
-    }
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: Colors.black.withValues(alpha: 0.35),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.06),
-            ),
-          ),
-          child: Center(
-            child: Text(emoji, style: const TextStyle(fontSize: 15)),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [valueText, labelText],
-        ),
-      ],
     );
   }
 
@@ -1445,79 +1377,6 @@ class _RingPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _RingPainter old) =>
       old.progress != progress || old.strokeWidth != strokeWidth;
-}
-
-// ─── GLASS CAPSULE (iOS 18 glassmorphism) ─────────────────────────────────
-// Reusable frosted-glass pill: heavy backdrop blur, translucent black fill,
-// top sheen gradient, hairline border and a soft bottom-only shadow. The
-// content behind stays visible through the glass.
-
-class _GlassCapsule extends StatelessWidget {
-  final Widget child;
-  final double radius;
-
-  const _GlassCapsule({required this.child, this.radius = 34});
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(radius),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.28),
-            blurRadius: 26,
-            spreadRadius: -4,
-            offset: const Offset(0, 14),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 35, sigmaY: 35),
-          child: Container(
-            decoration: BoxDecoration(
-              // 4%: the capsule is meant to read as glass over the clip, not as
-              // a panel sitting on top of it. The 35-sigma blur below is what
-              // keeps the white text legible now that the tint barely darkens
-              // anything — without it this would be unreadable over a bright
-              // frame.
-              color: Colors.black.withValues(alpha: 0.04),
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.08),
-                width: 1,
-              ),
-            ),
-            child: Stack(
-              children: [
-                // Vertical sheen: faint white at the top fading to nothing.
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(radius),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.white.withValues(alpha: 0.08),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                child,
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 // ─── GRADIENT RING TIMER (Apple Fitness style) ────────────────────────────

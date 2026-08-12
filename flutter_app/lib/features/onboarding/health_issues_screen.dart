@@ -146,7 +146,7 @@ class _HealthIssuesScreenState extends State<HealthIssuesScreen> {
               end: Alignment(0.98, 0.29),
               colors: [Color(0xFFFF136B), Color(0xFFFF607B)],
             ),
-            borderRadius: BorderRadius.circular(23),
+            borderRadius: BorderRadius.circular(45),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,

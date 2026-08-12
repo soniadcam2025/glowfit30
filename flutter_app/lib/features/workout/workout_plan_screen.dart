@@ -133,8 +133,8 @@ class _WorkoutPlanScreenState extends State<WorkoutPlanScreen> {
                   ),
                   TextSpan(
                     text: 'Workout Plan',
-                    style: GoogleFonts.poppins(
-                        fontSize: 20, fontWeight: FontWeight.w800, color: _pink),
+                    style: GoogleFonts.ptSerif(
+                        fontSize: 20, fontWeight: FontWeight.bold, color: _pink),
                   ),
                 ]),
               ),

@@ -181,9 +181,9 @@ class _WorkoutCategoryScreenState extends State<WorkoutCategoryScreen> {
                   const SizedBox(height: 14),
                   Text(
                     heading1,
-                    style: GoogleFonts.poppins(
+                    style: GoogleFonts.ptSerif(
                       fontSize: 44,
-                      fontWeight: FontWeight.w900,
+                      fontWeight: FontWeight.bold,
                       color: _pink,
                       height: 1.0,
                     ),

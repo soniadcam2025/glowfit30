@@ -12,7 +12,7 @@ class AppConstants {
 
   // Size Constants
   static const double buttonHeight = 56.0;
-  static const double buttonBorderRadius = 16.0;
+  static const double buttonBorderRadius = 45.0;
   static const double cardBorderRadius = 12.0;
   static const double inputBorderRadius = 12.0;
 
