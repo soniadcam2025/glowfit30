@@ -158,6 +158,7 @@ Per `docs/archive/App-Admin-Api connection Task.md` (**28/28 — complete as of 
 - **Phase 4 — Polish** (4/4): push notifications, media uploads (Vultr S3), streak logic, analytics page.
 - **Phase 5 — Content Completion** (3/3 ✅): Workout Library category cards, Glow screen (full CRUD from stub) — fixed a `HomeController` GetX `permanent` bug along the way. Task 28 (profile settings sub-screens: Workout/Diet/Notification/App Settings) completed and pushed 2026-07-26.
 - **Beyond original scope:** standalone browsable Workout Library with category browse + difficulty filter + hero/featured separation; full project documentation suite (this file plus 13 others); App Settings module (language/appearance/legal content) completed end-to-end (2026-07-26); Premium/paywall screen built and wired from Glow (2026-07-26); Glow category linking + category detail screen (2026-07-26); unified Glow content (Reads/Shorts) detail screen with tabbed accordion content and premium gating (2026-07-26).
+- **Flutter design pass, in progress (2026-08-12):** app-wide button corner radius unified to a fully pill-shaped 45px (13 CTAs); shared `WorkoutStatsPill` widget replacing duplicated exercise/kcal counters on the Workout Ready and Active screens; Workout Ready screen redesigned to a supplied reference; 9 pink two-tone headlines switched to PT Serif Bold; Splash/Language/onboarding-footer decorative cleanup (removed subtitle text, footer caption, and wave background across 7 shared-footer screens). Screen-by-screen, user-directed — see `CHANGELOG.md` and `PROJECT_MEMORY.md` for the full change list.
 
 ## 15. Pending Features
 
@@ -174,6 +175,7 @@ Per `docs/archive/App-Admin-Api connection Task.md` (**28/28 — complete as of 
 - nginx missing `client_max_body_size` — likely rejects the API's 100MB video-upload endpoint with a 413.
 - Plaintext VPS/DB credentials committed to git.
 - ~~`HomeController` GetX `permanent` bug~~ — **fixed** (commit `41232a0`).
+- ~~`expandMedia()` in `api/src/utils/media.js` silently corrupted every `Date` field in any response carrying a media URL (rebuilding `Object.entries()` of a `Date` produces `{}`), hanging the Flutter Profile screen — live since `2007fcc` (2026-08-07)~~ — **fixed** (2026-08-12).
 
 ## 17. Technical Debt
 
