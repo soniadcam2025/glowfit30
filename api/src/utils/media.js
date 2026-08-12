@@ -96,6 +96,20 @@ function legacyVideo(rawUrl) {
   return { url: rawUrl, poster: null, duration: null, width: null, height: null, mime: 'video/mp4', size: null, blurhash: null };
 }
 
+/**
+ * Whether a value is a plain `{}` object, as opposed to a class instance.
+ *
+ * Only plain objects and arrays may be walked. A `Date` has no enumerable own
+ * properties, so `Object.entries` on one returns `[]` — rebuilding it from its
+ * entries in `attach` turned every date in the payload into `{}`. Guarding on
+ * the prototype covers Date and anything else with one (Decimal, Buffer, Map),
+ * rather than special-casing the type that happened to break first.
+ */
+function isPlainObject(node) {
+  const proto = Object.getPrototypeOf(node);
+  return proto === Object.prototype || proto === null;
+}
+
 /** Walks a payload collecting every imageUrl/videoUrl string value. */
 function collect(node, found, depth = 0) {
   if (depth > 12 || node === null || typeof node !== 'object') return;
@@ -103,6 +117,7 @@ function collect(node, found, depth = 0) {
     for (const n of node) collect(n, found, depth + 1);
     return;
   }
+  if (!isPlainObject(node)) return;
   for (const [k, v] of Object.entries(node)) {
     if ((k === 'imageUrl' || k === 'videoUrl' || k === 'heroImageUrl' ||
          k === 'cardImageUrl' || k === 'gifUrl' || k === 'photoUrl') &&
@@ -127,6 +142,9 @@ const OBJECT_KEY = {
 function attach(node, assets, depth = 0) {
   if (depth > 12 || node === null || typeof node !== 'object') return node;
   if (Array.isArray(node)) return node.map((n) => attach(n, assets, depth + 1));
+  // Dates and other class instances are passed through untouched — see
+  // isPlainObject. Rebuilding them from Object.entries would erase them.
+  if (!isPlainObject(node)) return node;
 
   const out = {};
   for (const [k, v] of Object.entries(node)) {
