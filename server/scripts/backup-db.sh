@@ -19,7 +19,8 @@
 # Usage (on the VPS, as root):
 #   bash server/scripts/backup-db.sh
 # Env overrides:
-#   DB_NAME, BACKUP_DIR, PUBLIC_KEY, RETENTION_DAYS, MIN_TABLES, KEEP_PLAINTEXT
+#   DB_NAME, BACKUP_DIR, PUBLIC_KEY, RETENTION_DAYS, MIN_TABLES, KEEP_PLAINTEXT,
+#   BACKUP_STAMP (set by backup-nightly.sh so it knows which files it made)
 #
 # Exit 0 = backup written and verified. Non-zero = no trustworthy backup.
 
@@ -34,7 +35,7 @@ RETENTION_DAYS="${RETENTION_DAYS:-14}"
 MIN_TABLES="${MIN_TABLES:-15}"
 KEEP_PLAINTEXT="${KEEP_PLAINTEXT:-0}"
 
-STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+STAMP="${BACKUP_STAMP:-$(date -u +%Y%m%dT%H%M%SZ)}"
 BASE="$BACKUP_DIR/${DB_NAME}-${STAMP}"
 DUMP="$BASE.dump"
 LOG_PREFIX="[backup:${DB_NAME}]"

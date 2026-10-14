@@ -1,0 +1,8 @@
+# GlowFit 30 — nightly encrypted database backup to soniadcam2025/glowfit30-backups.
+# Installed as /etc/cron.d/glowfit-backup (root:root 644). See BACKUP_RESTORE.md.
+# 21:30 UTC = 03:00 IST, the quietest hour for the app's users.
+# flock -n: a run still going (it takes ~10 s) is never doubled up.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
+30 21 * * * root /usr/bin/flock -n /run/glowfit-backup.lock /bin/bash /var/www/glowfit/server/scripts/backup-nightly.sh >> /var/log/glowfit-backup.log 2>&1

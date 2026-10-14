@@ -404,3 +404,16 @@ Also built and shipped `client-builds/GlowFit30-2026-08-12.zip` (60.3MB release 
 **gh CLI quirk:** the *active* gh account is `lovusayani`; the repo owner `soniadcam2025` is a secondary login. Owner-scoped operations used `GH_TOKEN=$(gh auth token --user soniadcam2025)` per command rather than switching the active account.
 
 Left for the owner: nightly cron + off-server storage choice, private-key custody, credential rotation, whether the main repo should be private, rehearsing `setup-vps.sh` on a throwaway VPS. Eight modified Flutter source files present in the working tree (in-progress UI work, changed during this session) were **not** committed.
+
+### 2026-10-14 (later) — Nightly backups live, live passwords found in public history and rotated
+**The history review found something the first pass missed.** The earlier audit had compared only the committed *database* password with production (not live) and stopped there. Testing every credential-shaped token in all history against `/etc/shadow` (via Python `crypt`, values piped over SSH stdin, nothing printed) showed the **root and sprsadmin Linux passwords in the public repo were the current ones**, with `PasswordAuthentication yes` and `PermitRootLogin yes`. Rotated both with `chpasswd` from stdin; new values written only to a local ACL-restricted file. Auth logs back to 2026-09-13 show only publickey logins (owner IP + Actions runners using the `glowfit-deploy-20260726` key). Lesson: "the DB password is stale" said nothing about the others — test every candidate against every live credential.
+
+**Why a deploy key and git tags instead of release assets.** Releases need an API token; a fine-grained PAT can only be minted in the browser, which would have left the pipeline unverifiable today. A deploy key is narrower anyway (one repo — confirmed by a refused dry-run push to `glowfit30`). Each night is an orphan commit under tag `nightly/<stamp>`, never on a branch, so pruning a tag genuinely drops the backup. Known trade-off: root on the VPS can delete backups in that repo (never read them).
+
+**Windows gotcha:** cloning a backup tag on this machine converted the `.sha256` file to CRLF (`core.autocrlf=true`), making `sha256sum -c` fail on a perfectly good backup. Fixed for future tags with a `* binary` `.gitattributes` in each commit; for older tags clone with `-c core.autocrlf=false`.
+
+**Restore test without the private key touching the VPS:** clone tag from GitHub on the PC → decrypt with owner key → plaintext sha256 = manifest → `scp` to a root-only path → `restore-db.sh` into `glowfit_restore_test_*` → counts identical (19 tables, 765 rows, 21 migrations) → `dropdb`, `shred`. No local Postgres/Docker here, so the temp DB lives on the prod cluster briefly.
+
+**Media finding:** both Vultr buckets have a day-0 lifecycle transition to `VULTR_ARCHIVE`, no versioning, single copy (233 objects, ~3.6 MB). Not created by this repo; documented, not changed.
+
+**Classifier boundary:** a read-only bcrypt comparison of admin password hashes against public passwords was blocked as a production read — admin application password status is therefore unknown, not "fine".

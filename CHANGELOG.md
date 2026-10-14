@@ -6,6 +6,17 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-10-14, nightly off-server backups)
+- **`server/scripts/backup-nightly.sh`**, run at 21:30 UTC by `/etc/cron.d/glowfit-backup`: runs `backup-db.sh`, refuses to ship anything unencrypted, publishes the night's files as an orphan commit tagged `nightly/<UTC>` in the private `glowfit30-backups` repo, clones it back and compares every file, then prunes old `nightly/*` tags (30 days daily + 12 months first-of-month, never below 7). Failures exit non-zero, log, and write `FAILED` to `/var/backups/glowfit/STATUS` — failure path tested against a non-existent repo.
+- Upload credential is an SSH **deploy key** generated on the VPS and registered on `glowfit30-backups` only; GitHub's host keys are pinned from `api.github.com/meta`. Verified it cannot push to the public `glowfit30`.
+- **Backup freshness** workflow in `glowfit30-backups`: daily on GitHub's side, fails (→ owner email) if the newest nightly is missing, older than 26 h, unencrypted or fails its checksum.
+- `server/backup/cron.d-glowfit-backup`, `logrotate-glowfit-backup` (installed copies on the VPS).
+- `backup-db.sh` accepts `BACKUP_STAMP` so the nightly wrapper knows exactly which files it made.
+
+### Security (2026-10-14, credential rotation)
+- Full git-history secret review. The **root and sprsadmin Linux passwords in public history were still live** — rotated and verified; no password logins found in the available auth logs. The historical DB password was already dead; no other secret type was ever committed. History not rewritten.
+
+
 ### Added (2026-10-14, backups and disaster recovery)
 - **First production database backup.** `pg_dump -Fc` of `glowfit_db` (PostgreSQL 14.24), OpenPGP-encrypted to a dedicated backup key, uploaded as release `db-20261014T141709Z` in the new **private** repo `soniadcam2025/glowfit30-backups`. Verified, not assumed: `pg_restore --list` reads 19 tables; restored into a temporary database where every row count and the full schema matched production, then dropped; the release assets re-downloaded byte-identical; the owner's private key decrypts to the exact verified dump (sha256 match).
 - **`server/scripts/backup-db.sh`** — consistent dump, sanity checks (non-empty, readable, ≥15 tables), encrypts to the public key so the server can create backups it cannot read, manifest + checksum, role definitions without passwords, retention pruning. Deletes partial output on failure.

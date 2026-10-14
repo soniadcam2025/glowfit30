@@ -8,7 +8,7 @@ Last reviewed: 2026-10-14, against production at commit `ab3f681` (Ubuntu 22.04.
 
 | Comes from GitHub (`soniadcam2025/glowfit30`, **public**) | Must be supplied separately |
 |---|---|
-| API source (`api/`), Prisma schema + all migrations | **Database backup** — private repo `soniadcam2025/glowfit30-backups` (release assets, encrypted) |
+| API source (`api/`), Prisma schema + all migrations | **Database backups** — private repo `soniadcam2025/glowfit30-backups`: nightly tags `nightly/<UTC>` + manual releases `db-*`, all encrypted |
 | Admin panel source (`backend/`) | **Backup private key** — owner's custody (see BACKUP_RESTORE.md). Without it the backups are unreadable |
 | Flutter app (`flutter_app/`), incl. `google-services.json` / `firebase_options.dart` (client config, not secret) | **`api/.env` values**: DB password, `JWT_SECRET`, Firebase service-account JSON, Vultr S3 keys + bucket names |
 | nginx configs as running in production (`server/nginx/live/`) | **`backend/.env`**: `NEXT_PUBLIC_API_URL` (not secret, but not committed) |
@@ -49,8 +49,9 @@ sudo -u postgres createuser --pwprompt glowfit_user        # NEW strong password
 Fetch the latest backup — from your own machine, `gh` logged in as the owner:
 
 ```bash
-gh release list --repo soniadcam2025/glowfit30-backups --limit 5
-gh release download <tag> --repo soniadcam2025/glowfit30-backups
+git ls-remote --tags https://github.com/soniadcam2025/glowfit30-backups.git 'nightly/*' | tail -3   # newest last
+git -c core.autocrlf=false clone --depth 1 --branch nightly/<UTC> https://github.com/soniadcam2025/glowfit30-backups.git b && cd b
+sha256sum -c glowfit_db-*.dump.gpg.sha256
 scp glowfit_db-*.dump.gpg glowfit_db-*.dump.gpg.sha256 glowfit-backup-PRIVATE-key.asc root@<new-ip>:/root/
 ```
 
@@ -110,7 +111,19 @@ The older **webhook** path (`server/webhook/`, `webhook.service` on port 9000, r
 
 ### 2.9 Backups on the new server
 
-Install the nightly job from BACKUP_RESTORE.md → "Nightly backups" and take one manual backup immediately.
+The old server's upload key does not move — it stays on (and dies with) the old VPS. Give the new one its own:
+
+```bash
+install -d -m 700 /root/.config/glowfit-backup && cd /root/.config/glowfit-backup
+ssh-keygen -q -t ed25519 -N "" -C glowfit-vps-nightly-backup -f deploy_key
+curl -fsS https://api.github.com/meta | python3 -c 'import sys,json; [print("github.com "+k) for k in json.load(sys.stdin)["ssh_keys"]]' > known_hosts
+cat deploy_key.pub   # add it: glowfit30-backups → Settings → Deploy keys → "Allow write access"
+install -m 644 /var/www/glowfit/server/backup/cron.d-glowfit-backup /etc/cron.d/glowfit-backup
+install -m 644 /var/www/glowfit/server/backup/logrotate-glowfit-backup /etc/logrotate.d/glowfit-backup
+bash /var/www/glowfit/server/scripts/backup-nightly.sh    # first run now; must end "done"
+```
+
+Then delete the old server's deploy key in the same Settings page.
 
 ### 2.10 Verify
 
@@ -148,8 +161,8 @@ Never run `prisma migrate dev` against production — hand-write migrations (see
 
 ## 4. Known gaps that affect recovery
 
-- **Nightly off-server backups are not installed yet** — only the 2026-10-14 snapshot exists. Until they are, any data written after that date is unrecoverable if the VPS is lost.
-- **Credentials in public git history.** `server/SERVER_SETUP_SUMMARY.md`, `VPS` and `help` held passwords before they were redacted/untracked on 2026-10-14; the old values remain in history. Treat them as compromised and rotate.
+- At most one day of data can be lost: backups are nightly (21:30 UTC). Take a manual run of `backup-nightly.sh` before any risky change.
+- **Credentials in public git history.** `server/SERVER_SETUP_SUMMARY.md`, `VPS` and `help` held the root and sprsadmin Linux passwords (both still live until **rotated 2026-10-14**) and an old DB password (already not live). History is unchanged, so never reuse any of those values. New Linux passwords: owner's secret store (see SECURITY.md).
 - `setup-vps.sh` has been syntax-checked but **not yet run end-to-end on a fresh VPS**. Do a rehearsal on a throwaway instance before you need it for real.
 - No Android release keystore exists; when one is created, it must be stored like the backup private key.
 - Media in Vultr Object Storage has no second copy (BACKUP_RESTORE.md → "Media").

@@ -1,0 +1,10 @@
+# Installed as /etc/logrotate.d/glowfit-backup. See BACKUP_RESTORE.md.
+/var/log/glowfit-backup.log {
+    weekly
+    rotate 8
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root adm
+}
