@@ -39,6 +39,8 @@ Global: 400 req/15min/IP. Auth-specific: 30 req/15min/IP on register/firebase/lo
 
 ## 🔴 Active Vulnerabilities / Findings (ranked)
 
+0. **CRITICAL (found 2026-10-14) — the `glowfit30` repository is public, and credentials were committed to it.** `server/SERVER_SETUP_SUMMARY.md` (Linux + PostgreSQL passwords, a credentialed `DATABASE_URL`), `VPS`, `api/VPS` and `help` were all tracked. They were redacted / untracked on 2026-10-14, but every value remains in public git history. The committed PostgreSQL password no longer matches production (compared by hash, never printed). The SSH passwords could not be checked without a login attempt and **must be rotated**, especially while password SSH authentication is enabled. Decide whether this repository should be private; never put production data in it (database backups go to the private `glowfit30-backups` repo, encrypted).
+
 1. **CRITICAL — Hardcoded password-reset default.** `POST /auth/reset-password` resets any admin/super_admin account's password to a literal `'Admin12345'` given only their email, with **no OTP/token/email-link verification**. The admin login UI even displays this password in plaintext in the success toast. Anyone who knows/guesses an admin email can take over the account.
    - **Fix:** require a signed, time-limited reset token sent to the account's email; never display the new password in a response.
 2. **HIGH — JWT persisted in `localStorage`** in the admin panel (`glowfit_admin_jwt`), alongside an httpOnly cookie meant to prevent exactly this. Any injected script (XSS) can read and exfiltrate it.

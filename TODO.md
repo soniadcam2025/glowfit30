@@ -8,7 +8,10 @@ Live task list for GlowFit. Grouped by priority. Check items off in place; when 
 - [x] ~~Replace hardcoded password-reset default (`Admin12345`)~~ — **the real issue was worse than recorded**: the endpoint was *unauthenticated*, so anyone knowing an admin email could take over that account (fixed 2026-08-02, see `SECURITY.md`). Now super_admin-only with a random per-call password.
 - [ ] **Rotate every admin password** — the takeover endpoint was public for the project's lifetime, so all admin credentials must be assumed compromised.
 - [ ] Build the Gmail OTP password-reset flow to replace the super_admin stop-gap: `nodemailer` + Gmail App Password, 6-digit OTP in Redis with a 10-min TTL (Redis is live and `ioredis` already a dependency), single-use with attempt limits, plus a "Forgot password?" flow on the admin login page. **Blocked on SMTP credentials** — needs a Gmail App Password, which requires 2FA on that account.
-- [ ] Set up PostgreSQL backups — **none exist**; a disk failure currently loses all data (confirmed 2026-08-02).
+- [~] PostgreSQL backups — **first verified backup taken 2026-10-14** (encrypted, in the private `glowfit30-backups` repo, restore-tested 19/19 tables identical). Scripts: `server/scripts/backup-db.sh` / `restore-db.sh`. **Still open:** install the nightly cron + choose off-server storage (BACKUP_RESTORE.md → "Nightly backups"); until then every write after 2026-10-14 is unprotected.
+- [ ] **The `glowfit30` repository is PUBLIC.** Passwords were committed in `server/SERVER_SETUP_SUMMARY.md`, `VPS`, `api/VPS`, `help` — redacted/untracked 2026-10-14 but still in history. The committed DB password no longer matches live (checked by hash); the SSH passwords could not be checked and must be rotated. Decide whether the repo should be private.
+- [ ] Store the backup private key (`C:Userssprsrglowfit-backup-keyglowfit-backup-PRIVATE-key.asc`) in a password manager + one offline copy; without it no backup can be restored.
+- [ ] Rehearse `RECOVERY.md` end-to-end on a throwaway VPS — `setup-vps.sh` is syntax-checked only.
 - [ ] Fix `GET /admin/chart-data` — confirmed broken 2026-08-02: queries `"User"`/`"Progress"`, actual tables are `users`/`progress`.
 - [ ] Fix `GET /admin/chart-data` raw-SQL table-name casing bug (`"User"`/`"Progress"` vs actual `users`/`progress`).
 - [x] ~~Confirm/complete HTTPS on `api.glowfit30.com` and `admin.glowfit30.com`~~ — verified live 2026-07-26, both working over HTTPS.
@@ -104,7 +107,7 @@ Phases 1–8a are **live in production** (pushed `5cbe352..2b5e391`, all deploy 
 - [x] ~~Stand up minimal CI (lint + build) for `api/` and `backend/`~~ — done 2026-07-26 as the `build-check` job in `.github/workflows/deploy.yml`.
 - [x] ~~Add a real deploy trigger~~ — done 2026-07-26, GitHub Actions + SSH (`.github/workflows/deploy.yml`). **Needs one-time secret setup** (`VPS_HOST`/`VPS_USER`/`VPS_SSH_KEY`) before it actually deploys — see `DEPLOYMENT.md`.
 - [x] ~~Add a PM2 `ecosystem.config.cjs` for the admin app~~ — done 2026-07-26, `backend/ecosystem.config.cjs` + `backend/deploy.sh` added.
-- [ ] Set up PostgreSQL backups.
+- [ ] Nightly PostgreSQL backups + off-server copy (see Critical section).
 - [ ] Disable root SSH login / password auth on the VPS.
 - [ ] Add deploy locking + a post-restart health check to `deploy.sh` (both scripts) — the new CI's health-check `verify` job covers post-deploy detection, but not a lock against overlapping manual+automated runs.
 - [ ] Confirm the assumption in `backend/deploy.sh`/`DEPLOYMENT.md` that the admin app lives at `/var/www/glowfit/backend` with PM2 process name `glowfit-backend` — flagged as unverified (no live SSH access), adjust `APP_DIR`/`PM2_APP_NAME` env vars if the real VPS layout differs.

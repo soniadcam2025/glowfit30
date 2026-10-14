@@ -234,7 +234,7 @@ Important app note:
 ### Linux User
 
 - Username: `sprsadmin`
-- Current temporary password: `[REDACTED — rotate and store in a password manager, not in this file; see SECURITY.md]`
+- Current temporary password: *(redacted 2026-10-14 — this repository is public; the old value is still in git history and must be treated as compromised and rotated)*
 
 Notes:
 
@@ -245,7 +245,7 @@ Notes:
 ### PostgreSQL User
 
 - Username: `glowfit_user`
-- Password: `[REDACTED — rotate and store in a password manager, not in this file; see SECURITY.md]`
+- Password: *(redacted 2026-10-14 — see note above; the committed value no longer matches the live password)*
 - Database: `glowfit_db`
 
 ### Root Access Used
@@ -260,7 +260,7 @@ Server app environment file was created with:
 ```text
 NODE_ENV=production
 PORT=3000
-DATABASE_URL=postgresql://glowfit_user:[REDACTED]@127.0.0.1:5432/glowfit_db
+DATABASE_URL=postgresql://glowfit_user:<redacted>@127.0.0.1:5432/glowfit_db
 NEXT_PUBLIC_API_URL=http://139.84.149.147/api
 ```
 

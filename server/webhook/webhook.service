@@ -1,0 +1,12 @@
+[Unit]
+Description=Webhook Server for Glowfit Auto Deploy
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/webhook -hooks /var/www/glowfit/webhook.json -port 9000
+Restart=always
+User=sprsadmin
+Environment=PATH=/usr/bin:/usr/local/bin
+
+[Install]
+WantedBy=multi-user.target

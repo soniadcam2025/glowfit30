@@ -14,12 +14,18 @@ Operational reference for how GlowFit is actually deployed today. This is the **
 
 ## Services & Ports
 
+Verified on the VPS 2026-10-14 (`ss -ltnp`, `pm2 jlist`). Earlier versions of this table had the ports and admin process name wrong.
+
 | Service | Process manager | Port | Domain |
 |---|---|---|---|
-| `glowfit-api` (Express) | PM2 fork mode, `api/ecosystem.config.cjs` | 4000 | `api.glowfit30.com` |
-| `glowfit-backend` (Next.js) | PM2 fork mode, `backend/ecosystem.config.cjs` (added 2026-07-26 — was previously ad hoc) | 3000 | `admin.glowfit30.com` |
-| PostgreSQL | native, localhost only | 5432 | — |
-| Redis | native, localhost only | 6379 | — |
+| `glowfit-api` (Express) | PM2 (user `sprsadmin`), `api/ecosystem.config.cjs` | 3000 | `api.glowfit30.com` |
+| `glowfit-admin` (Next.js) | PM2 (user `sprsadmin`), `backend/ecosystem.config.cjs` | 3001 | `admin.glowfit30.com` |
+| Landing page | static, nginx | — | `glowfit30.com`, `www.` |
+| PostgreSQL 14 | native, localhost only | 5432 | — |
+| Redis 6 | native, localhost only | 6379 | — |
+| `webhook.service` (legacy deploy, dormant since 2026-07-26) | systemd | 9000 | see `server/webhook/README.md` |
+
+Local development differs: API on 4000, admin on 3000. Backups and full-server recovery: see `BACKUP_RESTORE.md` and `RECOVERY.md`.
 
 ## Deployment Flow — Current Reality (2026-07-26: now automated)
 

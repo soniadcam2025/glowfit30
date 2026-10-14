@@ -6,6 +6,22 @@ Format loosely follows [Keep a Changelog](https://keepachangelog.com/). No versi
 
 ## [Unreleased]
 
+### Added (2026-10-14, backups and disaster recovery)
+- **First production database backup.** `pg_dump -Fc` of `glowfit_db` (PostgreSQL 14.24), OpenPGP-encrypted to a dedicated backup key, uploaded as release `db-20261014T141709Z` in the new **private** repo `soniadcam2025/glowfit30-backups`. Verified, not assumed: `pg_restore --list` reads 19 tables; restored into a temporary database where every row count and the full schema matched production, then dropped; the release assets re-downloaded byte-identical; the owner's private key decrypts to the exact verified dump (sha256 match).
+- **`server/scripts/backup-db.sh`** — consistent dump, sanity checks (non-empty, readable, ≥15 tables), encrypts to the public key so the server can create backups it cannot read, manifest + checksum, role definitions without passwords, retention pruning. Deletes partial output on failure.
+- **`server/scripts/restore-db.sh`** — restores only into a database that does not yet exist (refusal against the live `glowfit_db` tested), checksum check, decrypts in a throwaway keyring, single-transaction restore, row-count report.
+- **`server/scripts/setup-vps.sh`** — idempotent fresh-VPS bootstrap (packages, Node 24, PM2, app user, localhost-only Postgres check, deps, migrate deploy, build, PM2, HTTP vhosts); stops with instructions where secrets or the database are needed.
+- **`RECOVERY.md`, `BACKUP_RESTORE.md`** — what comes from GitHub vs. what must be held separately, step-by-step new-VPS recovery, restore/verify procedures, proposed nightly schedule and off-server storage options.
+- **`server/webhook/`** — the legacy webhook deploy (`deploy.sh`, systemd unit, `webhook.json.example` with a placeholder secret) preserved from the VPS and documented as dormant since 2026-07-26.
+- `api/.env.example` now lists every variable `src/config/env.js` reads (Firebase, Vultr S3, media CDN, seed-admin).
+
+### Security (2026-10-14)
+- Redacted two passwords and a credentialed `DATABASE_URL` from `server/SERVER_SETUP_SUMMARY.md`; stopped tracking `VPS`, `api/VPS`, `help` (credential notes) and `backend/glowfit-backend-deploy.tar.gz` (stale April source snapshot). **History is not rewritten — the old values stay in this public repository's history and must be rotated.**
+- `.gitignore`: database dumps/encrypted backups, and server-only runtime files (`/webhook.json`, `/deploy.sh`, `/web/`, `/.claude/`).
+
+### Fixed (2026-10-14, docs)
+- `DEPLOYMENT.md` services table had production ports and the admin process name wrong (api 4000 / `glowfit-backend` 3000); corrected to api 3000 / `glowfit-admin` 3001 from the live server.
+
 ### Fixed (2026-08-12, media expansion silently corrupted every Date in the response)
 - **`expandMedia()` in `api/src/utils/media.js` turned every `Date` field into `{}`.** `attach()` rebuilt every plain object it walked from `Object.entries()`, and a `Date` has no enumerable own properties, so `Object.entries(date)` returns `[]` — any response carrying at least one media URL had every date field (`completedAt`, `createdAt`, `dob`, …) silently flattened to an empty object. Discovered because it hung the Flutter Profile screen forever: `progress_screen`'s `completedAt as String?` cast threw before `setState`, so `_loading` never cleared and no error ever surfaced.
 - Fixed with an `isPlainObject()` guard in both `collect()` and `attach()`, checking the prototype rather than special-casing `Date` — the same rebuild would have flattened any other class instance (`Decimal`, `Buffer`, `Map`) that turns up in a payload later.

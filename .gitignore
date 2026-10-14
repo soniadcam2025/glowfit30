@@ -53,3 +53,19 @@ client-builds/
 # Wrangler build output and local state (infra/cloudflare)
 .wrangler/
 .wrangler-build/
+
+# Database dumps and backups — production data never goes in this (public) repo.
+# Encrypted backups live in the private glowfit30-backups repo; see BACKUP_RESTORE.md.
+*.dump
+*.dump.gpg
+*.sql.gpg
+*.sql.gz
+*.pgdump
+*.backup
+/backups/
+
+# Server-only runtime files that sit inside the /var/www/glowfit checkout
+/webhook.json
+/deploy.sh
+/web/
+/.claude/
